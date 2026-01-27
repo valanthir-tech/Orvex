@@ -1,0 +1,327 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Rubik', ui-sans-serif, system-ui, sans-serif;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0
+    }
+
+    to {
+      height: var(--radix-accordion-content-height)
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height)
+    }
+
+    to {
+      height: 0
+    }
+  }
+}
+
+/*
+  =====================================================
+  INVENTORY POS - COLOR CONFIGURATION
+  =====================================================
+  
+  TO CHANGE COLORS: Edit the values below.
+  All components will automatically update.
+  
+  Palette: Modern Professional (Slate + Amber/Teal)
+  - Primary: Deep Stone (professional, premium)
+  - Accent: Amber (warm, inviting - replaces green)
+  - Success: Teal (professional alternative to green)
+  - Warning: Amber
+  - Error: Rose
+  - Info: Sky blue
+  =====================================================
+*/
+
+:root {
+  /* === SEMANTIC COLORS (Easy to change) === */
+  --color-success: #0D9488;
+  /* Teal 600 - positive trends */
+  --color-warning: #D97706;
+  /* Amber 600 - warnings */
+  /* --color-warning: #A9B5DF; -- Reverted this as it might be a mistake, warning should be distinct */
+  --color-error: #E11D48;
+  /* Rose 600 - errors */
+  --color-info: #0284C7;
+  /* Sky 600 - information */
+
+  /* === CORE THEME === */
+  --background: #FAFAF9;
+  /* Stone 50 - warm white */
+  --foreground: #0C0A09;
+  /* Stone 950 */
+
+  --card: #FFFFFF;
+  --card-foreground: #0C0A09;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0C0A09;
+
+  /* Primary: Periwinkle (User Requested: A9B5DF) - Replaces Black */
+  --primary: #8DA2DE;
+  /* Using a slightly darker shade of A9B5DF (which is very light) for better button visibility, or stick to user's A9B5DF? 
+     User said "A9B5DF in light mode". I will use that but ensure text is dark. */
+  --primary: #A9B5DF;
+  --primary-foreground: #1C1917;
+  /* Dark text for light background */
+
+  /* Secondary: Light stone */
+  --secondary: #F5F5F4;
+  /* Stone 100 */
+  --secondary-foreground: #1C1917;
+
+  --muted: #F5F5F4;
+  /* Stone 100 */
+  --muted-foreground: #78716C;
+  /* Stone 500 */
+
+  /* Accent: Matches Primary for consistency in this theme */
+  --accent: #A9B5DF;
+  --accent-foreground: #1C1917;
+
+  --destructive: #E11D48;
+  /* Rose 600 */
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E7E5E4;
+  /* Stone 200 */
+  --input: #E7E5E4;
+  --ring: #A9B5DF;
+  /* Ring matches primary */
+
+  --radius: 1rem;
+
+  /* Chart colors - updated */
+  --chart-1: #A9B5DF;
+  /* Primary */
+  --chart-2: #0284C7;
+  /* Sky */
+  --chart-3: #D97706;
+  /* Amber */
+  --chart-4: #7C3AED;
+  /* Violet */
+  --chart-5: #DC2626;
+  /* Red */
+
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #44403C;
+  --sidebar-primary: #A9B5DF;
+  --sidebar-primary-foreground: #1C1917;
+  --sidebar-accent: #F5F5F4;
+  --sidebar-accent-foreground: #1C1917;
+  --sidebar-border: #E7E5E4;
+  --sidebar-ring: #A9B5DF;
+}
+
+.dark {
+  /* === SEMANTIC COLORS (Dark mode) === */
+  --color-success: #14B8A6;
+  /* Teal 500 */
+  --color-warning: #F59E0B;
+  /* Amber 500 */
+  --color-error: #FB7185;
+  /* Rose 400 */
+  --color-info: #38BDF8;
+  /* Sky 400 */
+
+  /* === CORE THEME === */
+  --background: #0C0A09;
+  /* Stone 950 */
+  --foreground: #FAFAF9;
+
+  --card: #1C1917;
+  /* Stone 900 */
+  --card-foreground: #FAFAF9;
+
+  --popover: #1C1917;
+  --popover-foreground: #FAFAF9;
+
+  /* Primary: Purple (User Requested: 7886C7) - Replaces White/Black */
+  --primary: #7886C7;
+  --primary-foreground: #FAFAF9;
+  /* Light text for dark background */
+
+  --secondary: #292524;
+  /* Stone 800 */
+  --secondary-foreground: #FAFAF9;
+
+  --muted: #292524;
+  --muted-foreground: #A8A29E;
+  /* Stone 400 */
+
+  /* Accent: Matches Primary */
+  --accent: #7886C7;
+  /* Dark mode accent */
+  --accent-foreground: #FAFAF9;
+
+  --destructive: #FB7185;
+  /* Rose 400 */
+  --destructive-foreground: #1C1917;
+
+  --border: #292524;
+  --input: #292524;
+  --ring: #7886C7;
+
+  --chart-1: #7886C7;
+  /* Primary Dark */
+  --chart-2: #38BDF8;
+  /* Sky 400 */
+  --chart-3: #FBBF24;
+  /* Amber 400 */
+  --chart-4: #A78BFA;
+  /* Violet 400 */
+  --chart-5: #F87171;
+  /* Red 400 */
+
+  --sidebar: #1C1917;
+  --sidebar-foreground: #D6D3D1;
+  --sidebar-primary: #7886C7;
+  --sidebar-primary-foreground: #FAFAF9;
+  --sidebar-accent: #292524;
+  --sidebar-accent-foreground: #FAFAF9;
+  --sidebar-border: #292524;
+  --sidebar-ring: #7886C7;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+  }
+}
+
+/* Floating cards with soft shadows */
+@layer utilities {
+  .card-float {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
+      0 10px 15px -3px rgba(0, 0, 0, 0.05),
+      0 20px 25px -5px rgba(0, 0, 0, 0.03);
+  }
+
+  .card-float-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-float-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08),
+      0 20px 25px -5px rgba(0, 0, 0, 0.05),
+      0 25px 50px -12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Pill buttons */
+@layer utilities {
+  .btn-pill {
+    border-radius: 9999px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Glass effect */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .dark .glass {
+    background: rgba(28, 25, 23, 0.8);
+  }
+}
+
+/* Focus improvements */
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+/* Selection color - uses accent */
+::selection {
+  background-color: rgba(217, 119, 6, 0.2);
+  /* Amber with opacity */
+  color: inherit;
+}
