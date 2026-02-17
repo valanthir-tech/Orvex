@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,18 +23,28 @@ export default function LoginPage() {
         const email = formData.get("email") as string
         const password = formData.get("password") as string
 
-        const supabase = createClient()
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        })
+        // For now, we bypass real ERPNext authentication in the UI
+        // In a real implementation, we would call an API route to proxy the login
+        // to ERPNext and set a session cookie.
 
-        if (error) {
-            setError(error.message)
-            setIsLoading(false)
+        // Mock authentication for development
+        if (email && password) {
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000))
+
+            // Check against demo credentials (admin/admin) or allow any for dev
+            if (password.length > 0) {
+                // Set a mock cookie or local storage if needed
+                document.cookie = "erpnext_session=mock-session; path=/";
+                router.push("/")
+                router.refresh()
+            } else {
+                setError("Invalid credentials")
+                setIsLoading(false)
+            }
         } else {
-            router.push("/")
-            router.refresh()
+            setError("Please fill in all fields")
+            setIsLoading(false)
         }
     }
 
@@ -47,39 +56,40 @@ export default function LoginPage() {
                 </div>
                 <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
                 <p className="text-balance text-sm text-muted-foreground">
-                    Enter your email below to login to your account
+                    Login to your ERPNext integrated POS
                 </p>
             </div>
             <Card>
                 <CardHeader>
                     <CardTitle>Login</CardTitle>
                     <CardDescription>
-                        Enter your email below to login to your account
+                        Use your ERPNext credentials
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">Email / Username</Label>
                             <Input
                                 id="email"
                                 name="email"
-                                type="email"
-                                placeholder="m@example.com"
+                                type="text"
+                                placeholder="Administrator"
+                                defaultValue="Administrator"
                                 required
                             />
                         </div>
                         <div className="grid gap-2">
                             <div className="flex items-center">
                                 <Label htmlFor="password">Password</Label>
-                                <Link
-                                    href="/forgot-password"
-                                    className="ml-auto text-sm underline-offset-4 hover:underline"
-                                >
-                                    Forgot your password?
-                                </Link>
                             </div>
-                            <Input id="password" name="password" type="password" required />
+                            <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                defaultValue="admin"
+                            />
                         </div>
                         {error && (
                             <div className="text-sm text-destructive font-medium">
@@ -92,7 +102,10 @@ export default function LoginPage() {
                         </Button>
                     </form>
                 </CardContent>
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex justify-center flex-col gap-2">
+                    <p className="text-xs text-muted-foreground text-center">
+                        Default credentials: Administrator / admin
+                    </p>
                     <p className="text-sm text-muted-foreground">
                         Don&apos;t have an account?{" "}
                         <Link href="/signup" className="underline underline-offset-4 hover:text-primary">

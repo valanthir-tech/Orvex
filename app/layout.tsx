@@ -1,19 +1,19 @@
 import type { Metadata } from "next"
-import { Rubik, Nunito_Sans } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import SyncWorker from "@/components/sync/SyncWorker"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-const rubik = Rubik({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-sans",
   display: "swap",
 })
 
-const nunitoSans = Nunito_Sans({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-mono",
   display: "swap",
 })
 
@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${rubik.variable} ${nunitoSans.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

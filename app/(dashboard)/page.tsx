@@ -13,6 +13,7 @@ import Link from "next/link"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { cardStyles, badgeStyles, getBadgeByIndex, getProgressBarColor } from "@/lib/theme"
 
 // Mock data - Clothing Store
 const recentSales = [
@@ -42,18 +43,18 @@ export default function DashboardPage() {
             {/* Stats Row - Bento Style with Colored Glow Hover */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {/* Total Revenue - Teal accent with teal glow */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.teal.card}>
+                    <div className={cardStyles.teal.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Today's Revenue</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.teal.icon}>
                             <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">Rs. 48,250</div>
                         <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center rounded-full bg-teal-100 dark:bg-teal-900/30 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-400">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyles.teal}`}>
                                 +18.2%
                             </span>
                             <span className="text-xs text-muted-foreground">vs yesterday</span>
@@ -62,18 +63,18 @@ export default function DashboardPage() {
                 </Card>
 
                 {/* Total Orders - Sky blue accent with sky glow */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-sky-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 via-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.sky.card}>
+                    <div className={cardStyles.sky.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Orders Today</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.sky.icon}>
                             <ShoppingCart className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">42</div>
                         <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center rounded-full bg-teal-100 dark:bg-teal-900/30 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-400">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyles.success}`}>
                                 +8
                             </span>
                             <span className="text-xs text-muted-foreground">from yesterday</span>
@@ -82,18 +83,18 @@ export default function DashboardPage() {
                 </Card>
 
                 {/* Total Items - Amber accent with amber glow */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.amber.card}>
+                    <div className={cardStyles.amber.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Items</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.amber.icon}>
                             <Shirt className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">1,284</div>
                         <div className="flex items-center gap-2 mt-2">
-                            <span className="inline-flex items-center rounded-full bg-teal-100 dark:bg-teal-900/30 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-400">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeStyles.success}`}>
                                 +12
                             </span>
                             <span className="text-xs text-muted-foreground">this week</span>
@@ -101,20 +102,34 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* Low Stock Alert - Rose accent with rose glow */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-rose-500/20 hover:-translate-y-1 card-float bg-rose-50 dark:bg-rose-950/30">
-                    <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-                    <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-rose-700 dark:text-rose-400">Low Stock Alert</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30 transition-transform duration-300 group-hover:scale-110">
-                            <TriangleAlert className="h-5 w-5 text-white" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="relative">
-                        <div className="text-3xl font-bold font-heading text-rose-700 dark:text-rose-400">23</div>
-                        <div className="text-xs text-rose-600/80 dark:text-rose-400/80 mt-2">items need restock</div>
-                    </CardContent>
-                </Card>
+                {/* Low Stock Alert - Dynamic Color based on severity */}
+                {(() => {
+                    const stockCount: number = 23; // Mock data
+                    // Determine which card style to use based on severity
+                    const getAlertStyle = () => {
+                        if (stockCount === 0) return { style: cardStyles.emerald, icon: Package, text: "All items in stock" }
+                        if (stockCount <= 5) return { style: cardStyles.amber, icon: TriangleAlert, text: "items low on stock" }
+                        return { style: cardStyles.rose, icon: TriangleAlert, text: "items need restock" }
+                    }
+                    const alert = getAlertStyle()
+                    const AlertIcon = alert.icon
+
+                    return (
+                        <Card className={alert.style.card}>
+                            <div className={alert.style.overlay} />
+                            <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Alert</CardTitle>
+                                <div className={alert.style.icon}>
+                                    <AlertIcon className="h-5 w-5 text-white" />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="relative">
+                                <div className="text-3xl font-bold font-heading">{stockCount}</div>
+                                <div className="text-xs mt-2 text-muted-foreground">{alert.text}</div>
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
             </div>
 
             {/* Quick Actions - Pill Buttons */}
@@ -231,41 +246,26 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="pt-6">
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                        {topItems.map((item, index) => {
-                            // Professional color palette: Teal, Sky, Amber, Violet
-                            const barColors = [
-                                "bg-teal-500",   // #1
-                                "bg-sky-500",    // #2
-                                "bg-amber-500",  // #3
-                                "bg-violet-500", // #4
-                            ]
-                            const badgeColors = [
-                                "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-                                "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
-                                "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                                "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-                            ]
-                            return (
-                                <div key={item.name} className="space-y-3 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
-                                    <div className="flex items-center justify-between">
-                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${badgeColors[index]}`}>
-                                            #{index + 1}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">{item.sold} sold</span>
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{item.name}</p>
-                                        <p className="text-lg font-bold font-heading mt-1">{item.revenue}</p>
-                                    </div>
-                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-500 ${barColors[index]}`}
-                                            style={{ width: `${item.percentage}%` }}
-                                        />
-                                    </div>
+                        {topItems.map((item, index) => (
+                            <div key={item.name} className="space-y-3 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${getBadgeByIndex(index)}`}>
+                                        #{index + 1}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{item.sold} sold</span>
                                 </div>
-                            )
-                        })}
+                                <div>
+                                    <p className="font-medium">{item.name}</p>
+                                    <p className="text-lg font-bold font-heading mt-1">{item.revenue}</p>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all duration-500 ${getProgressBarColor(index)}`}
+                                        style={{ width: `${item.percentage}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>

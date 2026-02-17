@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import prisma from "@/lib/prisma"
-import { requireProfile } from "@/lib/auth"
-import { ensureMainWarehouse } from "./stock"
+
+// ERPNext API Configuration
+const ERPNEXT_URL = process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080'
+const API_KEY = process.env.ERPNEXT_API_KEY
+const API_SECRET = process.env.ERPNEXT_API_SECRET
 
 export type CartItem = {
     itemId: string
@@ -19,25 +21,54 @@ const invoiceSchema = z.object({
     paidAmount: z.coerce.number().min(0)
 })
 
-export async function createPOSInvoice(formData: FormData) {
-    const profile = await requireProfile()
+// Map our payment modes to ERPNext Mode of Payment
+const PAYMENT_MODE_MAP: Record<string, string> = {
+    'CASH': 'Cash',
+    'CARD': 'Credit Card',
+    'QR_ESEWA': 'Cash', // Will need to create custom modes in ERPNext
+    'QR_KHALTI': 'Cash',
+    'QR_FONEPAY': 'Cash',
+    'BANK_TRANSFER': 'Bank Draft',
+}
 
-    // Ensure POS Profile (Counter) exists for this user/org, or create default
-    let posProfile = await prisma.pOSProfile.findFirst({
-        where: { organizationId: profile.organizationId }
-    })
+// Helper function to make ERPNext API calls
+async function erpnextFetch<T>(
+    endpoint: string,
+    options: RequestInit = {}
+): Promise<T | null> {
+    try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        }
 
-    if (!posProfile) {
-        // Auto-create default counter
-        posProfile = await prisma.pOSProfile.create({
-            data: {
-                name: "Main Counter",
-                organizationId: profile.organizationId,
-                namingSeries: "INV-"
-            }
+        // Add API key authentication if available
+        if (API_KEY && API_SECRET) {
+            headers['Authorization'] = `token ${API_KEY}:${API_SECRET}`
+        }
+
+        const response = await fetch(`${ERPNEXT_URL}${endpoint}`, {
+            ...options,
+            headers: {
+                ...headers,
+                ...options.headers,
+            },
         })
-    }
 
+        if (!response.ok) {
+            const errorText = await response.text()
+            console.error('ERPNext API error:', response.statusText, errorText)
+            return null
+        }
+
+        const data = await response.json()
+        return data.data || data.message || data
+    } catch (error) {
+        console.error('ERPNext fetch error:', error)
+        return null
+    }
+}
+
+export async function createPOSInvoice(formData: FormData) {
     const rawData = {
         items: formData.get("items"),
         paymentMode: formData.get("paymentMode"),
@@ -53,107 +84,173 @@ export async function createPOSInvoice(formData: FormData) {
     if (cartItems.length === 0) return { error: "Cart is empty" }
 
     try {
-        const result = await prisma.$transaction(async (tx) => {
-            // 1. Calculate Totals
-            let netTotal = 0
-            let totalDiscount = 0
+        // Calculate totals
+        let netTotal = 0
+        let totalDiscount = 0
+        const invoiceItems: Array<{
+            item_code: string
+            qty: number
+            rate: number
+            discount_amount?: number
+        }> = []
 
-            // Verify items exist and fetch details
-            const productIds = cartItems.map(c => c.itemId)
-            const products = await tx.item.findMany({
-                where: { id: { in: productIds } }
+        for (const cartItem of cartItems) {
+            const amount = cartItem.qty * cartItem.rate
+            netTotal += amount
+            totalDiscount += (cartItem.discount || 0)
+
+            invoiceItems.push({
+                item_code: cartItem.itemId,
+                qty: cartItem.qty,
+                rate: cartItem.rate,
+                discount_amount: cartItem.discount || 0,
             })
-            const productMap = new Map(products.map(p => [p.id, p]))
+        }
 
-            const lineItems = []
+        const grandTotal = netTotal - totalDiscount
 
-            for (const cartItem of cartItems) {
-                const product = productMap.get(cartItem.itemId)
-                if (!product) throw new Error(`Product not found`)
+        // Create Sales Invoice in ERPNext
+        // For POS, we use Sales Invoice with is_pos = 1 and update_stock = 1
+        const invoiceData = {
+            doctype: 'Sales Invoice',
+            customer: 'Walk-in Customer', // ERPNext needs a customer - create this in ERPNext
+            posting_date: new Date().toISOString().split('T')[0],
+            is_pos: 1,
+            update_stock: 1,
+            items: invoiceItems.map(item => ({
+                doctype: 'Sales Invoice Item',
+                item_code: item.item_code,
+                qty: item.qty,
+                rate: item.rate,
+                discount_amount: item.discount_amount,
+            })),
+            payments: [{
+                doctype: 'Sales Invoice Payment',
+                mode_of_payment: PAYMENT_MODE_MAP[paymentMode] || 'Cash',
+                amount: paidAmount,
+            }],
+            paid_amount: paidAmount,
+            change_amount: Math.max(0, paidAmount - grandTotal),
+        }
 
-                // Use cart rate (allows overrides) or system rate? 
-                // For now system rate for security, or cart rate if we trust UI. 
-                // Let's use cart rate but validate it's not crazy? 
-                // Simpler: Use cart rate passed from UI.
-
-                const amount = cartItem.qty * cartItem.rate
-                netTotal += amount
-                totalDiscount += (cartItem.discount || 0)
-
-                lineItems.push({
-                    itemId: cartItem.itemId,
-                    itemName: product.name,
-                    qty: cartItem.qty,
-                    rate: cartItem.rate,
-                    amount: amount,
-                    discountAmount: cartItem.discount || 0
-                })
+        const result = await erpnextFetch<{ name: string }>(
+            '/api/resource/Sales Invoice',
+            {
+                method: 'POST',
+                body: JSON.stringify(invoiceData),
             }
+        )
 
-            const grandTotal = netTotal - totalDiscount
-            const changeAmount = Math.max(0, paidAmount - grandTotal)
-
-            // 2. Create Invoice
-            const invoice = await tx.pOSInvoice.create({
-                data: {
-                    name: `${posProfile.namingSeries}${Date.now()}`,
-                    status: 'PAID',
-                    organizationId: profile.organizationId,
-                    posProfileId: posProfile.id,
-                    createdById: profile.id,
-                    customer: "Walk-in Customer",
-
-                    netTotal,
-                    totalTax: 0, // TODO: Tax Logic
-                    discountAmount: totalDiscount,
-                    grandTotal,
-                    paidAmount,
-                    changeAmount,
-                    modeOfPayment: paymentMode as any,
-                }
-            })
-
-            // 3. Create Invoice Items
-            for (const line of lineItems) {
-                await tx.pOSInvoiceItem.create({
-                    data: {
-                        invoiceId: invoice.id,
-                        ...line
-                    }
-                })
-            }
-
-            // 4. Deduct Stock (Auto-Stock Entry)
-            const warehouse = await ensureMainWarehouse(profile.organizationId, tx)
-
-            for (const line of lineItems) {
-                await tx.stockLedgerEntry.create({
-                    data: {
-                        organizationId: profile.organizationId,
-                        itemId: line.itemId,
-                        warehouseId: warehouse.id,
-                        qtyChange: -line.qty, // Negative for sale
-                        actualQty: 0,
-                        valuationRate: 0,
-                        voucherType: "POS Invoice",
-                        voucherNo: invoice.name
-                    }
-                })
-
-                await tx.item.update({
-                    where: { id: line.itemId },
-                    data: { currentStock: { decrement: line.qty } }
-                })
-            }
-
-            return invoice
-        })
+        if (!result) {
+            return { error: "Failed to create invoice in ERPNext" }
+        }
 
         revalidatePath("/pos")
-        return { success: true, invoiceId: result.id }
+        return { success: true, invoiceId: result.name }
 
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error(e)
-        return { error: e.message || "Failed to process sale" }
+        const error = e as Error
+        return { error: error.message || "Failed to process sale" }
+    }
+}
+
+// Get POS invoices for today
+export async function getTodayInvoices() {
+    const today = new Date().toISOString().split('T')[0]
+
+    try {
+        const params = new URLSearchParams({
+            filters: JSON.stringify([
+                ['posting_date', '=', today],
+                ['is_pos', '=', 1],
+            ]),
+            fields: JSON.stringify([
+                'name', 'customer', 'grand_total', 'paid_amount',
+                'posting_date', 'posting_time', 'status'
+            ]),
+            order_by: 'creation desc',
+            limit_page_length: '50',
+        })
+
+        const result = await erpnextFetch<Array<{
+            name: string
+            customer: string
+            grand_total: number
+            paid_amount: number
+            posting_date: string
+            posting_time: string
+            status: string
+        }>>(`/api/resource/Sales Invoice?${params.toString()}`)
+
+        if (!result) return []
+
+        return result.map(inv => ({
+            id: inv.name,
+            name: inv.name,
+            customer: inv.customer,
+            grandTotal: inv.grand_total,
+            paidAmount: inv.paid_amount,
+            createdAt: new Date(`${inv.posting_date}T${inv.posting_time}`),
+            status: inv.status,
+        }))
+    } catch (error) {
+        console.error('Get invoices error:', error)
+        return []
+    }
+}
+
+// Get invoice details
+export async function getInvoice(id: string) {
+    try {
+        const result = await erpnextFetch<{
+            name: string
+            customer: string
+            grand_total: number
+            paid_amount: number
+            change_amount: number
+            posting_date: string
+            posting_time: string
+            status: string
+            items: Array<{
+                item_code: string
+                item_name: string
+                qty: number
+                rate: number
+                amount: number
+            }>
+            payments: Array<{
+                mode_of_payment: string
+                amount: number
+            }>
+        }>(`/api/resource/Sales Invoice/${encodeURIComponent(id)}`)
+
+        if (!result) return null
+
+        const inv = result
+        return {
+            id: inv.name,
+            name: inv.name,
+            customer: inv.customer,
+            grandTotal: inv.grand_total,
+            paidAmount: inv.paid_amount,
+            changeAmount: inv.change_amount,
+            createdAt: new Date(`${inv.posting_date}T${inv.posting_time}`),
+            status: inv.status,
+            items: inv.items.map(item => ({
+                itemCode: item.item_code,
+                itemName: item.item_name,
+                qty: item.qty,
+                rate: item.rate,
+                amount: item.amount,
+            })),
+            payments: inv.payments.map(p => ({
+                mode: p.mode_of_payment,
+                amount: p.amount,
+            })),
+        }
+    } catch (error) {
+        console.error('Get invoice error:', error)
+        return null
     }
 }

@@ -1,23 +1,18 @@
-import prisma from "@/lib/prisma"
-import { requireProfile } from "@/lib/auth"
+import { getItems } from "@/app/actions/items"
 import StockEntryForm from "./stock-entry-form"
 
+export const dynamic = 'force-dynamic'
+
 export default async function NewEntryPage() {
-    const profile = await requireProfile()
+    // Fetch items for the dropdown from ERPNext
+    const items = await getItems({ status: "all" })
 
-    // Fetch items for the dropdown
-    const items = await prisma.item.findMany({
-        where: {
-            organizationId: profile.organizationId,
-            deletedAt: null
-        },
-        select: {
-            id: true,
-            name: true,
-            itemCode: true,
-            currentStock: true
-        }
-    })
+    const transformedItems = items.map(p => ({
+        id: p.itemCode, // Use Item Code as ID for ERPNext
+        name: p.name,
+        itemCode: p.itemCode,
+        currentStock: p.currentStock || 0
+    }))
 
-    return <StockEntryForm items={items} />
+    return <StockEntryForm items={transformedItems} />
 }

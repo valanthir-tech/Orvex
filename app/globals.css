@@ -1,327 +1,471 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@plugin "tailwindcss-animate";
-
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   🎨 BRAND COLORS - CHANGE THESE TO CUSTOMIZE YOUR THEME
+   ============================================
+   
+   To change the entire app's color scheme, simply modify 
+   the HSL values below. All UI elements will update automatically!
+   
+   HSL Format: hue saturation% lightness%
+   - Hue: 0-360 (color wheel position)
+   - Saturation: 0-100% (color intensity)  
+   - Lightness: 0-100% (brightness)
+   
+   Example brand colors:
+   - Blue:    220 90% 50%
+   - Teal:    175 70% 40%
+   - Purple:  270 70% 55%
+   - Orange:  25 95% 55%
+   - Green:   145 65% 40%
+   ============================================ */
+
+:root {
+  /* 🎨 MAIN BRAND COLOR - Change this to set your primary brand color */
+  --brand-hue: 25;
+  /* Orange-brown hue (change to any 0-360 value) */
+  --brand-saturation: 30%;
+  /* Color intensity */
+
+  /* Primary Colors (auto-calculated from brand) */
+  --primary: hsl(var(--brand-hue) var(--brand-saturation) 15%);
+  --primary-foreground: hsl(var(--brand-hue) 5% 98%);
+
+  /* 🎨 STATUS COLORS - Used for alerts, badges, and indicators */
+  /* Success - Green */
+  --success: 145 65% 42%;
+  --success-light: 145 60% 94%;
+  --success-dark: 145 65% 35%;
+
+  /* Warning - Amber/Yellow */
+  --warning: 38 92% 50%;
+  --warning-light: 45 93% 94%;
+  --warning-dark: 38 92% 40%;
+
+  /* Danger - Red/Rose */
+  --danger: 0 72% 51%;
+  --danger-light: 0 86% 94%;
+  --danger-dark: 0 72% 45%;
+
+  /* Info - Sky Blue */
+  --info: 199 89% 48%;
+  --info-light: 199 89% 94%;
+  --info-dark: 199 89% 40%;
+
+  /* 🎨 ACCENT COLORS - Used for highlights and special elements */
+  /* Teal accent */
+  --accent-teal: 175 70% 41%;
+  --accent-teal-light: 175 70% 94%;
+
+  /* Amber accent */
+  --accent-amber: 38 92% 50%;
+  --accent-amber-light: 45 93% 94%;
+
+  /* Sky accent */
+  --accent-sky: 199 89% 48%;
+  --accent-sky-light: 199 89% 94%;
+
+  /* Emerald accent */
+  --accent-emerald: 160 84% 39%;
+  --accent-emerald-light: 160 84% 94%;
+
+  /* Rose accent */
+  --accent-rose: 350 89% 60%;
+  --accent-rose-light: 350 89% 94%;
+
+  /* Violet accent */
+  --accent-violet: 270 70% 55%;
+  --accent-violet-light: 270 70% 95%;
+
+  /* ============================================
+     BASE UI COLORS (usually don't need to change)
+     ============================================ */
+  --radius: 0.625rem;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(var(--brand-hue) 10% 10%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(var(--brand-hue) 10% 10%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(var(--brand-hue) 10% 10%);
+  --secondary: hsl(var(--brand-hue) 5% 96%);
+  --secondary-foreground: hsl(var(--brand-hue) 10% 15%);
+  --muted: hsl(var(--brand-hue) 5% 96%);
+  --muted-foreground: hsl(var(--brand-hue) 10% 45%);
+  --accent: hsl(var(--brand-hue) 5% 96%);
+  --accent-foreground: hsl(var(--brand-hue) 10% 15%);
+  --destructive: hsl(var(--danger));
+  --border: hsl(var(--brand-hue) 10% 90%);
+  --input: hsl(var(--brand-hue) 10% 90%);
+  --ring: hsl(var(--brand-hue) var(--brand-saturation) 40%);
+
+  /* Chart colors */
+  --chart-1: hsl(var(--accent-teal));
+  --chart-2: hsl(var(--accent-sky));
+  --chart-3: hsl(var(--accent-amber));
+  --chart-4: hsl(var(--accent-emerald));
+  --chart-5: hsl(var(--accent-rose));
+
+  /* Sidebar */
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(var(--brand-hue) var(--brand-saturation) 15%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(var(--brand-hue) 5% 95%);
+  --sidebar-accent-foreground: hsl(var(--brand-hue) 10% 15%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(var(--brand-hue) var(--brand-saturation) 50%);
+}
+
+/* Dark Mode */
+.dark {
+  --primary: hsl(var(--brand-hue) var(--brand-saturation) 85%);
+  --primary-foreground: hsl(var(--brand-hue) 10% 10%);
+
+  --background: hsl(var(--brand-hue) 10% 8%);
+  --foreground: hsl(var(--brand-hue) 5% 95%);
+  --card: hsl(var(--brand-hue) 10% 12%);
+  --card-foreground: hsl(var(--brand-hue) 5% 95%);
+  --popover: hsl(var(--brand-hue) 10% 12%);
+  --popover-foreground: hsl(var(--brand-hue) 5% 95%);
+  --secondary: hsl(var(--brand-hue) 10% 18%);
+  --secondary-foreground: hsl(var(--brand-hue) 5% 95%);
+  --muted: hsl(var(--brand-hue) 10% 18%);
+  --muted-foreground: hsl(var(--brand-hue) 10% 60%);
+  --accent: hsl(var(--brand-hue) 10% 18%);
+  --accent-foreground: hsl(var(--brand-hue) 5% 95%);
+  --destructive: hsl(0 62% 55%);
+  --border: hsl(var(--brand-hue) 10% 20%);
+  --input: hsl(var(--brand-hue) 10% 20%);
+  --ring: hsl(var(--brand-hue) var(--brand-saturation) 60%);
+
+  /* Dark mode status colors */
+  --success: 145 65% 50%;
+  --success-light: 145 30% 20%;
+  --warning: 38 92% 55%;
+  --warning-light: 38 40% 20%;
+  --danger: 0 72% 55%;
+  --danger-light: 0 40% 20%;
+  --info: 199 89% 55%;
+  --info-light: 199 40% 20%;
+
+  /* Sidebar dark */
+  --sidebar: hsl(var(--brand-hue) 10% 8%);
+  --sidebar-foreground: hsl(var(--brand-hue) 5% 90%);
+  --sidebar-primary: hsl(var(--brand-hue) var(--brand-saturation) 60%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(var(--brand-hue) 10% 15%);
+  --sidebar-accent-foreground: hsl(var(--brand-hue) 5% 90%);
+  --sidebar-border: hsl(var(--brand-hue) 10% 18%);
+  --sidebar-ring: hsl(var(--brand-hue) var(--brand-saturation) 55%);
+}
+
+/* Theme mapping for Tailwind */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Rubik', ui-sans-serif, system-ui, sans-serif;
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
 
-  @keyframes accordion-down {
-    from {
-      height: 0
-    }
-
-    to {
-      height: var(--radix-accordion-content-height)
-    }
-  }
-
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height)
-    }
-
-    to {
-      height: 0
-    }
-  }
-}
-
-/*
-  =====================================================
-  INVENTORY POS - COLOR CONFIGURATION
-  =====================================================
-  
-  TO CHANGE COLORS: Edit the values below.
-  All components will automatically update.
-  
-  Palette: Modern Professional (Slate + Amber/Teal)
-  - Primary: Deep Stone (professional, premium)
-  - Accent: Amber (warm, inviting - replaces green)
-  - Success: Teal (professional alternative to green)
-  - Warning: Amber
-  - Error: Rose
-  - Info: Sky blue
-  =====================================================
-*/
-
-:root {
-  /* === SEMANTIC COLORS (Easy to change) === */
-  --color-success: #0D9488;
-  /* Teal 600 - positive trends */
-  --color-warning: #D97706;
-  /* Amber 600 - warnings */
-  /* --color-warning: #A9B5DF; -- Reverted this as it might be a mistake, warning should be distinct */
-  --color-error: #E11D48;
-  /* Rose 600 - errors */
-  --color-info: #0284C7;
-  /* Sky 600 - information */
-
-  /* === CORE THEME === */
-  --background: #FAFAF9;
-  /* Stone 50 - warm white */
-  --foreground: #0C0A09;
-  /* Stone 950 */
-
-  --card: #FFFFFF;
-  --card-foreground: #0C0A09;
-
-  --popover: #FFFFFF;
-  --popover-foreground: #0C0A09;
-
-  /* Primary: Periwinkle (User Requested: A9B5DF) - Replaces Black */
-  --primary: #8DA2DE;
-  /* Using a slightly darker shade of A9B5DF (which is very light) for better button visibility, or stick to user's A9B5DF? 
-     User said "A9B5DF in light mode". I will use that but ensure text is dark. */
-  --primary: #A9B5DF;
-  --primary-foreground: #1C1917;
-  /* Dark text for light background */
-
-  /* Secondary: Light stone */
-  --secondary: #F5F5F4;
-  /* Stone 100 */
-  --secondary-foreground: #1C1917;
-
-  --muted: #F5F5F4;
-  /* Stone 100 */
-  --muted-foreground: #78716C;
-  /* Stone 500 */
-
-  /* Accent: Matches Primary for consistency in this theme */
-  --accent: #A9B5DF;
-  --accent-foreground: #1C1917;
-
-  --destructive: #E11D48;
-  /* Rose 600 */
-  --destructive-foreground: #FFFFFF;
-
-  --border: #E7E5E4;
-  /* Stone 200 */
-  --input: #E7E5E4;
-  --ring: #A9B5DF;
-  /* Ring matches primary */
-
-  --radius: 1rem;
-
-  /* Chart colors - updated */
-  --chart-1: #A9B5DF;
-  /* Primary */
-  --chart-2: #0284C7;
-  /* Sky */
-  --chart-3: #D97706;
-  /* Amber */
-  --chart-4: #7C3AED;
-  /* Violet */
-  --chart-5: #DC2626;
-  /* Red */
-
-  /* Sidebar */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #44403C;
-  --sidebar-primary: #A9B5DF;
-  --sidebar-primary-foreground: #1C1917;
-  --sidebar-accent: #F5F5F4;
-  --sidebar-accent-foreground: #1C1917;
-  --sidebar-border: #E7E5E4;
-  --sidebar-ring: #A9B5DF;
-}
-
-.dark {
-  /* === SEMANTIC COLORS (Dark mode) === */
-  --color-success: #14B8A6;
-  /* Teal 500 */
-  --color-warning: #F59E0B;
-  /* Amber 500 */
-  --color-error: #FB7185;
-  /* Rose 400 */
-  --color-info: #38BDF8;
-  /* Sky 400 */
-
-  /* === CORE THEME === */
-  --background: #0C0A09;
-  /* Stone 950 */
-  --foreground: #FAFAF9;
-
-  --card: #1C1917;
-  /* Stone 900 */
-  --card-foreground: #FAFAF9;
-
-  --popover: #1C1917;
-  --popover-foreground: #FAFAF9;
-
-  /* Primary: Purple (User Requested: 7886C7) - Replaces White/Black */
-  --primary: #7886C7;
-  --primary-foreground: #FAFAF9;
-  /* Light text for dark background */
-
-  --secondary: #292524;
-  /* Stone 800 */
-  --secondary-foreground: #FAFAF9;
-
-  --muted: #292524;
-  --muted-foreground: #A8A29E;
-  /* Stone 400 */
-
-  /* Accent: Matches Primary */
-  --accent: #7886C7;
-  /* Dark mode accent */
-  --accent-foreground: #FAFAF9;
-
-  --destructive: #FB7185;
-  /* Rose 400 */
-  --destructive-foreground: #1C1917;
-
-  --border: #292524;
-  --input: #292524;
-  --ring: #7886C7;
-
-  --chart-1: #7886C7;
-  /* Primary Dark */
-  --chart-2: #38BDF8;
-  /* Sky 400 */
-  --chart-3: #FBBF24;
-  /* Amber 400 */
-  --chart-4: #A78BFA;
-  /* Violet 400 */
-  --chart-5: #F87171;
-  /* Red 400 */
-
-  --sidebar: #1C1917;
-  --sidebar-foreground: #D6D3D1;
-  --sidebar-primary: #7886C7;
-  --sidebar-primary-foreground: #FAFAF9;
-  --sidebar-accent: #292524;
-  --sidebar-accent-foreground: #FAFAF9;
-  --sidebar-border: #292524;
-  --sidebar-ring: #7886C7;
+  /* Custom semantic colors */
+  --color-success: hsl(var(--success));
+  --color-success-light: hsl(var(--success-light));
+  --color-warning: hsl(var(--warning));
+  --color-warning-light: hsl(var(--warning-light));
+  --color-danger: hsl(var(--danger));
+  --color-danger-light: hsl(var(--danger-light));
+  --color-info: hsl(var(--info));
+  --color-info-light: hsl(var(--info-light));
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: var(--font-heading);
+    @apply bg-background text-foreground;
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Custom scrollbar */
+/* ============================================
+   SEMANTIC COLOR UTILITIES
+   These use your defined brand/accent colors
+   ============================================ */
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+
+  /* Status backgrounds */
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+
+  .bg-success-light {
+    background-color: hsl(var(--success-light));
+  }
+
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+
+  .bg-warning-light {
+    background-color: hsl(var(--warning-light));
+  }
+
+  .bg-danger {
+    background-color: hsl(var(--danger));
+  }
+
+  .bg-danger-light {
+    background-color: hsl(var(--danger-light));
+  }
+
+  .bg-info {
+    background-color: hsl(var(--info));
+  }
+
+  .bg-info-light {
+    background-color: hsl(var(--info-light));
+  }
+
+  /* Status text */
+  .text-success {
+    color: hsl(var(--success));
+  }
+
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+
+  .text-danger {
+    color: hsl(var(--danger));
+  }
+
+  .text-info {
+    color: hsl(var(--info));
+  }
+
+  /* Accent backgrounds */
+  .bg-accent-teal {
+    background-color: hsl(var(--accent-teal));
+  }
+
+  .bg-accent-teal-light {
+    background-color: hsl(var(--accent-teal-light));
+  }
+
+  .bg-accent-amber {
+    background-color: hsl(var(--accent-amber));
+  }
+
+  .bg-accent-amber-light {
+    background-color: hsl(var(--accent-amber-light));
+  }
+
+  .bg-accent-sky {
+    background-color: hsl(var(--accent-sky));
+  }
+
+  .bg-accent-sky-light {
+    background-color: hsl(var(--accent-sky-light));
+  }
+
+  .bg-accent-emerald {
+    background-color: hsl(var(--accent-emerald));
+  }
+
+  .bg-accent-emerald-light {
+    background-color: hsl(var(--accent-emerald-light));
+  }
+
+  .bg-accent-rose {
+    background-color: hsl(var(--accent-rose));
+  }
+
+  .bg-accent-rose-light {
+    background-color: hsl(var(--accent-rose-light));
+  }
+
+  .bg-accent-violet {
+    background-color: hsl(var(--accent-violet));
+  }
+
+  .bg-accent-violet-light {
+    background-color: hsl(var(--accent-violet-light));
+  }
+
+  /* Accent text */
+  .text-accent-teal {
+    color: hsl(var(--accent-teal));
+  }
+
+  .text-accent-amber {
+    color: hsl(var(--accent-amber));
+  }
+
+  .text-accent-sky {
+    color: hsl(var(--accent-sky));
+  }
+
+  .text-accent-emerald {
+    color: hsl(var(--accent-emerald));
+  }
+
+  .text-accent-rose {
+    color: hsl(var(--accent-rose));
+  }
+
+  .text-accent-violet {
+    color: hsl(var(--accent-violet));
+  }
+
+  /* Border colors */
+  .border-success {
+    border-color: hsl(var(--success));
+  }
+
+  .border-warning {
+    border-color: hsl(var(--warning));
+  }
+
+  .border-danger {
+    border-color: hsl(var(--danger));
+  }
+
+  .border-info {
+    border-color: hsl(var(--info));
+  }
+
+  /* Shadow glow effects using brand color */
+  .shadow-brand {
+    box-shadow: 0 10px 40px -10px hsl(var(--brand-hue) var(--brand-saturation) 30% / 0.3);
+  }
+
+  .shadow-success {
+    box-shadow: 0 10px 40px -10px hsl(var(--success) / 0.3);
+  }
+
+  .shadow-warning {
+    box-shadow: 0 10px 40px -10px hsl(var(--warning) / 0.3);
+  }
+
+  .shadow-danger {
+    box-shadow: 0 10px 40px -10px hsl(var(--danger) / 0.3);
+  }
+
+  .shadow-info {
+    box-shadow: 0 10px 40px -10px hsl(var(--info) / 0.3);
   }
 }
 
-/* Floating cards with soft shadows */
-@layer utilities {
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+@layer components {
+
+  /* Floating card effect with subtle shadow */
   .card-float {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-      0 10px 15px -3px rgba(0, 0, 0, 0.05),
-      0 20px 25px -5px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    background: var(--card);
   }
 
-  .card-float-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  .dark .card-float {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
   }
 
-  .card-float-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08),
-      0 20px 25px -5px rgba(0, 0, 0, 0.05),
-      0 25px 50px -12px rgba(0, 0, 0, 0.05);
-  }
-}
-
-/* Pill buttons */
-@layer utilities {
+  /* Pill-shaped buttons */
   .btn-pill {
-    border-radius: 9999px;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-}
-
-/* Glass effect */
-@layer utilities {
-  .glass {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    @apply rounded-full px-6;
   }
 
-  .dark .glass {
-    background: rgba(28, 25, 23, 0.8);
+  /* Heading font weight */
+  .font-heading {
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
-}
 
-/* Focus improvements */
-@layer base {
-  :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  /* Status badges */
+  .badge-success {
+    @apply bg-success-light text-success;
   }
-}
 
-/* Selection color - uses accent */
-::selection {
-  background-color: rgba(217, 119, 6, 0.2);
-  /* Amber with opacity */
-  color: inherit;
+  .badge-warning {
+    @apply bg-warning-light text-warning;
+  }
+
+  .badge-danger {
+    @apply bg-danger-light text-danger;
+  }
+
+  .badge-info {
+    @apply bg-info-light text-info;
+  }
+
+  /* Stat cards with accent colors */
+  .stat-card-teal {
+    --stat-color: var(--accent-teal);
+    --stat-color-light: var(--accent-teal-light);
+  }
+
+  .stat-card-amber {
+    --stat-color: var(--accent-amber);
+    --stat-color-light: var(--accent-amber-light);
+  }
+
+  .stat-card-sky {
+    --stat-color: var(--accent-sky);
+    --stat-color-light: var(--accent-sky-light);
+  }
+
+  .stat-card-emerald {
+    --stat-color: var(--accent-emerald);
+    --stat-color-light: var(--accent-emerald-light);
+  }
+
+  .stat-card-rose {
+    --stat-color: var(--accent-rose);
+    --stat-color-light: var(--accent-rose-light);
+  }
+
+  .stat-card-violet {
+    --stat-color: var(--accent-violet);
+    --stat-color-light: var(--accent-violet-light);
+  }
 }

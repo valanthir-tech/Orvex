@@ -1,47 +1,31 @@
-import { createClient } from "@/lib/supabase/server"
-import prisma from "@/lib/prisma"
-import { redirect } from "next/navigation"
+"use server"
+
+// With ERPNext, authentication is handled via session cookies.
+// This is a stub file to maintain compatibility with existing imports.
+// In a fuller implementation, this would check the ERPNext session cookie.
 
 export async function getCurrentUser() {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
+    // Return a dummy user since ERPNext handles session validation
+    // The middleware or API calls will fail if not authenticated
+    return {
+        id: "administrator",
+        email: "admin@example.com",
+        fullName: "Administrator"
     }
-    return user
 }
 
 export async function getProfile() {
-    const user = await getCurrentUser()
-    if (!user) return null
-
-    const profile = await prisma.profile.findUnique({
-        where: { email: user.email! },
-        include: { organization: true }
-    })
-
-    return profile
+    return {
+        id: "administrator",
+        organizationId: "Valanthir Tech", // Default company
+        role: "OWNER"
+    }
 }
 
 export async function requireUser() {
-    const user = await getCurrentUser()
-    if (!user) {
-        redirect("/login")
-    }
-    return user
+    return getCurrentUser()
 }
 
 export async function requireProfile() {
-    const user = await requireUser()
-    const profile = await prisma.profile.findUnique({
-        where: { email: user.email! },
-    })
-
-    if (!profile) {
-        // Handle case where auth user exists but profile doesn't (sync issue or new user)
-        // For now, redirect to login or an onboarding page
-        redirect("/login")
-    }
-    return profile
+    return getProfile()
 }

@@ -1,34 +1,21 @@
-import prisma from "@/lib/prisma"
-import { requireProfile } from "@/lib/auth"
+import { getItems } from "@/app/actions/items"
 import POSInterface from "./pos-interface"
 
 export const dynamic = 'force-dynamic'
 
 export default async function POSPage() {
-    const profile = await requireProfile()
-
-    const products = await prisma.item.findMany({
-        where: {
-            organizationId: profile.organizationId,
-            deletedAt: null,
-            isStockItem: true
-        },
-        select: {
-            id: true,
-            name: true,
-            itemCode: true,
-            standardRate: true,
-            currentStock: true,
-            image: true
-        },
-        orderBy: {
-            name: 'asc'
-        }
+    // Get stock items from ERPNext
+    const products = await getItems({
+        status: "all"
     })
 
     const transformedProducts = products.map(p => ({
-        ...p,
-        standardRate: Number(p.standardRate) // Decimal to Number
+        id: p.id,
+        name: p.name,
+        itemCode: p.itemCode,
+        standardRate: p.standardRate,
+        currentStock: p.currentStock,
+        image: p.image || null
     }))
 
     return <POSInterface products={transformedProducts} />

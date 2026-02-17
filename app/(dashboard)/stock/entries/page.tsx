@@ -1,6 +1,5 @@
+import { getStockEntries } from "@/app/actions/stock-entry"
 import Link from "next/link"
-import prisma from "@/lib/prisma"
-import { requireProfile } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import {
     Table,
@@ -10,43 +9,21 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Plus, FolderInput, FolderOutput, ArrowRightLeft, RefreshCw } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Plus, FolderInput, FolderOutput, ArrowRightLeft, RefreshCw, FileText } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
 
 export default async function StockEntriesPage() {
-    const profile = await requireProfile()
-
-    const entries = await prisma.stockEntry.findMany({
-        where: {
-            organizationId: profile.organizationId,
-        },
-        include: {
-            createdBy: {
-                select: { fullName: true }
-            },
-            _count: {
-                select: { items: true }
-            }
-        },
-        orderBy: {
-            createdAt: 'desc',
-        },
-        take: 50
-    })
+    const entries = await getStockEntries()
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case 'MATERIAL_RECEIPT': return <FolderInput className="h-4 w-4 text-emerald-500" />
-            case 'MATERIAL_ISSUE': return <FolderOutput className="h-4 w-4 text-rose-500" />
-            case 'MATERIAL_TRANSFER': return <ArrowRightLeft className="h-4 w-4 text-blue-500" />
-            default: return <RefreshCw className="h-4 w-4 text-amber-500" />
+            case 'Material Receipt': return <FolderInput className="h-4 w-4 text-emerald-500" />
+            case 'Material Issue': return <FolderOutput className="h-4 w-4 text-rose-500" />
+            case 'Material Transfer': return <ArrowRightLeft className="h-4 w-4 text-blue-500" />
+            case 'Stock Reconciliation': return <RefreshCw className="h-4 w-4 text-amber-500" />
+            default: return <FileText className="h-4 w-4 text-gray-500" />
         }
-    }
-
-    const getTypeLabel = (type: string) => {
-        return type.replace(/_/g, ' ')
     }
 
     return (
@@ -72,8 +49,8 @@ export default async function StockEntriesPage() {
                             <TableHead>Type</TableHead>
                             <TableHead>Reference</TableHead>
                             <TableHead>Date</TableHead>
-                            <TableHead>Created By</TableHead>
-                            <TableHead className="text-right">Items</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Total Amount</TableHead>
                             <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -90,15 +67,15 @@ export default async function StockEntriesPage() {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             {getTypeIcon(entry.type)}
-                                            <span className="text-xs font-medium">{getTypeLabel(entry.type)}</span>
+                                            <span className="text-xs font-medium">{entry.type}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="font-mono text-xs">{entry.name || entry.id.slice(0, 8)}</TableCell>
+                                    <TableCell className="font-mono text-xs">{entry.name}</TableCell>
                                     <TableCell>
-                                        {new Date(entry.postingDate).toLocaleDateString()}
+                                        {entry.date.toLocaleDateString()}
                                     </TableCell>
-                                    <TableCell>{entry.createdBy.fullName}</TableCell>
-                                    <TableCell className="text-right">{entry._count.items}</TableCell>
+                                    <TableCell>{entry.status}</TableCell>
+                                    <TableCell className="text-right">{entry.totalAmount}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="sm" asChild>
                                             <Link href={`/stock/entries/${entry.id}`}>View</Link>
