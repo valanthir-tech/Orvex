@@ -3,13 +3,20 @@
  * 
  * This module provides a client for interacting with the ERPNext/Frappe REST API.
  * It handles authentication, request formatting, and response parsing.
+ * 
+ * REFACTORED FOR MULTI-TENANCY
  */
 
-// Default to local development instance
-const ERPNEXT_URL = process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080';
+import pLimit from 'p-limit';
+
+// Rate limiting: 5 concurrent requests shared globally for this instance
+// In a real serverless environment, this limit is per-lambda. 
+// For better global rate limiting, use Redis. For MVP, this protects the single node process.
+const limit = pLimit(5);
 
 interface FrappeResponse<T = unknown> {
     message?: T;
+    data?: T; // Sometimes Frappe returns { data: ... } instead of message
     exc?: string;
     exc_type?: string;
     _server_messages?: string;
@@ -19,121 +26,81 @@ interface FrappeListResponse<T> {
     data: T[];
 }
 
-interface AuthCredentials {
-    usr: string;
-    pwd: string;
+export interface ERPNextConfig {
+    url: string;
+    apiKey: string;
+    apiSecret: string;
 }
 
-class ERPNextClient {
-    private baseUrl: string;
-    private sessionCookie: string | null = null;
+export class ERPNextClient {
+    private config: ERPNextConfig;
 
-    constructor(baseUrl: string = ERPNEXT_URL) {
-        this.baseUrl = baseUrl;
+    constructor(config: ERPNextConfig) {
+        this.config = config;
     }
 
-    /**
-     * Login to ERPNext and store session cookie
-     */
-    async login(credentials: AuthCredentials): Promise<boolean> {
-        try {
-            const response = await fetch(`${this.baseUrl}/api/method/login`, {
-                method: 'POST',
-                headers: {
+    private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T | null> {
+        return limit(async () => {
+            try {
+                // Ensure no trailing slash in URL and leading slash in endpoint
+                const baseUrl = this.config.url.replace(/\/$/, '');
+                const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+                
+                const url = `${baseUrl}${path}`;
+                
+                const headers: HeadersInit = {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(credentials),
-                credentials: 'include',
-            });
+                    'Authorization': `token ${this.config.apiKey}:${this.config.apiSecret}`
+                };
 
-            if (!response.ok) {
-                console.error('Login failed:', response.statusText);
-                return false;
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        ...headers,
+                        ...options.headers,
+                    },
+                    cache: 'no-store' // Important for transactional data
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`ERPNext Error [${response.status}]:`, errorText);
+                    return null;
+                }
+
+                const data: FrappeResponse<T> = await response.json();
+                
+                // Normalizing Frappe's inconsistent responses
+                if (data.data) return data.data;
+                if (data.message) return data.message;
+                
+                // Sometimes it just returns the object directly (rare but happens)
+                return data as T;
+
+            } catch (error) {
+                console.error('ERPNext Network Error:', error);
+                return null;
             }
-
-            // Store session cookie from response
-            const setCookie = response.headers.get('set-cookie');
-            if (setCookie) {
-                this.sessionCookie = setCookie;
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Login error:', error);
-            return false;
-        }
+        });
     }
 
     /**
      * Make authenticated GET request
      */
     async get<T>(endpoint: string, params?: Record<string, string>): Promise<T | null> {
-        try {
-            const url = new URL(`${this.baseUrl}${endpoint}`);
-            if (params) {
-                Object.entries(params).forEach(([key, value]) => {
-                    url.searchParams.append(key, value);
-                });
-            }
-
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-            };
-
-            if (this.sessionCookie) {
-                headers['Cookie'] = this.sessionCookie;
-            }
-
-            const response = await fetch(url.toString(), {
-                method: 'GET',
-                headers,
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                console.error('GET request failed:', response.statusText);
-                return null;
-            }
-
-            const data: FrappeResponse<T> = await response.json();
-            return data.message ?? null;
-        } catch (error) {
-            console.error('GET error:', error);
-            return null;
-        }
+        const queryParams = new URLSearchParams(params).toString();
+        const url = queryParams ? `${endpoint}?${queryParams}` : endpoint;
+        return this.fetch<T>(url, { method: 'GET' });
     }
 
     /**
      * Make authenticated POST request
      */
     async post<T>(endpoint: string, body?: unknown): Promise<T | null> {
-        try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-            };
-
-            if (this.sessionCookie) {
-                headers['Cookie'] = this.sessionCookie;
-            }
-
-            const response = await fetch(`${this.baseUrl}${endpoint}`, {
-                method: 'POST',
-                headers,
-                body: body ? JSON.stringify(body) : undefined,
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                console.error('POST request failed:', response.statusText);
-                return null;
-            }
-
-            const data: FrappeResponse<T> = await response.json();
-            return data.message ?? null;
-        } catch (error) {
-            console.error('POST error:', error);
-            return null;
-        }
+        return this.fetch<T>(endpoint, {
+            method: 'POST',
+            body: body ? JSON.stringify(body) : undefined,
+        });
     }
 
     // ============================================================
@@ -147,41 +114,25 @@ class ERPNextClient {
         doctype: string,
         options?: {
             fields?: string[];
-            filters?: Record<string, unknown>;
+            filters?: any;
             limit?: number;
             offset?: number;
             orderBy?: string;
         }
     ): Promise<T[]> {
-        try {
-            const params: Record<string, string> = {};
+        const params: Record<string, string> = {};
 
-            if (options?.fields) {
-                params.fields = JSON.stringify(options.fields);
-            }
-            if (options?.filters) {
-                params.filters = JSON.stringify(options.filters);
-            }
-            if (options?.limit) {
-                params.limit_page_length = options.limit.toString();
-            }
-            if (options?.offset) {
-                params.limit_start = options.offset.toString();
-            }
-            if (options?.orderBy) {
-                params.order_by = options.orderBy;
-            }
+        if (options?.fields) params.fields = JSON.stringify(options.fields);
+        if (options?.filters) params.filters = JSON.stringify(options.filters);
+        if (options?.limit) params.limit_page_length = options.limit.toString();
+        if (options?.offset) params.limit_start = options.offset.toString();
+        if (options?.orderBy) params.order_by = options.orderBy;
 
-            const result = await this.get<FrappeListResponse<T>>(
-                `/api/resource/${doctype}`,
-                params
-            );
-
-            return result?.data ?? [];
-        } catch (error) {
-            console.error(`getList error for ${doctype}:`, error);
-            return [];
-        }
+        // Frappe standard list endpoint
+        const result = await this.get<T | T[]>(`/api/resource/${doctype}`, params);
+        
+        // Ensure we always return an array
+        return Array.isArray(result) ? result : [];
     }
 
     /**
@@ -201,70 +152,21 @@ class ERPNextClient {
     /**
      * Update an existing document
      */
-    async updateDoc<T>(
-        doctype: string,
-        name: string,
-        updates: Partial<T>
-    ): Promise<T | null> {
-        try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-            };
-
-            if (this.sessionCookie) {
-                headers['Cookie'] = this.sessionCookie;
-            }
-
-            const response = await fetch(
-                `${this.baseUrl}/api/resource/${doctype}/${encodeURIComponent(name)}`,
-                {
-                    method: 'PUT',
-                    headers,
-                    body: JSON.stringify(updates),
-                    credentials: 'include',
-                }
-            );
-
-            if (!response.ok) {
-                console.error('PUT request failed:', response.statusText);
-                return null;
-            }
-
-            const data: FrappeResponse<T> = await response.json();
-            return data.message ?? null;
-        } catch (error) {
-            console.error('updateDoc error:', error);
-            return null;
-        }
+    async updateDoc<T>(doctype: string, name: string, updates: Partial<T>): Promise<T | null> {
+        return this.fetch<T>(`/api/resource/${doctype}/${encodeURIComponent(name)}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates)
+        });
     }
 
     /**
      * Delete a document
      */
     async deleteDoc(doctype: string, name: string): Promise<boolean> {
-        try {
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-            };
-
-            if (this.sessionCookie) {
-                headers['Cookie'] = this.sessionCookie;
-            }
-
-            const response = await fetch(
-                `${this.baseUrl}/api/resource/${doctype}/${encodeURIComponent(name)}`,
-                {
-                    method: 'DELETE',
-                    headers,
-                    credentials: 'include',
-                }
-            );
-
-            return response.ok;
-        } catch (error) {
-            console.error('deleteDoc error:', error);
-            return false;
-        }
+        const result = await this.fetch(`/api/resource/${doctype}/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        });
+        return result !== null;
     }
 
     // ============================================================
@@ -276,49 +178,39 @@ class ERPNextClient {
      */
     async getItems(filters?: Record<string, unknown>) {
         return this.getList<ERPNextItem>('Item', {
-            fields: ['name', 'item_name', 'item_code', 'standard_rate', 'stock_uom', 'item_group', 'image'],
+            fields: ['name', 'item_name', 'item_code', 'standard_rate', 'stock_uom', 'item_group', 'image', 'description'],
             filters,
+            limit: 0 // Get all
         });
     }
 
     /**
-     * Get Item by code
+     * Create a Sales Invoice
+     * IDEMPOTENCY: Pass a UUID field (custom_pos_uuid) to check for duplicates
      */
-    async getItem(itemCode: string) {
-        return this.getDoc<ERPNextItem>('Item', itemCode);
-    }
+    async createSalesInvoice(invoice: Partial<ERPNextSalesInvoice>, posUuid?: string) {
+        // 1. Check for Idempotency if UUID provided
+        if (posUuid) {
+            // Check if Invoice exists with this matching UUID
+            const existing = await this.getList<{ name: string }>('Sales Invoice', {
+                filters: [['custom_pos_uuid', '=', posUuid]],
+                limit: 1,
+                fields: ['name']
+            });
 
-    /**
-     * Get Item Groups (Categories)
-     */
-    async getItemGroups() {
-        return this.getList<ERPNextItemGroup>('Item Group', {
-            fields: ['name', 'parent_item_group', 'is_group'],
-        });
-    }
+            if (existing && existing.length > 0) {
+                console.log(`[Idempotency] Invoice for POS UUID ${posUuid} already exists: ${existing[0].name}`);
+                return { name: existing[0].name, status: 'already_synced' };
+            }
+        }
 
-    /**
-     * Create a Sales Invoice (for POS transactions)
-     */
-    async createSalesInvoice(invoice: Partial<ERPNextSalesInvoice>) {
+        // 2. Create if not exists
         return this.createDoc<ERPNextSalesInvoice>('Sales Invoice', {
             ...invoice,
+            custom_pos_uuid: posUuid, // Ensure we save this for future checks
             is_pos: 1,
             update_stock: 1,
         });
-    }
-
-    /**
-     * Get current stock for an item at a warehouse
-     */
-    async getStockBalance(itemCode: string, warehouse: string) {
-        return this.get<{ qty: number }>(
-            '/api/method/erpnext.stock.utils.get_stock_balance',
-            {
-                item_code: itemCode,
-                warehouse,
-            }
-        );
     }
 }
 
@@ -363,11 +255,7 @@ export interface ERPNextSalesInvoice {
     }[];
     total: number;
     grand_total: number;
+    paid_amount?: number;
+    change_amount?: number;
+    custom_pos_uuid?: string; // Critical for idempotency
 }
-
-// ============================================================
-// SINGLETON INSTANCE
-// ============================================================
-
-export const erpnext = new ERPNextClient();
-export default erpnext;

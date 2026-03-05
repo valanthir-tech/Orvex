@@ -63,20 +63,30 @@ export default function NewStockEntryPage({ items }: { items: any[] }) {
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-6">
+        <div className="max-w-4xl mx-auto space-y-8">
+            {/* Header */}
+            <div>
+                <h2 className="text-2xl font-bold font-heading tracking-tight">New Stock Entry</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                    Record material receipt, issue, or manual adjustment
+                </p>
+            </div>
+
             <form action={handleSubmit}>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>New Stock Entry</CardTitle>
-                        <CardDescription>
-                            Record material receipt, issue, or manual adjustment.
-                        </CardDescription>
+                <Card className="card-float border-0 rounded-2xl">
+                    <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 pb-4">
+                        <div>
+                            <CardTitle className="text-lg font-heading">Entry Details</CardTitle>
+                            <CardDescription>
+                                Add items and quantities for this stock entry
+                            </CardDescription>
+                        </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="pt-6 space-y-6">
                         <div className="md:w-1/3">
                             <Label>Entry Type</Label>
                             <Select name="type" value={type} onValueChange={setType}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-11 rounded-xl">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -87,24 +97,24 @@ export default function NewStockEntryPage({ items }: { items: any[] }) {
                             </Select>
                         </div>
 
-                        <div className="border rounded-md">
+                        <Card className="border border-border/50 rounded-xl overflow-hidden">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 border-b">
+                                <thead className="bg-muted/30 border-b">
                                     <tr>
-                                        <th className="p-3 font-medium">Item</th>
-                                        <th className="p-3 font-medium w-32">Quantity</th>
+                                        <th className="p-3 font-medium text-muted-foreground">Item</th>
+                                        <th className="p-3 font-medium text-muted-foreground w-32">Quantity</th>
                                         <th className="p-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {rows.map((row, index) => (
-                                        <tr key={index} className="border-b last:border-0 group">
+                                        <tr key={index} className="border-b last:border-0 group hover:bg-muted/30 transition-colors">
                                             <td className="p-3">
                                                 <Select
                                                     value={row.itemId}
                                                     onValueChange={(val) => updateRow(index, 'itemId', val)}
                                                 >
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="h-11 rounded-xl">
                                                         <SelectValue placeholder="Select Item" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -122,6 +132,7 @@ export default function NewStockEntryPage({ items }: { items: any[] }) {
                                                     min="1"
                                                     value={row.qty}
                                                     onChange={(e) => updateRow(index, 'qty', parseInt(e.target.value) || 0)}
+                                                    className="h-11 rounded-xl"
                                                 />
                                             </td>
                                             <td className="p-3">
@@ -129,7 +140,7 @@ export default function NewStockEntryPage({ items }: { items: any[] }) {
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-muted-foreground hover:text-red-500"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                                     onClick={() => removeRow(index)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -140,18 +151,18 @@ export default function NewStockEntryPage({ items }: { items: any[] }) {
                                 </tbody>
                             </table>
                             <div className="p-2 border-t bg-muted/10">
-                                <Button type="button" variant="ghost" size="sm" onClick={addRow}>
-                                    <Plus className="h-4 w-4 mr-2" /> Add Row
+                                <Button type="button" variant="ghost" size="sm" onClick={addRow} className="gap-2 rounded-lg">
+                                    <Plus className="h-4 w-4" /> Add Row
                                 </Button>
                             </div>
-                        </div>
+                        </Card>
 
-                        <div className="flex justify-end gap-4">
-                            <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                        <div className="flex justify-end gap-3 pt-2">
+                            <Button type="button" variant="outline" onClick={() => window.history.back()} className="rounded-xl h-11">
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isPending}>
-                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Button type="submit" disabled={isPending} className="rounded-xl h-11 gap-2">
+                                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                                 Submit Entry
                             </Button>
                         </div>

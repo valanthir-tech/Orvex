@@ -3,49 +3,78 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Box, Loader2 } from "lucide-react"
+
+const loginSchema = z.object({
+    email: z
+        .string()
+        .min(1, "Email is required")
+        .email("Please enter a valid email"),
+    password: z
+        .string()
+        .min(6, "Password must be at least 6 characters"),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault()
+    const form = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+    })
+
+    async function onSubmit(values: LoginFormValues) {
         setIsLoading(true)
-        setError(null)
+        const supabase = createSupabaseBrowserClient()
 
-        const formData = new FormData(event.currentTarget)
-        const email = formData.get("email") as string
-        const password = formData.get("password") as string
+        const { error } = await supabase.auth.signInWithPassword({
+            email: values.email,
+            password: values.password,
+        })
 
-        // For now, we bypass real ERPNext authentication in the UI
-        // In a real implementation, we would call an API route to proxy the login
-        // to ERPNext and set a session cookie.
-
-        // Mock authentication for development
-        if (email && password) {
-            // Simulate network delay
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            // Check against demo credentials (admin/admin) or allow any for dev
-            if (password.length > 0) {
-                // Set a mock cookie or local storage if needed
-                document.cookie = "erpnext_session=mock-session; path=/";
-                router.push("/")
-                router.refresh()
-            } else {
-                setError("Invalid credentials")
-                setIsLoading(false)
-            }
-        } else {
-            setError("Please fill in all fields")
+        if (error) {
+            form.setError("root", { message: error.message })
             setIsLoading(false)
+            return
         }
+
+        router.push("/dashboard")
+        router.refresh()
     }
 
     return (
@@ -56,64 +85,92 @@ export default function LoginPage() {
                 </div>
                 <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
                 <p className="text-balance text-sm text-muted-foreground">
-                    Login to your ERPNext integrated POS
+                    Login to your Inventory & POS system
                 </p>
             </div>
-            <Card>
+            <Card className="border-0 shadow-lg rounded-2xl">
                 <CardHeader>
-                    <CardTitle>Login</CardTitle>
+                    <CardTitle>Welcome back</CardTitle>
                     <CardDescription>
-                        Use your ERPNext credentials
+                        Enter your credentials to continue
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit} className="grid gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email / Username</Label>
-                            <Input
-                                id="email"
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="grid gap-4"
+                        >
+                            <FormField
+                                control={form.control}
                                 name="email"
-                                type="text"
-                                placeholder="Administrator"
-                                defaultValue="Administrator"
-                                required
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="name@example.com"
+                                                type="email"
+                                                autoComplete="email"
+                                                disabled={isLoading}
+                                                className="h-11"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
-                        </div>
-                        <div className="grid gap-2">
-                            <div className="flex items-center">
-                                <Label htmlFor="password">Password</Label>
-                            </div>
-                            <Input
-                                id="password"
+                            <FormField
+                                control={form.control}
                                 name="password"
-                                type="password"
-                                required
-                                defaultValue="admin"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                placeholder="••••••••"
+                                                autoComplete="current-password"
+                                                disabled={isLoading}
+                                                className="h-11"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
-                        </div>
-                        {error && (
-                            <div className="text-sm text-destructive font-medium">
-                                {error}
-                            </div>
-                        )}
-                        <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Login
-                        </Button>
-                    </form>
+                            {form.formState.errors.root && (
+                                <p className="text-sm font-medium text-destructive mt-1">
+                                    {form.formState.errors.root.message}
+                                </p>
+                            )}
+                            <Button
+                                type="submit"
+                                className="w-full h-11 mt-2"
+                                disabled={isLoading}
+                            >
+                                {isLoading && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                Sign In
+                            </Button>
+                        </form>
+                    </Form>
                 </CardContent>
                 <CardFooter className="flex justify-center flex-col gap-2">
-                    <p className="text-xs text-muted-foreground text-center">
-                        Default credentials: Administrator / admin
-                    </p>
                     <p className="text-sm text-muted-foreground">
                         Don&apos;t have an account?{" "}
-                        <Link href="/signup" className="underline underline-offset-4 hover:text-primary">
+                        <Link
+                            href="/signup"
+                            className="underline underline-offset-4 hover:text-primary"
+                        >
                             Sign up
                         </Link>
                     </p>
                 </CardFooter>
             </Card>
-        </div>
+        </div >
     )
 }

@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import SyncWorker from "@/components/sync/SyncWorker"
 import { Toaster } from "@/components/ui/sonner"
+import { CookieConsent } from "@/components/legal/cookie-consent"
 import "./globals.css"
 
 const inter = Inter({
@@ -43,6 +44,7 @@ export default function RootLayout({
           <SyncWorker />
           {children}
           <Toaster />
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

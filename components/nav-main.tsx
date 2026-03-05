@@ -8,6 +8,14 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
@@ -17,6 +25,7 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavMain({
@@ -33,21 +42,54 @@ export function NavMain({
         }[]
     }[]
 }) {
+    const { state } = useSidebar()
+
     return (
         <SidebarGroup>
             <SidebarGroupLabel>Menu</SidebarGroupLabel>
             <SidebarMenu>
-                {items.map((item) => (
-                    <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip={item.title}>
-                                <a href={item.url}>
-                                    <item.icon />
-                                    <span>{item.title}</span>
-                                </a>
-                            </SidebarMenuButton>
-                            {item.items?.length ? (
-                                <>
+                {items.map((item) =>
+                    item.items?.length ? (
+                        state === "collapsed" ? (
+                            // Collapsed: show floating dropdown on icon click
+                            <SidebarMenuItem key={item.title}>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <SidebarMenuButton tooltip={item.title}>
+                                            <item.icon />
+                                            <span>{item.title}</span>
+                                        </SidebarMenuButton>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        side="right"
+                                        align="start"
+                                        sideOffset={4}
+                                        className="min-w-[180px] rounded-xl"
+                                    >
+                                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                            {item.title}
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {item.items.map((subItem) => (
+                                            <DropdownMenuItem key={subItem.title} asChild>
+                                                <a href={subItem.url} className="cursor-pointer">
+                                                    {subItem.title}
+                                                </a>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </SidebarMenuItem>
+                        ) : (
+                            // Expanded: show collapsible submenu
+                            <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild tooltip={item.title}>
+                                        <a href={item.url}>
+                                            <item.icon />
+                                            <span>{item.title}</span>
+                                        </a>
+                                    </SidebarMenuButton>
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuAction className="data-[state=open]:rotate-90">
                                             <ChevronRight />
@@ -56,7 +98,7 @@ export function NavMain({
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {item.items?.map((subItem) => (
+                                            {item.items.map((subItem) => (
                                                 <SidebarMenuSubItem key={subItem.title}>
                                                     <SidebarMenuSubButton asChild>
                                                         <a href={subItem.url}>
@@ -67,11 +109,21 @@ export function NavMain({
                                             ))}
                                         </SidebarMenuSub>
                                     </CollapsibleContent>
-                                </>
-                            ) : null}
+                                </SidebarMenuItem>
+                            </Collapsible>
+                        )
+                    ) : (
+                        // No sub-items: plain link
+                        <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton asChild tooltip={item.title}>
+                                <a href={item.url}>
+                                    <item.icon />
+                                    <span>{item.title}</span>
+                                </a>
+                            </SidebarMenuButton>
                         </SidebarMenuItem>
-                    </Collapsible>
-                ))}
+                    )
+                )}
             </SidebarMenu>
         </SidebarGroup>
     )

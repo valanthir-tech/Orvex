@@ -1,26 +1,20 @@
-import { redirect } from "next/navigation"
-import { getProfile, getCurrentUser } from "@/lib/auth"
+import { cookies } from "next/headers"
 import DashboardLayoutClient from "./dashboard-layout-client"
+import { getUserProfile } from "@/lib/user"
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    // 1. Check Auth (Middleware handles this but good to be safe)
-    const user = await getCurrentUser()
-    if (!user) {
-        redirect("/login")
-    }
+    const cookieStore = await cookies()
+    const sidebarCookie = cookieStore.get("sidebar_state")
+    const defaultOpen = sidebarCookie ? sidebarCookie.value === "true" : true
 
-    // 2. Check Profile/Organization
-    const profile = await getProfile()
-    if (!profile) {
-        redirect("/setup")
-    }
+    const profile = await getUserProfile()
 
     return (
-        <DashboardLayoutClient>
+        <DashboardLayoutClient defaultOpen={defaultOpen} userProfile={profile}>
             {children}
         </DashboardLayoutClient>
     )

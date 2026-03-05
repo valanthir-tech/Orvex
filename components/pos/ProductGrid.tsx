@@ -12,16 +12,11 @@ const seedMockData = async () => {
     const count = await db.items.count();
     if (count === 0) {
         const items: Item[] = [
-            { id: "1", name: "Premium Hoodie", price: 3500, stock: 50, isSynced: true, updatedAt: new Date() },
-            { id: "2", name: "Slim Fit Chinos", price: 2500, stock: 40, isSynced: true, updatedAt: new Date() },
-            { id: "3", name: "Casual Polo Shirt", price: 1800, stock: 60, isSynced: true, updatedAt: new Date() },
-            { id: "4", name: "Winter Jacket", price: 5500, stock: 20, isSynced: true, updatedAt: new Date() },
-            { id: "5", name: "Cotton T-Shirt", price: 900, stock: 100, isSynced: true, updatedAt: new Date() },
-            { id: "6", name: "Denim Jeans", price: 2200, stock: 35, isSynced: true, updatedAt: new Date() },
-            { id: "7", name: "Running Shoes", price: 4500, stock: 15, isSynced: true, updatedAt: new Date() },
-            { id: "8", name: "Baseball Cap", price: 500, stock: 80, isSynced: true, updatedAt: new Date() },
-            { id: "9", name: "Leather Belt", price: 1200, stock: 45, isSynced: true, updatedAt: new Date() },
-            { id: "10", name: "Ankle Socks (3pk)", price: 450, stock: 150, isSynced: true, updatedAt: new Date() },
+            { id: "1", name: "Premium Hoodie", sku: "HOD-001", price: 3500, cost: 1800, stock: 50, minStock: 10, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
+            { id: "2", name: "Slim Fit Chinos", sku: "CHI-002", price: 2500, cost: 1200, stock: 40, minStock: 8, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
+            { id: "3", name: "Casual Polo Shirt", sku: "POL-003", price: 1800, cost: 800, stock: 60, minStock: 15, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
+            { id: "4", name: "Winter Jacket", sku: "JAC-004", price: 5500, cost: 3000, stock: 20, minStock: 5, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
+            { id: "5", name: "Cotton T-Shirt", sku: "TSH-005", price: 900, cost: 350, stock: 100, minStock: 20, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
         ];
         await db.items.bulkAdd(items);
     }

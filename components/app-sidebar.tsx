@@ -9,9 +9,11 @@ import {
     Home,
     LayoutDashboard,
     LifeBuoy,
+    Package,
     Send,
     Settings2,
     ShoppingCart,
+    Warehouse,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -28,12 +30,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const data = {
-    user: {
-        name: "Admin",
-        email: "admin@valanthir.com",
-        avatar: "/avatars/shadcn.jpg",
-    },
+const navigationBlocks = {
     navMain: [
         {
             title: "Dashboard",
@@ -47,7 +44,17 @@ const data = {
             icon: ShoppingCart,
         },
         {
+            title: "Products",
+            url: "/products",
+            icon: Package,
+        },
+        {
             title: "Inventory",
+            url: "/inventory",
+            icon: Warehouse,
+        },
+        {
+            title: "Stock Management",
             url: "#",
             icon: Box,
             items: [
@@ -70,6 +77,11 @@ const data = {
             url: "/reports",
             icon: BarChart3,
         },
+        {
+            title: "Settings",
+            url: "/settings",
+            icon: Settings2,
+        },
     ],
     navSecondary: [
         {
@@ -82,15 +94,12 @@ const data = {
             url: "#",
             icon: Send,
         },
-    ],
-    projects: [
-        /* Can add quick links here if needed, leaving empty for now or using placeholders */
-    ],
+    ]
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ userProfile, ...props }: React.ComponentProps<typeof Sidebar> & { userProfile?: { name: string, email: string, avatar: string } }) {
     return (
-        <Sidebar variant="inset" {...props}>
+        <Sidebar variant="inset" collapsible="icon" {...props}>
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -109,12 +118,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
-                {/* <NavProjects projects={data.projects} /> */}
-                <NavSecondary items={data.navSecondary} className="mt-auto" />
+                <NavMain items={navigationBlocks.navMain} />
+                <NavSecondary items={navigationBlocks.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                {userProfile && <NavUser user={userProfile} />}
             </SidebarFooter>
         </Sidebar>
     )

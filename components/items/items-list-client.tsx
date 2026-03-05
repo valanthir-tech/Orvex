@@ -159,7 +159,7 @@ export function ItemsListClient({ items, categories }: ItemsListClientProps) {
             </div>
 
             {/* Stats Cards - Dashboard Style with Colored Glow */}
-            <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Total Items - Sky */}
                 <Card
                     className={`${cardStyles.sky.card} cursor-pointer ${statusFilter === 'all' ? cardStyles.sky.ring : ''}`}
@@ -191,7 +191,7 @@ export function ItemsListClient({ items, categories }: ItemsListClientProps) {
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
-                        <div className="text-3xl font-bold font-heading text-emerald-600 dark:text-emerald-400">{stats.inStock}</div>
+                        <div className="text-3xl font-bold font-heading">{stats.inStock}</div>
                         <p className="text-xs text-muted-foreground mt-1">items available</p>
                     </CardContent>
                 </Card>
@@ -209,7 +209,7 @@ export function ItemsListClient({ items, categories }: ItemsListClientProps) {
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
-                        <div className="text-3xl font-bold font-heading text-amber-600 dark:text-amber-400">{stats.lowStock}</div>
+                        <div className="text-3xl font-bold font-heading">{stats.lowStock}</div>
                         <p className="text-xs text-muted-foreground mt-1">need restocking</p>
                     </CardContent>
                 </Card>
@@ -227,7 +227,7 @@ export function ItemsListClient({ items, categories }: ItemsListClientProps) {
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
-                        <div className="text-3xl font-bold font-heading text-rose-600 dark:text-rose-400">{stats.outOfStock}</div>
+                        <div className="text-3xl font-bold font-heading">{stats.outOfStock}</div>
                         <p className="text-xs text-muted-foreground mt-1">unavailable</p>
                     </CardContent>
                 </Card>

@@ -2,47 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { createItemSchema, updateItemSchema, CreateItemInput, UpdateItemInput } from "@/types/item"
+import { getTenantClient } from "@/lib/tenant"
 
-// ERPNext API Configuration
-const ERPNEXT_URL = process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080'
-const API_KEY = process.env.ERPNEXT_API_KEY
-const API_SECRET = process.env.ERPNEXT_API_SECRET
-
-// Helper function to make authenticated ERPNext API calls
-async function erpnextFetch<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T | null> {
-    try {
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-        }
-
-        // Add API key authentication if available
-        if (API_KEY && API_SECRET) {
-            headers['Authorization'] = `token ${API_KEY}:${API_SECRET}`
-        }
-
-        const response = await fetch(`${ERPNEXT_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...headers,
-                ...options.headers,
-            },
-        })
-
-        if (!response.ok) {
-            console.error('ERPNext API error:', response.statusText)
-            return null
-        }
-
-        const data = await response.json()
-        return data.data || data.message || data
-    } catch (error) {
-        console.error('ERPNext fetch error:', error)
-        return null
-    }
-}
+// 
+// MULTI-TENANT REFACTOR
+// All actions now use getTenantClient() to resolve headers dynamically
+// 
 
 // Type for ERPNext Item
 interface ERPNextItem {
@@ -63,6 +28,7 @@ interface ERPNextItem {
 // Type for ERPNext Item Group
 interface ERPNextItemGroup {
     name: string
+    item_group_name?: string
     parent_item_group?: string
     is_group: 0 | 1
 }
@@ -116,20 +82,20 @@ export async function createItem(data: CreateItemInput) {
     } = validatedFields.data
 
     try {
-        const erpItem = await erpnextFetch<ERPNextItem>('/api/resource/Item', {
-            method: 'POST',
-            body: JSON.stringify({
-                item_code: itemCode,
-                item_name: name,
-                item_group: itemGroupId || 'All Item Groups',
-                stock_uom: stockUom || 'Nos',
-                standard_rate: standardRate,
-                valuation_rate: valuationRate || standardRate,
-                description: description,
-                is_stock_item: isStockItem ? 1 : 0,
-                has_batch_no: hasBatchNo ? 1 : 0,
-                barcodes: barcode ? [{ barcode: barcode }] : [],
-            }),
+        const client = await getTenantClient();
+
+        const erpItem = await client.createDoc<ERPNextItem>('Item', {
+            item_code: itemCode,
+            item_name: name,
+            item_group: itemGroupId || 'All Item Groups',
+            stock_uom: stockUom || 'Nos',
+            standard_rate: standardRate,
+            valuation_rate: valuationRate || standardRate,
+            description: description,
+            is_stock_item: isStockItem ? 1 : 0,
+            has_batch_no: hasBatchNo ? 1 : 0,
+            // @ts-ignore
+            barcodes: barcode ? [{ barcode: barcode }] : [],
         })
 
         if (!erpItem) {
@@ -159,22 +125,18 @@ export async function updateItem(data: UpdateItemInput) {
     const { id, ...updateData } = validatedFields.data
 
     try {
-        const erpItem = await erpnextFetch<{ data: ERPNextItem }>(
-            `/api/resource/Item/${encodeURIComponent(id)}`,
-            {
-                method: 'PUT',
-                body: JSON.stringify({
-                    item_name: updateData.name,
-                    item_group: updateData.itemGroupId || undefined,
-                    stock_uom: updateData.stockUom,
-                    standard_rate: updateData.standardRate,
-                    valuation_rate: updateData.valuationRate,
-                    description: updateData.description,
-                    is_stock_item: updateData.isStockItem ? 1 : 0,
-                    has_batch_no: updateData.hasBatchNo ? 1 : 0,
-                }),
-            }
-        )
+        const client = await getTenantClient();
+
+        const erpItem = await client.updateDoc<ERPNextItem>('Item', id, {
+            item_name: updateData.name,
+            item_group: updateData.itemGroupId || undefined,
+            stock_uom: updateData.stockUom,
+            standard_rate: updateData.standardRate,
+            valuation_rate: updateData.valuationRate,
+            description: updateData.description,
+            is_stock_item: updateData.isStockItem ? 1 : 0,
+            has_batch_no: updateData.hasBatchNo ? 1 : 0,
+        });
 
         if (!erpItem) {
             return { success: false, error: "Failed to update item in ERPNext." }
@@ -182,7 +144,7 @@ export async function updateItem(data: UpdateItemInput) {
 
         revalidatePath("/items")
         revalidatePath(`/items/${id}`)
-        return { success: true, item: transformItem(erpItem.data) }
+        return { success: true, item: transformItem(erpItem) }
     } catch (error) {
         console.error("Update item error:", error)
         return { success: false, error: "Failed to update item." }
@@ -192,14 +154,13 @@ export async function updateItem(data: UpdateItemInput) {
 // Delete (disable) an item
 export async function deleteItem(id: string) {
     try {
+        const client = await getTenantClient();
+
         // ERPNext doesn't delete items, it disables them
-        await erpnextFetch(`/api/resource/Item/${encodeURIComponent(id)}`, {
-            method: 'PUT',
-            body: JSON.stringify({ disabled: 1 }),
-        })
+        const result = await client.updateDoc('Item', id, { disabled: 1 });
 
         revalidatePath("/items")
-        return { success: true }
+        return { success: !!result }
     } catch (error) {
         console.error("Delete item error:", error)
         return { success: false, error: "Failed to delete item." }
@@ -208,12 +169,16 @@ export async function deleteItem(id: string) {
 
 // Get single item
 export async function getItem(id: string) {
-    const result = await erpnextFetch<ERPNextItem>(
-        `/api/resource/Item/${encodeURIComponent(id)}`
-    )
+    try {
+        const client = await getTenantClient();
+        const result = await client.getDoc<ERPNextItem>('Item', id);
 
-    if (!result) return null
-    return transformItem(result)
+        if (!result) return null
+        return transformItem(result)
+    } catch (error) {
+        console.error("Get item error:", error)
+        return null;
+    }
 }
 
 // Get all items with optional filters
@@ -223,6 +188,8 @@ export async function getItems(options?: {
     status?: "all" | "in-stock" | "low-stock" | "out-of-stock"
 }) {
     try {
+        const client = await getTenantClient();
+
         // Build filters
         const filters: [string, string, unknown][] = [
             ['disabled', '=', 0]
@@ -236,21 +203,17 @@ export async function getItems(options?: {
             filters.push(['item_group', '=', options.categoryId])
         }
 
-        const params = new URLSearchParams({
-            filters: JSON.stringify(filters),
-            fields: JSON.stringify([
+        // We use the raw client.getList here for advanced filtering
+        // But our wrapper simplifies this.
+        const result = await client.getList<ERPNextItem>('Item', {
+            filters,
+            fields: [
                 'name', 'item_name', 'item_code', 'item_group',
                 'stock_uom', 'standard_rate', 'valuation_rate',
                 'description', 'image', 'is_stock_item', 'has_batch_no', 'disabled'
-            ]),
-            limit_page_length: '0', // Get all
-        })
-
-        const result = await erpnextFetch<ERPNextItem[]>(
-            `/api/resource/Item?${params.toString()}`
-        )
-
-        if (!result) return []
+            ],
+            limit: 0
+        });
 
         return result.map(transformItem)
     } catch (error) {
@@ -262,16 +225,12 @@ export async function getItems(options?: {
 // Get all categories (Item Groups)
 export async function getCategories() {
     try {
-        const params = new URLSearchParams({
-            fields: JSON.stringify(['name', 'parent_item_group', 'is_group']),
-            limit_page_length: '0',
-        })
+        const client = await getTenantClient();
 
-        const result = await erpnextFetch<ERPNextItemGroup[]>(
-            `/api/resource/Item Group?${params.toString()}`
-        )
-
-        if (!result) return []
+        const result = await client.getList<ERPNextItemGroup>('Item Group', {
+            fields: ['name', 'parent_item_group', 'is_group'],
+            limit: 0
+        });
 
         return result.map(group => ({
             id: group.name,
@@ -288,16 +247,13 @@ export async function getCategories() {
 // Create a category (Item Group)
 export async function createCategory(name: string) {
     try {
-        const result = await erpnextFetch<{ data: ERPNextItemGroup }>(
-            '/api/resource/Item Group',
-            {
-                method: 'POST',
-                body: JSON.stringify({
-                    item_group_name: name,
-                    parent_item_group: 'All Item Groups',
-                }),
-            }
-        )
+        const client = await getTenantClient();
+
+        const result = await client.createDoc<ERPNextItemGroup>('Item Group', {
+            item_group_name: name, // ERPNext expects this field name for ID generation sometimes, but name works too
+            parent_item_group: 'All Item Groups',
+            is_group: 0
+        });
 
         if (!result) {
             return { success: false, error: "Failed to create category." }
@@ -307,8 +263,8 @@ export async function createCategory(name: string) {
         return {
             success: true,
             category: {
-                id: result.data.name,
-                name: result.data.name,
+                id: result.name,
+                name: result.name,
             }
         }
     } catch (error) {

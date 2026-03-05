@@ -48,3 +48,7 @@ prisma/schema.prisma
 
 # Docs
 /docs
+
+# Migrations
+/prisma/migrations
+/supabase/migrations

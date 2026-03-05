@@ -7,40 +7,40 @@ import { v7 as uuidv7 } from 'uuid';
 // ----------------------------------------------------------------------
 
 interface PosState {
-    // Session State
-    sessionId: number | null;
-    isSessionOpen: boolean;
-
-    // Cart State
+    // Cart
     cart: CartItem[];
-
-    // Active Transaction Meta
     customerName: string;
     customerPan: string;
 
+    // Last completed order (for receipt)
+    lastOrder: Order | null;
+
     // Actions
-    addToCart: (item: any) => void;
+    addToCart: (item: { id: string; name: string; sku: string; price: number; stock: number }) => void;
     removeFromCart: (itemId: string) => void;
-    updateQuantity: (itemId: string, delta: number) => void;
+    updateQuantity: (itemId: string, newQty: number) => void;
     clearCart: () => void;
     setCustomer: (name: string, pan: string) => void;
 
-    // Logic
-    getTotals: () => { subTotal: number; tax: number; total: number; itemCount: number };
-    checkout: (paymentMode: 'CASH' | 'CARD' | 'QR') => Promise<string>; // Returns Order UUID
+    // Computed
+    getTotals: () => { subTotal: number; taxRate: number; tax: number; total: number; itemCount: number; discount: number };
+
+    // Checkout
+    checkout: (paymentMode: 'CASH' | 'CARD' | 'QR' | 'CREDIT', paidAmount: number) => Promise<Order>;
 }
+
+// Nepal VAT rate
+const TAX_RATE = 0.13;
 
 // ----------------------------------------------------------------------
 // STORE
 // ----------------------------------------------------------------------
 
 export const usePosStore = create<PosState>((set, get) => ({
-    sessionId: null,
-    isSessionOpen: false, // In a real app, check DB on load
-
     cart: [],
     customerName: '',
     customerPan: '',
+    lastOrder: null,
 
     addToCart: (item) => set((state) => {
         const existing = state.cart.find((i) => i.itemId === item.id);
@@ -48,32 +48,33 @@ export const usePosStore = create<PosState>((set, get) => ({
             return {
                 cart: state.cart.map((i) =>
                     i.itemId === item.id ? { ...i, quantity: i.quantity + 1 } : i
-                )
+                ),
             };
         }
         return {
             cart: [...state.cart, {
                 itemId: item.id,
                 name: item.name,
+                sku: item.sku,
                 price: item.price,
-                quantity: 1
-            }]
+                quantity: 1,
+                discount: 0,
+            }],
         };
     }),
 
     removeFromCart: (itemId) => set((state) => ({
-        cart: state.cart.filter((i) => i.itemId !== itemId)
+        cart: state.cart.filter((i) => i.itemId !== itemId),
     })),
 
-    updateQuantity: (itemId, delta) => set((state) => {
+    updateQuantity: (itemId, newQty) => set((state) => {
+        if (newQty <= 0) {
+            return { cart: state.cart.filter((i) => i.itemId !== itemId) };
+        }
         return {
-            cart: state.cart.map((i) => {
-                if (i.itemId === itemId) {
-                    const newQty = Math.max(0, i.quantity + delta);
-                    return { ...i, quantity: newQty };
-                }
-                return i;
-            }).filter(i => i.quantity > 0) // Remove if 0
+            cart: state.cart.map((i) =>
+                i.itemId === itemId ? { ...i, quantity: newQty } : i
+            ),
         };
     }),
 
@@ -83,42 +84,60 @@ export const usePosStore = create<PosState>((set, get) => ({
 
     getTotals: () => {
         const { cart } = get();
-        const subTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        // Nepal VAT 13% hardcoded for now - move to config later
-        const tax = subTotal * 0.13;
+        const subTotal = cart.reduce((acc, item) => {
+            const itemTotal = item.price * item.quantity;
+            const discountAmount = itemTotal * (item.discount / 100);
+            return acc + (itemTotal - discountAmount);
+        }, 0);
+        const discount = cart.reduce((acc, item) => {
+            return acc + (item.price * item.quantity * (item.discount / 100));
+        }, 0);
+        const tax = subTotal * TAX_RATE;
         const total = subTotal + tax;
         const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-
-        return { subTotal, tax, total, itemCount };
+        return { subTotal, taxRate: TAX_RATE, tax, total, itemCount, discount };
     },
 
-    checkout: async (paymentMode) => {
+    checkout: async (paymentMode, paidAmount) => {
         const state = get();
         const totals = state.getTotals();
         const orderUuid = uuidv7();
 
-        if (state.cart.length === 0) throw new Error("Cart is empty");
+        if (state.cart.length === 0) throw new Error('Cart is empty');
 
-        // Persist to Dexie (Offline First)
         const order: Order = {
             uuid: orderUuid,
             status: 'completed',
-            customerName: state.customerName,
+            customerName: state.customerName || 'Walk-in Customer',
             customerPan: state.customerPan,
             subTotal: totals.subTotal,
+            taxRate: totals.taxRate,
             taxTotal: totals.tax,
             grandTotal: totals.total,
-            discountTotal: 0,
-            items: state.cart,
+            discountTotal: totals.discount,
+            items: [...state.cart],
             paymentMode,
+            paidAmount,
+            changeAmount: Math.max(0, paidAmount - totals.total),
             createdAt: new Date(),
+            syncRetries: 0,
         };
 
         await db.orders.add(order);
 
-        // Clear Session
-        state.clearCart();
+        // Deduct stock locally
+        for (const cartItem of state.cart) {
+            const dbItem = await db.items.get(cartItem.itemId);
+            if (dbItem) {
+                await db.items.update(cartItem.itemId, {
+                    stock: Math.max(0, dbItem.stock - cartItem.quantity),
+                });
+            }
+        }
 
-        return orderUuid;
-    }
+        // Set lastOrder for receipt display, then clear cart
+        set({ lastOrder: order, cart: [], customerName: '', customerPan: '' });
+
+        return order;
+    },
 }));

@@ -1,118 +1,102 @@
 
 "use client";
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useNetwork } from '@/hooks/use-network';
 import { useSyncStore } from '@/stores/sync-store';
-import { db } from '@/lib/db';
+import { syncPendingOrders, getPendingSyncCount } from '@/lib/sync-engine';
 import { toast } from 'sonner';
+
+const POLL_INTERVAL_MS = 30_000;   // Check every 30s when idle
+const RETRY_MIN_INTERVAL_MS = 5_000; // Min gap between sync cycles
 
 export default function SyncWorker() {
     const isOnline = useNetwork();
-    const { status, setStatus, setPendingCount, setError, setLastSyncedAt } = useSyncStore();
+    const { setStatus, setPendingCount, setError, setLastSyncedAt } = useSyncStore();
+    const isSyncingRef = useRef(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-    // Check for pending orders count frequently
+    // Update pending count periodically
     useEffect(() => {
         const checkPending = async () => {
-            if (!db) return;
-            // 'status' is a reserved word in some Dexie contexts, but here it's our field
-            // We assume orders with status != 'SYNCED' are pending.
-            // Note: Dexie filtering on '!=', need to use filter().
-            const count = await db.orders
-                .filter(order => order.status !== 'synced')
-                .count();
-            setPendingCount(count);
+            try {
+                const count = await getPendingSyncCount();
+                setPendingCount(count);
+            } catch {
+                // Dexie not ready yet
+            }
         };
 
         checkPending();
-        const interval = setInterval(checkPending, 5000); // Check every 5s
+        const interval = setInterval(checkPending, 5_000);
         return () => clearInterval(interval);
     }, [setPendingCount]);
 
-    // The Sync Logic
+    // Core sync logic — delegates to sync-engine which handles retries/logging
     const performSync = useCallback(async () => {
-        if (!isOnline) return;
+        if (!isOnline || isSyncingRef.current) return;
+
+        isSyncingRef.current = true;
+        setStatus('SYNCING');
 
         try {
-            // 1. Get Pending Orders
-            const pendingOrders = await db.orders
-                .filter(order => order.status !== 'synced')
-                .limit(50) // Batch size
-                .toArray();
+            const result = await syncPendingOrders();
 
-            if (pendingOrders.length === 0) {
+            if (result.synced > 0) {
+                setLastSyncedAt(new Date());
+                toast.success(`Synced ${result.synced} order(s)`);
+            }
+
+            if (result.failed > 0) {
+                setError(result.errors[0] || 'Some orders failed to sync');
+            }
+
+            const remaining = await getPendingSyncCount();
+            setPendingCount(remaining);
+
+            if (remaining > 0) {
                 setStatus('IDLE');
+                // Schedule next attempt
+                timerRef.current = setTimeout(() => {
+                    isSyncingRef.current = false;
+                    performSync();
+                }, RETRY_MIN_INTERVAL_MS);
                 return;
             }
 
-            setStatus('SYNCING');
-
-            // 2. Send to API
-            const response = await fetch('/api/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    connectionId: crypto.randomUUID(),
-                    orders: pendingOrders.map(o => ({
-                        ...o,
-                        status: o.status.toUpperCase() // Map 'completed' -> 'COMPLETED' for API
-                    }))
-                })
-            });
-
-            const result = await response.json();
-
-            if (!result.success) {
-                throw new Error(result.error || 'Sync failed');
-            }
-
-            // 3. Update Dexie on Success
-            // We iterate through the successfully synced IDs and update their status
-            if (result.syncedIds && Array.isArray(result.syncedIds)) {
-                await db.orders
-                    .where('uuid')
-                    .anyOf(result.syncedIds)
-                    .modify({ status: 'synced', syncedAt: new Date() });
-
-                setLastSyncedAt(new Date());
-                toast.success(`Synced ${result.syncedCount} orders to cloud`);
-            }
-
-            setStatus('SUCCESS');
-
-            // Re-trigger sync if there might be more
-            const remaining = await db.orders.filter(o => o.status !== 'synced').count();
-            if (remaining > 0) {
-                setTimeout(performSync, 1000); // Backoff slightly
-            } else {
-                setTimeout(() => setStatus('IDLE'), 2000);
-            }
-
+            setStatus(result.failed > 0 ? 'ERROR' : 'SUCCESS');
+            setTimeout(() => setStatus('IDLE'), 3000);
         } catch (err: any) {
-            console.error("Sync Error:", err);
+            console.error('[SyncWorker] Error:', err);
             setStatus('ERROR');
-            setError(err.message);
-            // toast.error("Sync failed: " + err.message); // Optional: Don't spam user
+            setError(err.message || 'Unknown sync error');
+        } finally {
+            isSyncingRef.current = false;
         }
-    }, [isOnline, setStatus, setLastSyncedAt, setError]);
+    }, [isOnline, setStatus, setLastSyncedAt, setError, setPendingCount]);
 
     // Trigger sync when coming online
     useEffect(() => {
-        if (isOnline) {
+        if (isOnline && !isSyncingRef.current) {
             performSync();
         }
     }, [isOnline, performSync]);
 
-    // Trigger sync periodically if online
+    // Periodic sync poll when online
     useEffect(() => {
         if (!isOnline) return;
+
         const interval = setInterval(() => {
-            if (status !== 'SYNCING') {
+            if (!isSyncingRef.current) {
                 performSync();
             }
-        }, 60000); // Try every minute
-        return () => clearInterval(interval);
-    }, [isOnline, status, performSync]);
+        }, POLL_INTERVAL_MS);
+
+        return () => {
+            clearInterval(interval);
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [isOnline, performSync]);
 
     return null; // Headless component
 }

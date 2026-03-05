@@ -1,51 +1,70 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createPOSInvoice } from '@/app/actions/pos';
 
-// Simplified sync route that forwards offline orders to ERPNext via createPOSInvoice
+const isMockMode = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
+/**
+ * POST /api/sync
+ *
+ * Receives offline POS orders from the SyncWorker and forwards them to
+ * ERPNext via the createPOSInvoice server action. Each order's UUID is
+ * passed as the idempotency key to prevent duplicate invoice creation.
+ *
+ * In mock mode, orders are acknowledged immediately.
+ */
 export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        // Basic validation
-        if (!body.orders || !Array.isArray(body.orders)) {
+        if (!body.orders || !Array.isArray(body.orders) || body.orders.length === 0) {
             return NextResponse.json(
-                { success: false, error: 'Invalid payload format' },
+                { success: false, error: 'Invalid payload: orders array required' },
                 { status: 400 }
             );
         }
 
         const syncedIds: string[] = [];
-        const errors: any[] = [];
+        const errors: { id: string; error: string }[] = [];
 
         for (const order of body.orders) {
-            try {
-                // Transform offline order to POS Invoice format
-                const formData = new FormData();
-                formData.append('paymentMode', 'CASH'); // Default or map from order.paymentMode
-                formData.append('paidAmount', order.grandTotal.toString());
+            if (!order.uuid) {
+                errors.push({ id: 'unknown', error: 'Order missing uuid' });
+                continue;
+            }
 
-                const items = order.items.map((item: any) => ({
-                    itemId: item.itemId, // Should be ERPNext Item Code
+            try {
+                // ── Mock mode: acknowledge immediately ──
+                if (isMockMode) {
+                    syncedIds.push(order.uuid);
+                    continue;
+                }
+
+                // ── Real mode: forward to ERPNext ──
+                const formData = new FormData();
+                formData.append('paymentMode', order.paymentMode || 'CASH');
+                formData.append('paidAmount', String(order.paidAmount ?? order.grandTotal));
+                // Pass the POS UUID as idempotency key
+                formData.append('posUuid', order.uuid);
+
+                const items = (order.items || []).map((item: any) => ({
+                    itemId: item.sku || item.itemId,
                     qty: item.quantity,
                     rate: item.price,
-                    discount: 0
+                    discount: item.discount || 0,
                 }));
 
                 formData.append('items', JSON.stringify(items));
 
-                // Call the server action directly
                 const result = await createPOSInvoice(formData);
 
                 if (result.success) {
                     syncedIds.push(order.uuid);
                 } else {
-                    errors.push({ id: order.uuid, error: result.error });
+                    errors.push({ id: order.uuid, error: result.error || 'Unknown server error' });
                 }
-
             } catch (err: any) {
-                console.error(`Failed to sync order ${order.uuid}:`, err);
-                errors.push({ id: order.uuid, error: err.message });
+                console.error(`[Sync] Failed order ${order.uuid}:`, err);
+                errors.push({ id: order.uuid, error: err.message || 'Network error' });
             }
         }
 
@@ -53,11 +72,10 @@ export async function POST(req: Request) {
             success: true,
             syncedCount: syncedIds.length,
             syncedIds,
-            errors
+            errors,
         });
-
     } catch (error) {
-        console.error('Sync API Error:', error);
+        console.error('[Sync] API Error:', error);
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

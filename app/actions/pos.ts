@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { getTenantClient } from "@/lib/tenant"
+import { ERPNextSalesInvoice } from "@/lib/erpnext"
 
-// ERPNext API Configuration
-const ERPNEXT_URL = process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080'
-const API_KEY = process.env.ERPNEXT_API_KEY
-const API_SECRET = process.env.ERPNEXT_API_SECRET
+// 
+// MULTI-TENANT REFACTOR
+// All actions now use getTenantClient() to resolve headers dynamically
+// 
 
 export type CartItem = {
     itemId: string
@@ -31,48 +33,12 @@ const PAYMENT_MODE_MAP: Record<string, string> = {
     'BANK_TRANSFER': 'Bank Draft',
 }
 
-// Helper function to make ERPNext API calls
-async function erpnextFetch<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T | null> {
-    try {
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-        }
-
-        // Add API key authentication if available
-        if (API_KEY && API_SECRET) {
-            headers['Authorization'] = `token ${API_KEY}:${API_SECRET}`
-        }
-
-        const response = await fetch(`${ERPNEXT_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...headers,
-                ...options.headers,
-            },
-        })
-
-        if (!response.ok) {
-            const errorText = await response.text()
-            console.error('ERPNext API error:', response.statusText, errorText)
-            return null
-        }
-
-        const data = await response.json()
-        return data.data || data.message || data
-    } catch (error) {
-        console.error('ERPNext fetch error:', error)
-        return null
-    }
-}
-
 export async function createPOSInvoice(formData: FormData) {
     const rawData = {
         items: formData.get("items"),
         paymentMode: formData.get("paymentMode"),
-        paidAmount: formData.get("paidAmount")
+        paidAmount: formData.get("paidAmount"),
+        posUuid: formData.get("posUuid"), // Critical for idempotency
     }
 
     const validation = invoiceSchema.safeParse(rawData)
@@ -80,19 +46,17 @@ export async function createPOSInvoice(formData: FormData) {
 
     const { items: itemsJson, paymentMode, paidAmount } = validation.data
     const cartItems = JSON.parse(itemsJson) as CartItem[]
+    const posUuid = rawData.posUuid as string || crypto.randomUUID(); // Fallback if not provided, but SyncWorker MUST provide it.
 
     if (cartItems.length === 0) return { error: "Cart is empty" }
 
     try {
+        const client = await getTenantClient();
+
         // Calculate totals
         let netTotal = 0
         let totalDiscount = 0
-        const invoiceItems: Array<{
-            item_code: string
-            qty: number
-            rate: number
-            discount_amount?: number
-        }> = []
+        const invoiceItems: any[] = []
 
         for (const cartItem of cartItems) {
             const amount = cartItem.qty * cartItem.rate
@@ -111,38 +75,30 @@ export async function createPOSInvoice(formData: FormData) {
 
         // Create Sales Invoice in ERPNext
         // For POS, we use Sales Invoice with is_pos = 1 and update_stock = 1
-        const invoiceData = {
-            doctype: 'Sales Invoice',
+        const invoiceData: Partial<ERPNextSalesInvoice> = {
             customer: 'Walk-in Customer', // ERPNext needs a customer - create this in ERPNext
             posting_date: new Date().toISOString().split('T')[0],
             is_pos: 1,
             update_stock: 1,
-            items: invoiceItems.map(item => ({
-                doctype: 'Sales Invoice Item',
-                item_code: item.item_code,
-                qty: item.qty,
-                rate: item.rate,
-                discount_amount: item.discount_amount,
-            })),
+            // @ts-ignore - Some ERPNext types are dynamic
+            items: invoiceItems,
             payments: [{
-                doctype: 'Sales Invoice Payment',
                 mode_of_payment: PAYMENT_MODE_MAP[paymentMode] || 'Cash',
                 amount: paidAmount,
             }],
             paid_amount: paidAmount,
+            // @ts-ignore
             change_amount: Math.max(0, paidAmount - grandTotal),
         }
 
-        const result = await erpnextFetch<{ name: string }>(
-            '/api/resource/Sales Invoice',
-            {
-                method: 'POST',
-                body: JSON.stringify(invoiceData),
-            }
-        )
+        const result = await client.createSalesInvoice(invoiceData, posUuid);
 
-        if (!result) {
+        if (!result || !result.name) {
             return { error: "Failed to create invoice in ERPNext" }
+        }
+
+        if ((result as any).status === 'already_synced') {
+            return { success: true, invoiceId: result.name, alreadySynced: true }
         }
 
         revalidatePath("/pos")
@@ -160,20 +116,9 @@ export async function getTodayInvoices() {
     const today = new Date().toISOString().split('T')[0]
 
     try {
-        const params = new URLSearchParams({
-            filters: JSON.stringify([
-                ['posting_date', '=', today],
-                ['is_pos', '=', 1],
-            ]),
-            fields: JSON.stringify([
-                'name', 'customer', 'grand_total', 'paid_amount',
-                'posting_date', 'posting_time', 'status'
-            ]),
-            order_by: 'creation desc',
-            limit_page_length: '50',
-        })
+        const client = await getTenantClient();
 
-        const result = await erpnextFetch<Array<{
+        const result = await client.getList<{
             name: string
             customer: string
             grand_total: number
@@ -181,9 +126,15 @@ export async function getTodayInvoices() {
             posting_date: string
             posting_time: string
             status: string
-        }>>(`/api/resource/Sales Invoice?${params.toString()}`)
-
-        if (!result) return []
+        }>('Sales Invoice', {
+            filters: [
+                ['posting_date', '=', today],
+                ['is_pos', '=', 1],
+            ],
+            // fields: ['name', 'customer', 'grand_total', 'paid_amount', 'posting_date', 'posting_time', 'status'], // getList handles fields diff
+            orderBy: 'creation desc',
+            limit: 50
+        })
 
         return result.map(inv => ({
             id: inv.name,
@@ -203,48 +154,28 @@ export async function getTodayInvoices() {
 // Get invoice details
 export async function getInvoice(id: string) {
     try {
-        const result = await erpnextFetch<{
-            name: string
-            customer: string
-            grand_total: number
-            paid_amount: number
-            change_amount: number
-            posting_date: string
-            posting_time: string
-            status: string
-            items: Array<{
-                item_code: string
-                item_name: string
-                qty: number
-                rate: number
-                amount: number
-            }>
-            payments: Array<{
-                mode_of_payment: string
-                amount: number
-            }>
-        }>(`/api/resource/Sales Invoice/${encodeURIComponent(id)}`)
+        const client = await getTenantClient();
+        const result = await client.getDoc<any>('Sales Invoice', id);
 
         if (!result) return null
 
-        const inv = result
         return {
-            id: inv.name,
-            name: inv.name,
-            customer: inv.customer,
-            grandTotal: inv.grand_total,
-            paidAmount: inv.paid_amount,
-            changeAmount: inv.change_amount,
-            createdAt: new Date(`${inv.posting_date}T${inv.posting_time}`),
-            status: inv.status,
-            items: inv.items.map(item => ({
+            id: result.name,
+            name: result.name,
+            customer: result.customer,
+            grandTotal: result.grand_total,
+            paidAmount: result.paid_amount,
+            changeAmount: result.change_amount,
+            createdAt: new Date(`${result.posting_date}T${result.posting_time}`),
+            status: result.status,
+            items: result.items.map((item: any) => ({
                 itemCode: item.item_code,
                 itemName: item.item_name,
                 qty: item.qty,
                 rate: item.rate,
                 amount: item.amount,
             })),
-            payments: inv.payments.map(p => ({
+            payments: result.payments.map((p: any) => ({
                 mode: p.mode_of_payment,
                 amount: p.amount,
             })),

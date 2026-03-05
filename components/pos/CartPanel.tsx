@@ -11,12 +11,12 @@ export default function CartPanel() {
     const { cart, updateQuantity, removeFromCart, getTotals, checkout, clearCart } = usePosStore();
     const totals = getTotals();
 
-    const handleCheckout = async (mode: 'CASH' | 'CARD' | 'QR') => {
+    const handleCheckout = async (mode: 'CASH' | 'CARD' | 'QR' | 'CREDIT') => {
         try {
             if (cart.length === 0) return toast.error("Cart is empty");
 
-            const orderId = await checkout(mode);
-            toast.success(`Order ${orderId.slice(0, 8)}... created!`);
+            const order = await checkout(mode, totals.total);
+            toast.success(`Order ${order.uuid.slice(0, 8)}... created!`);
         } catch (e) {
             toast.error("Checkout failed");
         }
@@ -59,7 +59,7 @@ export default function CartPanel() {
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6 rounded-full border-input"
-                                        onClick={() => updateQuantity(item.itemId, 1)}
+                                        onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
                                     >
                                         <Plus className="h-3 w-3" />
                                     </Button>
@@ -68,7 +68,7 @@ export default function CartPanel() {
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6 rounded-full border-input"
-                                        onClick={() => updateQuantity(item.itemId, -1)}
+                                        onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
                                     >
                                         <Minus className="h-3 w-3" />
                                     </Button>

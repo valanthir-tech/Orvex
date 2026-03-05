@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
 import { updateItem, deleteItem } from "@/app/actions/items"
+import { cardStyles } from "@/lib/theme"
+
 import {
     UOM_OPTIONS,
     UpdateItemInput,
@@ -203,13 +205,13 @@ export function ItemDetailClient({ item, categories }: ItemDetailClientProps) {
             </div>
 
             {/* Summary Cards - Dashboard Style */}
-            <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Current Stock - Sky */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-sky-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 via-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.sky.card}>
+                    <div className={cardStyles.sky.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Current Stock</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.sky.icon}>
                             <Package className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
@@ -218,66 +220,56 @@ export function ItemDetailClient({ item, categories }: ItemDetailClientProps) {
                             {item.currentStock}
                             <span className="text-lg font-normal text-muted-foreground ml-1">{item.stockUom}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-2">
                             Reorder at {item.minStockLevel} {item.stockUom}
                         </p>
                     </CardContent>
                 </Card>
 
                 {/* Selling Price - Teal */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.teal.card}>
+                    <div className={cardStyles.teal.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Selling Price</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.teal.icon}>
                             <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">{formatPrice(item.standardRate)}</div>
-                        <p className="text-xs text-muted-foreground mt-1">per {item.stockUom}</p>
+                        <p className="text-xs text-muted-foreground mt-2">per {item.stockUom}</p>
                     </CardContent>
                 </Card>
 
                 {/* Cost Price - Amber */}
-                <Card className="group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/20 hover:-translate-y-1 card-float">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className={cardStyles.amber.card}>
+                    <div className={cardStyles.amber.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Cost Price</CardTitle>
-                        <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <div className={cardStyles.amber.icon}>
                             <TrendingDown className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">{formatPrice(item.valuationRate)}</div>
-                        <p className="text-xs text-muted-foreground mt-1">per {item.stockUom}</p>
+                        <p className="text-xs text-muted-foreground mt-2">per {item.stockUom}</p>
                     </CardContent>
                 </Card>
 
-                {/* Profit Margin - Emerald/Rose depending on value */}
-                <Card className={`group relative overflow-hidden border-0 rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 card-float ${Number(profitMargin) >= 0 ? 'hover:shadow-emerald-500/20' : 'hover:shadow-rose-500/20'
-                    }`}>
-                    <div className={`absolute inset-0 bg-gradient-to-br ${Number(profitMargin) >= 0
-                            ? 'from-emerald-500/5 via-emerald-500/5'
-                            : 'from-rose-500/5 via-rose-500/5'
-                        } to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                {/* Profit Margin - Emerald/Rose */}
+                <Card className={Number(profitMargin) >= 0 ? cardStyles.emerald.card : cardStyles.rose.card}>
+                    <div className={Number(profitMargin) >= 0 ? cardStyles.emerald.overlay : cardStyles.rose.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Profit Margin</CardTitle>
-                        <div className={`h-10 w-10 rounded-2xl bg-gradient-to-br ${Number(profitMargin) >= 0
-                                ? 'from-emerald-500 to-emerald-600 shadow-emerald-500/30'
-                                : 'from-rose-500 to-rose-600 shadow-rose-500/30'
-                            } flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110`}>
+                        <div className={Number(profitMargin) >= 0 ? cardStyles.emerald.icon : cardStyles.rose.icon}>
                             <BarChart3 className="h-5 w-5 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
-                        <div className={`text-3xl font-bold font-heading ${Number(profitMargin) >= 0
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : 'text-rose-600 dark:text-rose-400'
-                            }`}>
+                        <div className="text-3xl font-bold font-heading">
                             {profitMargin}%
                         </div>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1 mt-2">
                             {Number(profitMargin) >= 0 ? (
                                 <ArrowUpRight className="h-3 w-3 text-emerald-500" />
                             ) : (

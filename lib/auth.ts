@@ -1,31 +1,37 @@
 "use server"
 
-// With ERPNext, authentication is handled via session cookies.
-// This is a stub file to maintain compatibility with existing imports.
-// In a fuller implementation, this would check the ERPNext session cookie.
+import { createSupabaseServerClient } from "./tenant" // Reuse helper from tenant.ts
+import { redirect } from "next/navigation"
 
 export async function getCurrentUser() {
-    // Return a dummy user since ERPNext handles session validation
-    // The middleware or API calls will fail if not authenticated
-    return {
-        id: "administrator",
-        email: "admin@example.com",
-        fullName: "Administrator"
-    }
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    return user
 }
 
 export async function getProfile() {
-    return {
-        id: "administrator",
-        organizationId: "Valanthir Tech", // Default company
-        role: "OWNER"
-    }
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+    return profile
 }
 
 export async function requireUser() {
-    return getCurrentUser()
+    const user = await getCurrentUser()
+    if (!user) redirect("/login")
+    return user
 }
 
 export async function requireProfile() {
-    return getProfile()
+    const profile = await getProfile()
+    if (!profile) redirect("/setup") // Or maybe /admin/setup if superadmin?
+    return profile
 }

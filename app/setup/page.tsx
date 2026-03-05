@@ -32,9 +32,9 @@ export default function SetupPage() {
                 </div>
 
                 <form action={handleSubmit}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Organization Setup</CardTitle>
+                    <Card className="card-float border-0 rounded-2xl">
+                        <CardHeader className="border-b border-border/50 pb-4">
+                            <CardTitle className="text-lg font-heading">Organization Setup</CardTitle>
                             <CardDescription>
                                 Create your workspace to manage inventory.
                             </CardDescription>
@@ -45,7 +45,7 @@ export default function SetupPage() {
                                     <User className="h-4 w-4" />
                                     Your Full Name
                                 </Label>
-                                <Input id="fullName" name="fullName" placeholder="John Doe" required />
+                                <Input id="fullName" name="fullName" placeholder="John Doe" required className="h-11 rounded-xl" />
                             </div>
 
                             <div className="grid gap-2">
@@ -53,10 +53,10 @@ export default function SetupPage() {
                                     <Building className="h-4 w-4" />
                                     Business Name
                                 </Label>
-                                <Input id="organizationName" name="organizationName" placeholder="My Awesome Store" required />
+                                <Input id="organizationName" name="organizationName" placeholder="My Awesome Store" required className="h-11 rounded-xl" />
                             </div>
 
-                            <Button type="submit" className="w-full" disabled={isPending}>
+                            <Button type="submit" className="w-full h-11 rounded-xl" disabled={isPending}>
                                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Complete Setup
                             </Button>

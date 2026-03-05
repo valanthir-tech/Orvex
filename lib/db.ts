@@ -5,48 +5,49 @@ import Dexie, { Table } from 'dexie';
 // ----------------------------------------------------------------------
 
 export interface Item {
-  id: string; // SKU or UUID from Supabase
+  id: string;
   name: string;
+  sku: string;
   price: number;
+  cost: number;
   stock: number;
-  categoryId?: string;
-  barcode?: string;
-  image?: string;
-  // Sync Status
-  isSynced: boolean; 
+  minStock: number;
+  category: string;
+  barcode: string | null;
+  image: string | null;
+  isActive: boolean;
+  isSynced: boolean;
   updatedAt: Date;
 }
 
 export interface CartItem {
   itemId: string;
   name: string;
+  sku: string;
   price: number;
   quantity: number;
-  discount?: number;
+  discount: number;
 }
 
 export interface Order {
-  id?: number; // Local auto-increment ID
-  uuid: string; // Global UUID
-  status: 'draft' | 'held' | 'completed' | 'synced';
-  
-  // Customer Info
-  customerName?: string;
-  customerPan?: string;
-  
-  // Financials
+  id?: number;
+  uuid: string;
+  status: 'draft' | 'held' | 'completed' | 'synced' | 'sync_failed';
+  customerName: string;
+  customerPan: string;
   subTotal: number;
+  taxRate: number;
   taxTotal: number;
   grandTotal: number;
   discountTotal: number;
-  
-  // Data
   items: CartItem[];
   paymentMode: 'CASH' | 'CARD' | 'QR' | 'CREDIT';
-  
-  // Meta
+  paidAmount: number;
+  changeAmount: number;
   createdAt: Date;
   syncedAt?: Date;
+  syncError?: string;
+  syncRetries: number;
 }
 
 export interface PosSession {
@@ -56,31 +57,38 @@ export interface PosSession {
   closingBalance?: number;
   openedAt: Date;
   closedAt?: Date;
-  openedBy: string; // User ID
+  openedBy: string;
+}
+
+export interface SyncLog {
+  id?: number;
+  orderUuid: string;
+  action: 'sync_attempt' | 'sync_success' | 'sync_failed';
+  errorMessage?: string;
+  timestamp: Date;
+  responseData?: string;
 }
 
 // ----------------------------------------------------------------------
 // DATABASE CLASS
 // ----------------------------------------------------------------------
 
-export class ValanthirConnectDB extends Dexie {
+export class ValanthirPOSDB extends Dexie {
   items!: Table<Item>;
   orders!: Table<Order>;
   sessions!: Table<PosSession>;
+  syncLogs!: Table<SyncLog>;
 
   constructor() {
-    super('ValanthirConnectDB');
-    
-    // Define Schema
-    // ++id = auto-increment
-    // & = unique index
-    // * = multi-entry index
+    super('ValanthirPOSDB');
+
     this.version(1).stores({
-      items: '&id, name, categoryId, barcode', 
-      orders: '++id, &uuid, status, createdAt',
-      sessions: '++id, status, openedBy'
+      items: '&id, name, sku, category, barcode, isActive',
+      orders: '++id, &uuid, status, createdAt, paymentMode',
+      sessions: '++id, status, openedBy',
+      syncLogs: '++id, orderUuid, action, timestamp',
     });
   }
 }
 
-export const db = new ValanthirConnectDB();
+export const db = new ValanthirPOSDB();

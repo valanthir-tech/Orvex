@@ -469,3 +469,78 @@
     --stat-color-light: var(--accent-violet-light);
   }
 }
+
+/* ============================================
+   QR SCANNER ANIMATIONS
+   ============================================ */
+@keyframes scan-line {
+  0% {
+    top: 15%;
+  }
+  50% {
+    top: 85%;
+  }
+  100% {
+    top: 15%;
+  }
+}
+
+.animate-scan-line {
+  animation: scan-line 2s ease-in-out infinite;
+}
+
+/* ============================================
+   PRINT STYLES - Receipt Printing
+   ============================================ */
+@media print {
+  /* Hide everything except the receipt */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 4mm;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  /* Hide dialog overlay, footer buttons, etc */
+  [role="dialog"],
+  [data-radix-dialog-overlay] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Clean text for thermal printers */
+  .print-receipt .text-muted-foreground {
+    color: #555 !important;
+  }
+
+  .print-receipt .text-primary {
+    color: #000 !important;
+  }
+
+  /* Remove rounded corners and shadows for print */
+  .print-receipt * {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure dashed borders print */
+  .print-receipt .border-dashed {
+    border-style: dashed !important;
+    border-color: #999 !important;
+  }
+}
