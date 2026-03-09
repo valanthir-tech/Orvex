@@ -40,19 +40,6 @@ import { decryptCredentials } from './encryption'
 
 // Cached per request to avoid double DB hits
 export const getTenantClient = cache(async () => {
-    // Check if we are running in MOCK_MODE for local development without Supabase
-    if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
-        const url = process.env.NEXT_PUBLIC_ERPNEXT_URL;
-        const apiKey = process.env.ERPNEXT_API_KEY;
-        const apiSecret = process.env.ERPNEXT_API_SECRET;
-
-        if (!url || !apiKey || !apiSecret) {
-            throw new Error("Missing ERPNext credentials in .env.local for mock mode.");
-        }
-
-        return new ERPNextClient({ url, apiKey, apiSecret });
-    }
-
     const supabase = await createSupabaseServerClient();
 
     // 1. Get current user

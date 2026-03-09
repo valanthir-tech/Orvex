@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -16,6 +16,7 @@ import {
     TrendingDown,
     TrendingUp,
     Warehouse,
+    RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -24,46 +25,25 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+    Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { cardStyles, badgeStyles } from "@/lib/theme"
 import {
-    type MockProduct,
-    type MockStockAdjustment,
-    mockProducts as initialProducts,
-    mockStockAdjustments as initialAdjustments,
-} from "@/lib/mock-data"
+    getInventory, getStockLedger, createInventoryAdjustment,
+    type InventoryItem, type StockLedgerEntry,
+} from "@/app/actions/inventory"
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -79,13 +59,29 @@ type AdjustmentFormValues = z.infer<typeof adjustmentSchema>
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function InventoryPageClient() {
-    const [products, setProducts] = useState<MockProduct[]>([...initialProducts])
-    const [adjustments, setAdjustments] = useState<MockStockAdjustment[]>([
-        ...initialAdjustments,
-    ])
+    const [products, setProducts] = useState<InventoryItem[]>([])
+    const [ledgerEntries, setLedgerEntries] = useState<StockLedgerEntry[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [search, setSearch] = useState("")
     const [isAdjustOpen, setIsAdjustOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const loadData = useCallback(async () => {
+        try {
+            const [inv, ledger] = await Promise.all([
+                getInventory(),
+                getStockLedger(50),
+            ])
+            setProducts(inv)
+            setLedgerEntries(ledger)
+        } catch {
+            toast.error("Failed to load inventory data")
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    useEffect(() => { loadData() }, [loadData])
 
     const lowStockProducts = useMemo(
         () => products.filter((p) => p.stock <= p.minStock && p.stock > 0),
@@ -110,7 +106,7 @@ export default function InventoryPageClient() {
         return products.filter(
             (p) =>
                 p.name.toLowerCase().includes(term) ||
-                p.sku.toLowerCase().includes(term)
+                p.itemCode.toLowerCase().includes(term)
         )
     }, [products, search])
 
@@ -136,7 +132,6 @@ export default function InventoryPageClient() {
 
     async function onSubmit(values: AdjustmentFormValues) {
         setIsSubmitting(true)
-        await new Promise((resolve) => setTimeout(resolve, 400))
 
         const product = products.find((p) => p.id === values.productId)
         if (!product) {
@@ -151,45 +146,37 @@ export default function InventoryPageClient() {
             return
         }
 
-        // Update product stock
-        setProducts((prev) =>
-            prev.map((p) =>
-                p.id === values.productId
-                    ? {
-                          ...p,
-                          stock:
-                              values.type === "add"
-                                  ? p.stock + values.quantity
-                                  : p.stock - values.quantity,
-                      }
-                    : p
-            )
-        )
-
-        // Add adjustment record
-        const newAdj: MockStockAdjustment = {
-            id: `adj-${String(adjustments.length + 1).padStart(3, "0")}`,
-            productId: values.productId,
-            productName: product.name,
+        const result = await createInventoryAdjustment({
+            itemCode: product.itemCode,
             type: values.type,
-            quantity:
-                values.type === "add" ? values.quantity : -values.quantity,
+            qty: values.quantity,
+            warehouse: product.warehouse,
             reason: values.reason,
-            date: new Date().toISOString().split("T")[0],
-            adjustedBy: "Current User",
-        }
-        setAdjustments((prev) => [newAdj, ...prev])
+        })
 
-        toast.success(
-            `${values.type === "add" ? "Added" : "Removed"} ${values.quantity} units of ${product.name}`
-        )
+        if (result.error) {
+            toast.error(result.error)
+        } else {
+            toast.success(
+                `${values.type === "add" ? "Added" : "Removed"} ${values.quantity} units of ${product.name}`
+            )
+            setIsAdjustOpen(false)
+            loadData() // Refresh data
+        }
         setIsSubmitting(false)
-        setIsAdjustOpen(false)
     }
 
-    function getStockLevel(product: MockProduct) {
-        const ratio = product.stock / (product.minStock * 3)
-        return Math.min(100, Math.max(0, ratio * 100))
+    function getStockLevel(product: InventoryItem) {
+        const maxLevel = Math.max(product.minStock * 3, product.stock, 1)
+        return Math.min(100, Math.max(0, (product.stock / maxLevel) * 100))
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        )
     }
 
     return (
@@ -204,13 +191,23 @@ export default function InventoryPageClient() {
                         Track stock levels and manage adjustments
                     </p>
                 </div>
-                <Button
-                    onClick={() => openAdjustModal()}
-                    className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
-                >
-                    <ArrowUpDown className="h-4 w-4" />
-                    Stock Adjustment
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => { setIsLoading(true); loadData() }}
+                        className="rounded-xl h-11 gap-2"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                    </Button>
+                    <Button
+                        onClick={() => openAdjustModal()}
+                        className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
+                    >
+                        <ArrowUpDown className="h-4 w-4" />
+                        Stock Adjustment
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -352,7 +349,7 @@ export default function InventoryPageClient() {
                                                     {product.name}
                                                 </TableCell>
                                                 <TableCell className="font-mono text-xs text-muted-foreground">
-                                                    {product.sku}
+                                                    {product.itemCode}
                                                 </TableCell>
                                                 <TableCell className="text-right font-semibold">
                                                     {product.stock}
@@ -426,7 +423,7 @@ export default function InventoryPageClient() {
                                                     {product.name}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground font-mono">
-                                                    {product.sku}
+                                                    {product.itemCode}
                                                 </p>
                                             </div>
                                             {product.stock <= 0 ? (
@@ -557,7 +554,7 @@ export default function InventoryPageClient() {
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="divide-y divide-border/50">
-                                {adjustments.length === 0 ? (
+                                {ledgerEntries.length === 0 ? (
                                     <div className="h-32 flex flex-col items-center justify-center text-muted-foreground">
                                         <ArrowUpDown className="h-8 w-8 text-muted-foreground/30 mb-2" />
                                         <p className="text-sm">
@@ -565,19 +562,19 @@ export default function InventoryPageClient() {
                                         </p>
                                     </div>
                                 ) : (
-                                    adjustments.map((adj) => (
+                                    ledgerEntries.map((entry) => (
                                         <div
-                                            key={adj.id}
+                                            key={entry.id}
                                             className="flex items-center gap-4 p-4"
                                         >
                                             <div
                                                 className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                                    adj.quantity > 0
+                                                    entry.qtyChange > 0
                                                         ? "bg-emerald-100 dark:bg-emerald-950/30"
                                                         : "bg-rose-100 dark:bg-rose-950/30"
                                                 }`}
                                             >
-                                                {adj.quantity > 0 ? (
+                                                {entry.qtyChange > 0 ? (
                                                     <Plus className="h-4 w-4 text-emerald-600" />
                                                 ) : (
                                                     <Minus className="h-4 w-4 text-rose-600" />
@@ -585,27 +582,27 @@ export default function InventoryPageClient() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-sm">
-                                                    {adj.productName}
+                                                    {entry.itemCode}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {adj.reason} &middot;{" "}
-                                                    {adj.date}
+                                                    {entry.voucherType}: {entry.voucherNo} &middot;{" "}
+                                                    {entry.date}
                                                 </p>
                                             </div>
                                             <div className="text-right">
                                                 <p
                                                     className={`font-semibold text-sm ${
-                                                        adj.quantity > 0
+                                                        entry.qtyChange > 0
                                                             ? "text-emerald-600"
                                                             : "text-rose-600"
                                                     }`}
                                                 >
-                                                    {adj.quantity > 0
-                                                        ? `+${adj.quantity}`
-                                                        : adj.quantity}
+                                                    {entry.qtyChange > 0
+                                                        ? `+${entry.qtyChange}`
+                                                        : entry.qtyChange}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {adj.type}
+                                                    Bal: {entry.balanceQty}
                                                 </p>
                                             </div>
                                         </div>

@@ -2,11 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-    // ── Mock/UI-first mode: skip all Supabase auth ──
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    const isMockMode = process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
-    if (isMockMode || !supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey) {
         return NextResponse.next()
     }
 
@@ -78,10 +76,18 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
 
     // 2. Auth Protection Logic
-    const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/auth')
-    const isProtectedPage = url.pathname.startsWith('/dashboard') ||
+    const isResetPasswordPage = url.pathname === '/reset-password'
+    const isAuthCallback = url.pathname === '/auth/callback'
+    const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/auth') || url.pathname.startsWith('/signup') || url.pathname.startsWith('/forgot-password')
+    const isProtectedPage = url.pathname === '/' ||
         url.pathname.startsWith('/pos') ||
+        url.pathname.startsWith('/products') ||
+        url.pathname.startsWith('/orders') ||
+        url.pathname.startsWith('/inventory') ||
+        url.pathname.startsWith('/customers') ||
         url.pathname.startsWith('/items') ||
+        url.pathname.startsWith('/stock') ||
+        url.pathname.startsWith('/reports') ||
         url.pathname.startsWith('/settings') ||
         url.pathname.startsWith('/admin')
 
@@ -92,10 +98,10 @@ export async function middleware(request: NextRequest) {
     }
 
     // Redirect authenticated users away from login
-    if (isAuthPage && user) {
-        // Simple redirect - role check is done inside the dashboard layout anyway
-        // Checking DB in middleware can be slow, so we do a "best guess" or just default to dashboard
-        url.pathname = '/dashboard'
+    // But allow reset-password page (user has a session from the email link)
+    // and auth callback (exchange code for session)
+    if (isAuthPage && user && !isResetPasswordPage && !isAuthCallback) {
+        url.pathname = '/'
         return NextResponse.redirect(url)
     }
 

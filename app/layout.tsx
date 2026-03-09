@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
+
+import { CookieConsent } from "@/components/legal/cookie-consent"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import SyncWorker from "@/components/sync/SyncWorker"
 import { Toaster } from "@/components/ui/sonner"
-import { CookieConsent } from "@/components/legal/cookie-consent"
 import "./globals.css"
 
 const inter = Inter({
@@ -20,11 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Inventory POS",
-    template: "%s | Inventory POS",
+    default: "Valanthir IMS",
+    template: "%s | Valanthir IMS",
   },
-  description: "Modern Inventory & POS System for Nepal",
-  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale"],
+  description: "Valanthir IMS is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
+  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "valanthir"],
 }
 
 export default function RootLayout({

@@ -13,6 +13,7 @@ import {
     Send,
     Settings2,
     ShoppingCart,
+    Users,
     Warehouse,
 } from "lucide-react"
 
@@ -44,6 +45,11 @@ const navigationBlocks = {
             icon: ShoppingCart,
         },
         {
+            title: "Orders",
+            url: "/orders",
+            icon: Archive,
+        },
+        {
             title: "Products",
             url: "/products",
             icon: Package,
@@ -52,6 +58,11 @@ const navigationBlocks = {
             title: "Inventory",
             url: "/inventory",
             icon: Warehouse,
+        },
+        {
+            title: "Customers",
+            url: "/customers",
+            icon: Users,
         },
         {
             title: "Stock Management",
@@ -109,8 +120,8 @@ export function AppSidebar({ userProfile, ...props }: React.ComponentProps<typeo
                                     <Command className="size-4" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">Inventory POS</span>
-                                    <span className="truncate text-xs">Valanthir</span>
+                                    <span className="truncate font-medium">Valanthir IMS</span>
+                                    <span className="truncate text-xs">Store Workspace</span>
                                 </div>
                             </a>
                         </SidebarMenuButton>

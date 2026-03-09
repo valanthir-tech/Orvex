@@ -185,3 +185,58 @@ export async function getInvoice(id: string) {
         return null
     }
 }
+
+// Get items for the POS terminal (formatted for Dexie local DB)
+export async function getPOSItems() {
+    try {
+        const client = await getTenantClient();
+
+        const items = await client.getList<{
+            name: string
+            item_name: string
+            item_code: string
+            item_group: string
+            standard_rate: number
+            valuation_rate: number
+            image: string | null
+            disabled: 0 | 1
+        }>('Item', {
+            fields: ['name', 'item_name', 'item_code', 'item_group', 'standard_rate', 'valuation_rate', 'image', 'disabled'],
+            filters: [['disabled', '=', 0], ['is_stock_item', '=', 1]],
+            limit: 0,
+        });
+
+        // Fetch stock for all items via Bin doctype
+        const bins = await client.getList<{
+            item_code: string
+            actual_qty: number
+        }>('Bin', {
+            fields: ['item_code', 'actual_qty'],
+            limit: 0,
+        });
+
+        const stockMap = new Map<string, number>();
+        for (const bin of bins) {
+            stockMap.set(bin.item_code, (stockMap.get(bin.item_code) || 0) + bin.actual_qty);
+        }
+
+        return items.map(item => ({
+            id: item.name,
+            name: item.item_name,
+            sku: item.item_code,
+            price: item.standard_rate || 0,
+            cost: item.valuation_rate || 0,
+            stock: stockMap.get(item.item_code) || 0,
+            minStock: 0,
+            category: item.item_group || 'Uncategorized',
+            barcode: null as string | null,
+            image: item.image || null,
+            isActive: true,
+            isSynced: true,
+            updatedAt: new Date(),
+        }));
+    } catch (error) {
+        console.error('Get POS items error:', error);
+        return [];
+    }
+}

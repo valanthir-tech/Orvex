@@ -10,11 +10,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { provisionTenant } from '@/lib/erpnext-provisioning';
 import { encryptCredentials } from '@/lib/encryption';
+import { isInternalAdminRequest } from '@/lib/internal-admin-auth';
 import { createSupabaseServerClient } from '@/lib/tenant';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
+        const supabase = await createSupabaseServerClient();
+        const isInternalRequest = isInternalAdminRequest(req);
 
         const {
             companyName,
@@ -42,6 +46,30 @@ export async function POST(req: NextRequest) {
                 { success: false, error: 'Company abbreviation must be at least 2 letters' },
                 { status: 400 }
             );
+        }
+
+        if (!isInternalRequest) {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                return NextResponse.json(
+                    { success: false, error: 'Unauthorized' },
+                    { status: 401 }
+                );
+            }
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (profile?.role !== 'superadmin') {
+                return NextResponse.json(
+                    { success: false, error: 'Forbidden' },
+                    { status: 403 }
+                );
+            }
         }
 
         console.log(`[Tenant API] Provisioning: ${companyName} (${abbr}) for ${ownerEmail}`);
@@ -72,15 +100,6 @@ export async function POST(req: NextRequest) {
             : null;
 
         // Save to Supabase tenants table (with encrypted credentials)
-        const supabase = await createSupabaseServerClient();
-
-        // Ensure the person who is provisioning this tenant is authorized as a superadmin
-        const { data: { user } } = await supabase.auth.getUser()
-
-        // We assume RLS protects the table, meaning only users with 'superadmin' role can insert into `tenants`.
-        // Alternatively, since we're provisioning, the user might be an admin of this specific tenant down the line,
-        // but currently, only superadmins can create new tenants.
-
         const tenantData = {
             company_name: companyName,
             company_abbr: abbr.toLowerCase(), // Save abbreviation as lowercase
@@ -107,7 +126,34 @@ export async function POST(req: NextRequest) {
                 { status: 500 }
             );
         }
+        // Invite the owner via Supabase Auth (sends email with magic link)
+        try {
+            const serviceClient = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!
+            );
 
+            const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(
+                ownerEmail,
+                {
+                    data: {
+                        first_name: ownerFirstName,
+                        last_name: ownerLastName || '',
+                        role: 'admin',
+                    },
+                    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
+                }
+            );
+
+            if (inviteError) {
+                // Log but don't fail — tenant is provisioned, invite can be resent
+                console.error('[Tenant API] Owner invite failed:', inviteError.message);
+            } else {
+                console.log(`[Tenant API] Owner invite sent to: ${ownerEmail}`);
+            }
+        } catch (inviteErr) {
+            console.error('[Tenant API] Owner invite error:', inviteErr);
+        }
         console.log(`[Tenant API] ✅ Tenant provisioned: ${companyName}`);
 
         return NextResponse.json({ success: true, tenant }, { status: 201 });

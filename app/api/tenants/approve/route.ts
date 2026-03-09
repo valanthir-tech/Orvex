@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isInternalAdminRequest } from '@/lib/internal-admin-auth';
 import { createSupabaseServerClient } from '@/lib/tenant';
 
 // Ensure we don't cache this endpoint
@@ -13,6 +14,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
     try {
         const { signupId } = await req.json();
+        const isInternalRequest = isInternalAdminRequest(req);
 
         if (!signupId) {
             return NextResponse.json(
@@ -23,15 +25,16 @@ export async function POST(req: NextRequest) {
 
         const supabase = await createSupabaseServerClient();
 
-        // 1. Double check superadmin authorization (API-level security)
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!isInternalRequest) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+            }
 
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-        if (profile?.role !== 'superadmin') {
-            return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+            if (profile?.role !== 'superadmin') {
+                return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+            }
         }
 
         // 2. Fetch the stored signup request
@@ -68,9 +71,16 @@ export async function POST(req: NextRequest) {
         const protocol = host.includes("localhost") ? "http" : "https";
         const provisionUrl = `${protocol}://${host}/api/tenants/provision`;
 
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        const internalSecret = process.env.INTERNAL_ADMIN_API_SECRET?.trim();
+
+        if (internalSecret) {
+            headers['x-internal-admin-secret'] = internalSecret;
+        }
+
         const provisionResult = await fetch(provisionUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 companyName: signup.company_name,
                 companyAbbr: signup.company_abbr,

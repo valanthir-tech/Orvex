@@ -24,9 +24,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { db, Order } from "@/lib/db"
 import { usePosStore } from "@/stores/pos-store"
-import { useSeedProducts } from "@/hooks/use-seed-products"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { syncPendingOrders } from "@/lib/sync-engine"
+import { getPOSItems } from "@/app/actions/pos"
 import QrScanner from "@/components/pos/QrScanner"
 import SyncLogsPanel from "@/components/pos/SyncLogsPanel"
 import { Activity } from "lucide-react"
@@ -39,10 +39,32 @@ function safeDate(d: Date | string | number): Date {
 }
 
 export default function POSInterface() {
-    // Seed products into Dexie on first load
-    useSeedProducts()
-
     const isOnline = useOnlineStatus()
+    const [isLoadingItems, setIsLoadingItems] = useState(false)
+
+    // Sync items from ERPNext into Dexie on mount & when coming online
+    const refreshItems = useCallback(async () => {
+        setIsLoadingItems(true)
+        try {
+            const items = await getPOSItems()
+            if (items.length > 0) {
+                await db.items.clear()
+                await db.items.bulkAdd(items)
+            }
+        } catch (err) {
+            console.error('Failed to sync items from ERPNext:', err)
+        }
+        setIsLoadingItems(false)
+    }, [])
+
+    useEffect(() => {
+        refreshItems()
+    }, [refreshItems])
+
+    // Re-sync when coming back online
+    useEffect(() => {
+        if (isOnline) refreshItems()
+    }, [isOnline, refreshItems])
 
     // Read products from Dexie (reactive)
     const products = useLiveQuery(
@@ -173,6 +195,9 @@ export default function POSInterface() {
         if (isSyncing) return
         setIsSyncing(true)
         try {
+            // Refresh product catalog from ERPNext
+            await refreshItems()
+            // Then sync pending orders
             const result = await syncPendingOrders()
             if (result.synced > 0) {
                 toast.success(`Synced ${result.synced} order(s)`)
@@ -183,7 +208,7 @@ export default function POSInterface() {
                 })
             }
             if (result.synced === 0 && result.failed === 0) {
-                toast.info("No pending orders to sync")
+                toast.success("Products refreshed")
             }
         } catch {
             toast.error("Sync failed")
@@ -802,7 +827,7 @@ export default function POSInterface() {
                                 {/* Receipt Header */}
                                 <div className="text-center mb-4">
                                     <h2 className="text-lg font-bold">Valanthir POS</h2>
-                                    <p className="text-xs text-muted-foreground">Tax Invoice</p>
+                                    <p className="text-xs text-muted-foreground">Order Slip</p>
                                     <div className="h-px bg-border my-3" />
                                     <div className="flex justify-between text-xs text-muted-foreground">
                                         <span>{safeDate(receiptOrder.createdAt).toLocaleDateString('en-NP', { year: 'numeric', month: 'short', day: 'numeric' })}</span>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Minus, Plus, Trash2, Printer, CreditCard, Banknote, QrCode, House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,10 +7,21 @@ import { usePosStore } from "@/stores/pos-store";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { PrintOrderSlipDialog } from "@/components/pos/PrintOrderSlip";
+import type { OrderSlipData } from "@/lib/thermal-printer";
+
+const PAYMENT_LABELS: Record<string, string> = {
+    CASH: "Cash",
+    CARD: "Card",
+    QR: "QR Pay",
+    CREDIT: "Credit",
+};
 
 export default function CartPanel() {
     const { cart, updateQuantity, removeFromCart, getTotals, checkout, clearCart } = usePosStore();
     const totals = getTotals();
+    const [printOpen, setPrintOpen] = useState(false);
+    const [printData, setPrintData] = useState<OrderSlipData | null>(null);
 
     const handleCheckout = async (mode: 'CASH' | 'CARD' | 'QR' | 'CREDIT') => {
         try {
@@ -17,9 +29,66 @@ export default function CartPanel() {
 
             const order = await checkout(mode, totals.total);
             toast.success(`Order ${order.uuid.slice(0, 8)}... created!`);
+
+            // Build order slip data for printing
+            const slipData: OrderSlipData = {
+                storeName: "My Store",
+                orderNumber: order.uuid.slice(0, 12).toUpperCase(),
+                date: new Date().toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                }),
+                time: new Date().toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                items: cart.map((item) => ({
+                    name: item.name,
+                    qty: item.quantity,
+                    rate: item.price,
+                    amount: item.price * item.quantity,
+                })),
+                subtotal: totals.subTotal,
+                discount: 0,
+                amountPaid: totals.total,
+                paymentMode: PAYMENT_LABELS[mode] || mode,
+            };
+            setPrintData(slipData);
+            setPrintOpen(true);
         } catch (e) {
             toast.error("Checkout failed");
         }
+    };
+
+    const handlePrintCurrent = () => {
+        if (cart.length === 0) return toast.error("Cart is empty");
+
+        const slipData: OrderSlipData = {
+            storeName: "My Store",
+            orderNumber: "PREVIEW",
+            date: new Date().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+            }),
+            time: new Date().toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+            items: cart.map((item) => ({
+                name: item.name,
+                qty: item.quantity,
+                rate: item.price,
+                amount: item.price * item.quantity,
+            })),
+            subtotal: totals.subTotal,
+            discount: 0,
+            amountPaid: totals.total,
+            paymentMode: "N/A",
+        };
+        setPrintData(slipData);
+        setPrintOpen(true);
     };
 
     return (
@@ -162,13 +231,22 @@ export default function CartPanel() {
                     <Button
                         variant="default"
                         className="col-span-1 h-auto py-3 flex-col gap-1 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        onClick={() => window.print()}
+                        onClick={handlePrintCurrent}
                     >
                         <Printer className="h-5 w-5" />
                         <span className="text-[10px] font-semibold">PRINT</span>
                     </Button>
                 </div>
             </div>
+
+            {/* Print Order Slip Dialog */}
+            {printData && (
+                <PrintOrderSlipDialog
+                    data={printData}
+                    open={printOpen}
+                    onOpenChange={setPrintOpen}
+                />
+            )}
         </div>
     );
 }

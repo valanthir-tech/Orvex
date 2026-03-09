@@ -26,8 +26,10 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const pageTitles: Record<string, string> = {
     "/": "Dashboard",
     "/pos": "Point of Sale",
+    "/orders": "Orders",
     "/products": "Products",
     "/inventory": "Inventory",
+    "/customers": "Customers",
     "/items": "Items & Products",
     "/items/new": "New Item",
     "/warehouses": "Warehouses",

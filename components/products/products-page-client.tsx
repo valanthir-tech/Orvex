@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -15,7 +15,7 @@ import {
     TrendingUp,
     AlertTriangle,
     XCircle,
-    Warehouse,
+    RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -56,20 +56,49 @@ import {
 } from "@/components/ui/select"
 import { badgeStyles, cardStyles } from "@/lib/theme"
 import {
-    type MockProduct,
-    mockProducts as initialProducts,
-    mockCategories,
-} from "@/lib/mock-data"
+    getItems,
+    createItem,
+    updateItem,
+    deleteItem,
+    getCategories,
+} from "@/app/actions/items"
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface Product {
+    id: string
+    name: string
+    itemCode: string
+    description: string
+    itemGroupId: string
+    itemGroup: { id: string; name: string }
+    stockUom: string
+    standardRate: number
+    valuationRate: number
+    currentStock: number
+    minStockLevel: number
+    isStockItem: boolean
+    hasBatchNo: boolean
+    image?: string | null
+    barcodes: string[]
+    createdAt: Date
+    updatedAt: Date
+}
+
+interface Category {
+    id: string
+    name: string
+}
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
 const productSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
-    sku: z.string().min(2, "SKU is required"),
+    itemCode: z.string().min(2, "Item code is required"),
     price: z.coerce.number().min(0, "Price cannot be negative"),
     cost: z.coerce.number().min(0, "Cost cannot be negative"),
-    stock: z.coerce.number().int().min(0, "Stock cannot be negative"),
     category: z.string().min(1, "Category is required"),
+    description: z.string().optional(),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
@@ -77,11 +106,30 @@ type ProductFormValues = z.infer<typeof productSchema>
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ProductsPageClient() {
-    const [products, setProducts] = useState<MockProduct[]>([...initialProducts])
+    const [products, setProducts] = useState<Product[]>([])
+    const [categories, setCategories] = useState<Category[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [search, setSearch] = useState("")
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [editingProduct, setEditingProduct] = useState<MockProduct | null>(null)
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const loadData = useCallback(async () => {
+        try {
+            const [items, cats] = await Promise.all([
+                getItems(),
+                getCategories(),
+            ])
+            setProducts(items as Product[])
+            setCategories(cats)
+        } catch {
+            toast.error("Failed to load products")
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
+
+    useEffect(() => { loadData() }, [loadData])
 
     const filteredProducts = useMemo(() => {
         if (!search) return products
@@ -89,17 +137,16 @@ export default function ProductsPageClient() {
         return products.filter(
             (p) =>
                 p.name.toLowerCase().includes(term) ||
-                p.sku.toLowerCase().includes(term) ||
-                p.category.toLowerCase().includes(term)
+                p.itemCode.toLowerCase().includes(term) ||
+                p.itemGroupId.toLowerCase().includes(term)
         )
     }, [products, search])
 
-    // Stats for consistency with dashboard
     const stats = useMemo(() => {
         const total = products.length
-        const inStock = products.filter((p) => p.stock > p.minStock).length
-        const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock).length
-        const outOfStock = products.filter((p) => p.stock <= 0).length
+        const inStock = products.filter((p) => p.currentStock > p.minStockLevel).length
+        const lowStock = products.filter((p) => p.currentStock > 0 && p.currentStock <= p.minStockLevel).length
+        const outOfStock = products.filter((p) => p.currentStock <= 0).length
         return { total, inStock, lowStock, outOfStock }
     }, [products])
 
@@ -107,11 +154,11 @@ export default function ProductsPageClient() {
         resolver: zodResolver(productSchema) as never,
         defaultValues: {
             name: "",
-            sku: "",
+            itemCode: "",
             price: 0,
             cost: 0,
-            stock: 0,
             category: "",
+            description: "",
         },
     })
 
@@ -119,71 +166,92 @@ export default function ProductsPageClient() {
         setEditingProduct(null)
         form.reset({
             name: "",
-            sku: "",
+            itemCode: "",
             price: 0,
             cost: 0,
-            stock: 0,
             category: "",
+            description: "",
         })
         setIsModalOpen(true)
     }
 
-    function openEditModal(product: MockProduct) {
+    function openEditModal(product: Product) {
         setEditingProduct(product)
         form.reset({
             name: product.name,
-            sku: product.sku,
-            price: product.price,
-            cost: product.cost,
-            stock: product.stock,
-            category: product.category,
+            itemCode: product.itemCode,
+            price: product.standardRate,
+            cost: product.valuationRate,
+            category: product.itemGroupId,
+            description: product.description,
         })
         setIsModalOpen(true)
     }
 
     async function onSubmit(values: ProductFormValues) {
         setIsSubmitting(true)
-        await new Promise((resolve) => setTimeout(resolve, 400))
 
         if (editingProduct) {
-            setProducts((prev) =>
-                prev.map((p) =>
-                    p.id === editingProduct.id ? { ...p, ...values } : p
-                )
-            )
-            toast.success("Product updated successfully")
-        } else {
-            const newProduct: MockProduct = {
-                id: `prod-${String(products.length + 1).padStart(3, "0")}`,
-                ...values,
-                minStock: 10,
-                image: null,
-                barcode: null,
-                isActive: true,
-                createdAt: new Date().toISOString().split("T")[0],
+            const result = await updateItem({
+                id: editingProduct.id,
+                name: values.name,
+                itemGroupId: values.category,
+                standardRate: values.price,
+                valuationRate: values.cost,
+                description: values.description,
+            })
+            if (result.success) {
+                toast.success("Product updated successfully")
+                setIsModalOpen(false)
+                loadData()
+            } else {
+                toast.error(result.error || "Failed to update product")
             }
-            setProducts((prev) => [...prev, newProduct])
-            toast.success("Product created successfully")
+        } else {
+            const result = await createItem({
+                name: values.name,
+                itemCode: values.itemCode,
+                itemGroupId: values.category,
+                standardRate: values.price,
+                valuationRate: values.cost,
+                description: values.description,
+                stockUom: "Nos",
+                isStockItem: true,
+                currentStock: 0,
+                minStockLevel: 0,
+                hasBatchNo: false,
+            })
+            if (result.success) {
+                toast.success("Product created successfully")
+                setIsModalOpen(false)
+                loadData()
+            } else {
+                toast.error(result.error || "Failed to create product")
+            }
         }
 
         setIsSubmitting(false)
-        setIsModalOpen(false)
     }
 
-    function handleDelete(product: MockProduct) {
-        setProducts((prev) => prev.filter((p) => p.id !== product.id))
-        toast.success(`${product.name} deleted`)
+    async function handleDelete(product: Product) {
+        const result = await deleteItem(product.id)
+        if (result.success) {
+            toast.success(`${product.name} deleted`)
+            loadData()
+        } else {
+            toast.error("Failed to delete product")
+        }
     }
 
-    function getStockBadge(product: MockProduct) {
-        if (product.stock <= 0) {
+    function getStockBadge(product: Product) {
+        if (product.currentStock <= 0) {
             return (
                 <Badge className={`${badgeStyles.danger} text-xs`}>
                     Out of Stock
                 </Badge>
             )
         }
-        if (product.stock <= product.minStock) {
+        if (product.currentStock <= product.minStockLevel) {
             return (
                 <Badge className={`${badgeStyles.warning} text-xs`}>
                     Low Stock
@@ -194,6 +262,14 @@ export default function ProductsPageClient() {
             <Badge className={`${badgeStyles.success} text-xs`}>
                 In Stock
             </Badge>
+        )
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
         )
     }
 
@@ -209,13 +285,23 @@ export default function ProductsPageClient() {
                         Manage your product catalog
                     </p>
                 </div>
-                <Button
-                    onClick={openAddModal}
-                    className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => { setIsLoading(true); loadData() }}
+                        className="rounded-xl h-11 gap-2"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                    </Button>
+                    <Button
+                        onClick={openAddModal}
+                        className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Product
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -326,7 +412,7 @@ export default function ProductsPageClient() {
                                 <TableRow>
                                     <TableHead className="w-[50px]">Image</TableHead>
                                     <TableHead>Name</TableHead>
-                                    <TableHead>SKU</TableHead>
+                                    <TableHead>Item Code</TableHead>
                                     <TableHead className="text-right">Price</TableHead>
                                     <TableHead className="text-right">Stock</TableHead>
                                     <TableHead>Status</TableHead>
@@ -363,13 +449,13 @@ export default function ProductsPageClient() {
                                                 {product.name}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs text-muted-foreground">
-                                                {product.sku}
+                                                {product.itemCode}
                                             </TableCell>
                                             <TableCell className="text-right font-semibold">
-                                                Rs. {product.price.toLocaleString()}
+                                                Rs. {product.standardRate.toLocaleString()}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {product.stock}
+                                                {product.currentStock}
                                             </TableCell>
                                             <TableCell>
                                                 {getStockBadge(product)}
@@ -429,17 +515,17 @@ export default function ProductsPageClient() {
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-xs text-muted-foreground font-mono">
-                                                {product.sku}
+                                                {product.itemCode}
                                             </span>
                                             {getStockBadge(product)}
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <p className="font-semibold text-sm">
-                                            Rs. {product.price.toLocaleString()}
+                                            Rs. {product.standardRate.toLocaleString()}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Stock: {product.stock}
+                                            Stock: {product.currentStock}
                                         </p>
                                     </div>
                                     <div className="flex flex-col gap-1">
@@ -505,14 +591,15 @@ export default function ProductsPageClient() {
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="sku"
+                                    name="itemCode"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>SKU</FormLabel>
+                                            <FormLabel>Item Code</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="e.g. HOD-001"
                                                     className="h-11"
+                                                    disabled={!!editingProduct}
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -536,12 +623,12 @@ export default function ProductsPageClient() {
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {mockCategories.map((cat) => (
+                                                    {categories.map((cat) => (
                                                         <SelectItem
-                                                            key={cat}
-                                                            value={cat}
+                                                            key={cat.id}
+                                                            value={cat.id}
                                                         >
-                                                            {cat}
+                                                            {cat.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -591,14 +678,13 @@ export default function ProductsPageClient() {
                             </div>
                             <FormField
                                 control={form.control}
-                                name="stock"
+                                name="description"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Current Stock</FormLabel>
+                                        <FormLabel>Description (optional)</FormLabel>
                                         <FormControl>
                                             <Input
-                                                type="number"
-                                                placeholder="0"
+                                                placeholder="Product description"
                                                 className="h-11"
                                                 {...field}
                                             />

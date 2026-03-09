@@ -1,33 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, ShoppingCart, Grid, List as ListIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePosStore } from "@/stores/pos-store";
-import { db, Item } from "@/lib/db";
+import { db } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
-
-// Mock data generator for testing if DB is empty
-const seedMockData = async () => {
-    const count = await db.items.count();
-    if (count === 0) {
-        const items: Item[] = [
-            { id: "1", name: "Premium Hoodie", sku: "HOD-001", price: 3500, cost: 1800, stock: 50, minStock: 10, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
-            { id: "2", name: "Slim Fit Chinos", sku: "CHI-002", price: 2500, cost: 1200, stock: 40, minStock: 8, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
-            { id: "3", name: "Casual Polo Shirt", sku: "POL-003", price: 1800, cost: 800, stock: 60, minStock: 15, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
-            { id: "4", name: "Winter Jacket", sku: "JAC-004", price: 5500, cost: 3000, stock: 20, minStock: 5, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
-            { id: "5", name: "Cotton T-Shirt", sku: "TSH-005", price: 900, cost: 350, stock: 100, minStock: 20, category: "Clothing", barcode: null, image: null, isActive: true, isSynced: true, updatedAt: new Date() },
-        ];
-        await db.items.bulkAdd(items);
-    }
-};
 
 export default function ProductGrid() {
     const [searchTerm, setSearchTerm] = useState("");
     const addToCart = usePosStore((state) => state.addToCart);
-
-    // Seed data on mount
-    useEffect(() => { seedMockData(); }, []);
 
     // Live Query from Dexie (Offline First)
     const items = useLiveQuery(async () => {

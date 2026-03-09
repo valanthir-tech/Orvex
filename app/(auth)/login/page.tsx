@@ -73,7 +73,7 @@ export default function LoginPage() {
             return
         }
 
-        router.push("/dashboard")
+        router.push("/")
         router.refresh()
     }
 
@@ -126,7 +126,15 @@ export default function LoginPage() {
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        <div className="flex items-center justify-between">
+                                            <FormLabel>Password</FormLabel>
+                                            <Link
+                                                href="/forgot-password"
+                                                className="text-xs text-muted-foreground underline underline-offset-4 hover:text-primary"
+                                            >
+                                                Forgot password?
+                                            </Link>
+                                        </div>
                                         <FormControl>
                                             <Input
                                                 type="password"
@@ -171,6 +179,19 @@ export default function LoginPage() {
                     </p>
                 </CardFooter>
             </Card>
+
+            <p className="text-[10px] text-muted-foreground/60 text-center max-w-sm mx-auto leading-relaxed">
+                Valanthir IMS is an inventory management and order recording system.
+                Order slips generated are for internal record-keeping only and do not
+                constitute tax invoices. By signing in you agree to our{" "}
+                <Link href="/legal/terms" className="underline hover:text-muted-foreground">
+                    Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="/legal/privacy" className="underline hover:text-muted-foreground">
+                    Privacy Policy
+                </Link>.
+            </p>
         </div >
     )
 }

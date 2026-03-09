@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createPOSInvoice } from '@/app/actions/pos';
 
-const isMockMode = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
-
 /**
  * POST /api/sync
  *
  * Receives offline POS orders from the SyncWorker and forwards them to
  * ERPNext via the createPOSInvoice server action. Each order's UUID is
  * passed as the idempotency key to prevent duplicate invoice creation.
- *
- * In mock mode, orders are acknowledged immediately.
  */
 export async function POST(req: Request) {
     try {
@@ -33,17 +29,9 @@ export async function POST(req: Request) {
             }
 
             try {
-                // ── Mock mode: acknowledge immediately ──
-                if (isMockMode) {
-                    syncedIds.push(order.uuid);
-                    continue;
-                }
-
-                // ── Real mode: forward to ERPNext ──
                 const formData = new FormData();
                 formData.append('paymentMode', order.paymentMode || 'CASH');
                 formData.append('paidAmount', String(order.paidAmount ?? order.grandTotal));
-                // Pass the POS UUID as idempotency key
                 formData.append('posUuid', order.uuid);
 
                 const items = (order.items || []).map((item: any) => ({
