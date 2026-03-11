@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 export async function middleware(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -19,6 +20,9 @@ export async function middleware(request: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            cookieOptions: {
+                name: 'sb-pos-auth',
+            },
             cookies: {
                 get(name: string) {
                     return request.cookies.get(name)?.value
@@ -89,12 +93,70 @@ export async function middleware(request: NextRequest) {
         url.pathname.startsWith('/stock') ||
         url.pathname.startsWith('/reports') ||
         url.pathname.startsWith('/settings') ||
-        url.pathname.startsWith('/admin')
+        url.pathname.startsWith('/admin') ||
+        url.pathname.startsWith('/payment') ||
+        url.pathname.startsWith('/blocked')
 
     // Redirect unauthenticated users
     if (isProtectedPage && !user) {
         url.pathname = '/login'
         return NextResponse.redirect(url)
+    }
+
+    // Role guard: superadmin cannot use the POS app — redirect to admin portal
+    if (isProtectedPage && user) {
+        const adminClient = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
+        const { data: profile } = await adminClient
+            .from('profiles')
+            .select('role, tenant_id')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.role === 'superadmin') {
+            // Sign out from POS and redirect to login with an error
+            await supabase.auth.signOut()
+            url.pathname = '/login'
+            url.searchParams.set('reason', 'superadmin')
+            return NextResponse.redirect(url)
+        }
+
+        // Subscription & access check for tenant users
+        if (profile?.tenant_id) {
+            const { data: tenant } = await adminClient
+                .from('tenants')
+                .select('subscription_status, is_blocked')
+                .eq('id', profile.tenant_id)
+                .single()
+
+            const isPaymentRoute = url.pathname.startsWith('/payment')
+            const isBlockedRoute = url.pathname.startsWith('/blocked')
+            const isLogoutRoute = url.pathname.startsWith('/logout')
+            const isExempt = isPaymentRoute || isBlockedRoute || isLogoutRoute
+
+            // Hard block: account fully suspended
+            if (tenant?.is_blocked && !isExempt) {
+                url.pathname = '/blocked'
+                url.search = ''
+                return NextResponse.redirect(url)
+            }
+
+            // Pending payment: redirect to payment page
+            if (tenant?.subscription_status === 'pending_payment' && !isExempt) {
+                url.pathname = '/payment'
+                url.search = ''
+                return NextResponse.redirect(url)
+            }
+
+            // Past due on payment route: redirect to dashboard (they have grace period)
+            if (isPaymentRoute && tenant?.subscription_status === 'active') {
+                url.pathname = '/'
+                url.search = ''
+                return NextResponse.redirect(url)
+            }
+        }
     }
 
     // Redirect authenticated users away from login

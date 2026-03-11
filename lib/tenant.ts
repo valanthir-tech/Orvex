@@ -9,6 +9,9 @@ export async function createSupabaseServerClient() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            cookieOptions: {
+                name: 'sb-pos-auth',
+            },
             cookies: {
                 getAll() {
                     return cookieStore.getAll()
@@ -37,6 +40,7 @@ export async function createSupabaseServerClient() {
 
 import { ERPNextClient, ERPNextConfig } from './erpnext'
 import { decryptCredentials } from './encryption'
+import { createClient } from '@supabase/supabase-js'
 
 // Cached per request to avoid double DB hits
 export const getTenantClient = cache(async () => {
@@ -48,14 +52,48 @@ export const getTenantClient = cache(async () => {
         throw new Error("Unauthorized: No user session found.");
     }
 
-    // 2. Get Profile to find Role & Tenant
-    const { data: profile, error: profileError } = await supabase
+    // 2. Get Profile to find Role & Tenant (use service-role to bypass RLS)
+    const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    let { data: profile } = await adminClient
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-    if (profileError || !profile) {
+    // Self-heal: create profile if DB trigger didn't fire
+    // Use insert (not upsert) so we never overwrite an existing row's role
+    if (!profile) {
+        const meta = user.user_metadata || {}
+        const { data: created, error: insertError } = await adminClient
+            .from('profiles')
+            .insert({
+                id: user.id,
+                email: user.email!,
+                first_name: meta.first_name || null,
+                last_name: meta.last_name || null,
+                role: meta.role || 'cashier',
+                tenant_id: null,
+            })
+            .select()
+            .single()
+
+        if (insertError) {
+            const { data: existing } = await adminClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single()
+            profile = existing
+        } else {
+            profile = created
+        }
+    }
+
+    if (!profile) {
         throw new Error("Unauthorized: No profile found.");
     }
 

@@ -92,6 +92,16 @@ const navigationBlocks = {
             title: "Settings",
             url: "/settings",
             icon: Settings2,
+            items: [
+                {
+                    title: "Store Settings",
+                    url: "/settings",
+                },
+                {
+                    title: "Subscription",
+                    url: "/settings/subscription",
+                },
+            ],
         },
     ],
     navSecondary: [

@@ -1,6 +1,7 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/tenant"
+import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -47,7 +48,35 @@ async function getCurrentTenantId() {
         .eq("id", user.id)
         .single()
 
-    if (!profile?.tenant_id) throw new Error("No tenant found")
+    if (!profile) throw new Error("No profile found")
+
+    // Auto-provision a tenant for users without one
+    if (!profile.tenant_id) {
+        const adminClient = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
+        const name = [user.user_metadata?.first_name, user.user_metadata?.last_name].filter(Boolean).join(' ')
+        const { data: tenant } = await adminClient
+            .from("tenants")
+            .insert({
+                company_name: name ? `${name}'s Store` : 'My Store',
+                owner_email: user.email,
+                status: 'active',
+            })
+            .select("id")
+            .single()
+
+        if (!tenant) throw new Error("Failed to create tenant")
+
+        await adminClient
+            .from("profiles")
+            .update({ tenant_id: tenant.id })
+            .eq("id", user.id)
+
+        return { tenantId: tenant.id, role: profile.role, userId: user.id }
+    }
+
     return { tenantId: profile.tenant_id, role: profile.role, userId: user.id }
 }
 

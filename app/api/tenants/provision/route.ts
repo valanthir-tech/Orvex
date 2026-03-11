@@ -11,13 +11,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { provisionTenant } from '@/lib/erpnext-provisioning';
 import { encryptCredentials } from '@/lib/encryption';
 import { isInternalAdminRequest } from '@/lib/internal-admin-auth';
-import { createSupabaseServerClient } from '@/lib/tenant';
 import { createClient } from '@supabase/supabase-js';
+
+function getServiceClient() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+}
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const supabase = await createSupabaseServerClient();
+        const supabase = getServiceClient();
         const isInternalRequest = isInternalAdminRequest(req);
 
         const {
@@ -29,6 +35,7 @@ export async function POST(req: NextRequest) {
             ownerPhone,
             country = 'Nepal',
             currency = 'NPR',
+            signupId = null,
         } = body;
 
         // Validate required fields
@@ -126,33 +133,49 @@ export async function POST(req: NextRequest) {
                 { status: 500 }
             );
         }
-        // Invite the owner via Supabase Auth (sends email with magic link)
+        // Link owner to tenant — update existing profile if user already exists, else invite
         try {
-            const serviceClient = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.SUPABASE_SERVICE_ROLE_KEY!
-            );
+            // Look up if this email already has a Supabase account
+            const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+            const existingUser = userList?.users?.find((u) => u.email === ownerEmail) ?? null;
 
-            const { error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(
-                ownerEmail,
-                {
-                    data: {
-                        first_name: ownerFirstName,
-                        last_name: ownerLastName || '',
-                        role: 'admin',
-                    },
-                    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
-                }
-            );
-
-            if (inviteError) {
-                // Log but don't fail — tenant is provisioned, invite can be resent
-                console.error('[Tenant API] Owner invite failed:', inviteError.message);
+            if (existingUser) {
+                // User already has an account — link them to this tenant directly
+                await supabase
+                    .from('profiles')
+                    .update({ tenant_id: tenant.id, role: 'admin' })
+                    .eq('id', existingUser.id);
+                console.log(`[Tenant API] Linked existing user ${ownerEmail} to tenant ${tenant.id}`);
             } else {
-                console.log(`[Tenant API] Owner invite sent to: ${ownerEmail}`);
+                // No account yet — send invite email
+                const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+                    ownerEmail,
+                    {
+                        data: {
+                            first_name: ownerFirstName,
+                            last_name: ownerLastName || '',
+                            role: 'admin',
+                        },
+                        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
+                    }
+                );
+
+                if (inviteError) {
+                    console.error('[Tenant API] Owner invite failed:', inviteError.message);
+                } else {
+                    console.log(`[Tenant API] Owner invite sent to: ${ownerEmail}`);
+                }
             }
-        } catch (inviteErr) {
-            console.error('[Tenant API] Owner invite error:', inviteErr);
+
+            // Mark the signup request as provisioned if we have a signupId
+            if (signupId) {
+                await supabase
+                    .from('tenant_signups')
+                    .update({ status: 'provisioned' })
+                    .eq('id', signupId);
+            }
+        } catch (linkErr) {
+            console.error('[Tenant API] Owner link/invite error:', linkErr);
         }
         console.log(`[Tenant API] ✅ Tenant provisioned: ${companyName}`);
 

@@ -17,7 +17,8 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
+import { PaymentReminderBanner } from "@/components/payment/payment-reminder-banner"
+
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -36,16 +37,23 @@ const pageTitles: Record<string, string> = {
     "/stock/entries": "Stock Entries",
     "/reports": "Reports",
     "/settings": "Settings",
+    "/settings/subscription": "Subscription",
 }
 
 export default function DashboardLayoutClient({
     children,
     defaultOpen,
     userProfile,
+    subscriptionInfo,
 }: {
     children: React.ReactNode
     defaultOpen: boolean
     userProfile?: any
+    subscriptionInfo?: {
+        status: string
+        gracePeriodEnd: string | null
+        daysRemaining: number | null
+    } | null
 }) {
     const pathname = usePathname()
     const [sidebarOpen, setSidebarOpen] = useState(defaultOpen)
@@ -64,7 +72,7 @@ export default function DashboardLayoutClient({
     return (
         <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
             <AppSidebar userProfile={userProfile ? {
-                name: `${userProfile.first_name} ${userProfile.last_name}`.trim() || 'Admin',
+                name: [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ') || userProfile.email?.split('@')[0] || 'Admin',
                 email: userProfile.email,
                 avatar: "/avatars/shadcn.jpg"
             } : undefined} />
@@ -91,11 +99,17 @@ export default function DashboardLayoutClient({
                         </Breadcrumb>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 pt-0 pb-20 lg:pb-4">
+                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                    {subscriptionInfo && ["past_due", "pending_payment"].includes(subscriptionInfo.status) && (
+                        <PaymentReminderBanner
+                            status={subscriptionInfo.status as "past_due" | "pending_payment" | "blocked"}
+                            daysRemaining={subscriptionInfo.daysRemaining}
+                            gracePeriodEnd={subscriptionInfo.gracePeriodEnd}
+                        />
+                    )}
                     {children}
                 </div>
             </SidebarInset>
-            <MobileBottomNav />
         </SidebarProvider>
     )
 }

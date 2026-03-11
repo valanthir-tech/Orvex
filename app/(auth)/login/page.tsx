@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -33,6 +33,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Box, Loader2 } from "lucide-react"
+import { checkUserRole } from "@/app/actions/auth"
 
 const loginSchema = z.object({
     email: z
@@ -48,6 +49,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
     const form = useForm<LoginFormValues>({
@@ -62,13 +64,25 @@ export default function LoginPage() {
         setIsLoading(true)
         const supabase = createSupabaseBrowserClient()
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
             email: values.email,
             password: values.password,
         })
 
         if (error) {
             form.setError("root", { message: error.message })
+            setIsLoading(false)
+            return
+        }
+
+        // Role guard: only superadmin is blocked — they belong in the admin portal
+        const role = await checkUserRole(signInData.user.id)
+
+        if (role === "superadmin") {
+            await supabase.auth.signOut()
+            form.setError("root", {
+                message: "Superadmin accounts cannot access this app. Please use the Admin Portal.",
+            })
             setIsLoading(false)
             return
         }
@@ -101,6 +115,11 @@ export default function LoginPage() {
                             onSubmit={form.handleSubmit(onSubmit)}
                             className="grid gap-4"
                         >
+                            {searchParams.get("reason") === "superadmin" && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                    Superadmin accounts cannot access the POS app. Please use the <strong>Admin Portal</strong>.
+                                </div>
+                            )}
                             <FormField
                                 control={form.control}
                                 name="email"

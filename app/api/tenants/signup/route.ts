@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/tenant';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
     try {
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
             ownerLastName,
             ownerPhone,
             country = 'Nepal',
+            userId = null,
         } = body;
 
         if (!companyName || !ownerEmail || !ownerFirstName) {
@@ -29,14 +30,20 @@ export async function POST(req: NextRequest) {
         }
 
         // Generate abbreviation from company name
-        const abbr = companyName
-            .split(/\s+/)
-            .map((w: string) => w[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 5);
+        // Multi-word: use initials (e.g. "My Shop" → "MS")
+        // Single-word / too short: use first 3 letters (e.g. "ShopXYZ" → "SHO")
+        const words = companyName.trim().split(/\s+/);
+        let abbr = words.length >= 2
+            ? words.map((w: string) => w[0]).join('').toUpperCase().slice(0, 5)
+            : companyName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
+        if (abbr.length < 2) {
+            abbr = companyName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4) || 'CO';
+        }
 
-        const supabase = await createSupabaseServerClient();
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
 
         const payload = {
             company_name: companyName,
@@ -46,7 +53,8 @@ export async function POST(req: NextRequest) {
             owner_last_name: ownerLastName || '',
             owner_phone: ownerPhone || null,
             country,
-            status: 'pending_approval'
+            status: 'pending_approval',
+            user_id: userId || null,
         };
 
         const { data, error } = await supabase

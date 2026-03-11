@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -25,82 +24,121 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-import { Box, Loader2 } from "lucide-react"
+import { Box, Building2, CheckCircle, Loader2 } from "lucide-react"
 
-const signupSchema = z.object({
-    firstName: z.string().min(1, "First Name is required"),
+// ── Schemas ──────────────────────────────────────────────────────────────────
+const accountSchema = z.object({
+    firstName: z.string().min(1, "First name is required"),
     lastName: z.string().optional(),
-    email: z
-        .string()
-        .min(1, "Email is required")
-        .email("Please enter a valid email"),
-    password: z
-        .string()
-        .min(6, "Password must be at least 6 characters"),
+    email: z.string().min(1, "Email is required").email("Please enter a valid email"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
 })
+type AccountValues = z.infer<typeof accountSchema>
 
-type SignupFormValues = z.infer<typeof signupSchema>
+const businessSchema = z.object({
+    companyName: z.string().min(2, "Business name is required"),
+    phone: z.string().optional(),
+    country: z.string().min(1, "Country is required"),
+})
+type BusinessValues = z.infer<typeof businessSchema>
 
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function SignupPage() {
-    const router = useRouter()
+    const [step, setStep] = useState<1 | 2 | 3>(1)
     const [isLoading, setIsLoading] = useState(false)
-    const [isSuccess, setIsSuccess] = useState(false)
+    const [accountData, setAccountData] = useState<AccountValues | null>(null)
+    const [userId, setUserId] = useState<string | null>(null)
 
-    const form = useForm<SignupFormValues>({
-        resolver: zodResolver(signupSchema),
-        defaultValues: {
-            firstName: "",
-            lastName: "",
-            email: "",
-            password: "",
-        },
+    const accountForm = useForm<AccountValues>({
+        resolver: zodResolver(accountSchema),
+        defaultValues: { firstName: "", lastName: "", email: "", password: "" },
     })
 
-    async function onSubmit(values: SignupFormValues) {
+    const businessForm = useForm<BusinessValues>({
+        resolver: zodResolver(businessSchema),
+        defaultValues: { companyName: "", phone: "", country: "Nepal" },
+    })
+
+    // Step 1 — create Supabase account
+    async function onAccountSubmit(values: AccountValues) {
         setIsLoading(true)
         const supabase = createSupabaseBrowserClient()
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email: values.email,
             password: values.password,
             options: {
                 data: {
                     first_name: values.firstName,
-                    last_name: values.lastName || '',
-                    role: 'admin' // Temporary logic: Initial signups own the tenant instance
-                }
-            }
+                    last_name: values.lastName || "",
+                    role: "admin",
+                },
+            },
         })
 
         if (error) {
-            form.setError("root", { message: error.message })
+            accountForm.setError("root", { message: error.message })
             setIsLoading(false)
             return
         }
 
-        setIsSuccess(true)
+        setAccountData(values)
+        setUserId(data.user?.id ?? null)
         setIsLoading(false)
+        setStep(2)
     }
 
-    if (isSuccess) {
+    // Step 2 — submit company/business info
+    async function onBusinessSubmit(values: BusinessValues) {
+        if (!accountData) return
+        setIsLoading(true)
+
+        const res = await fetch("/api/tenants/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                companyName: values.companyName,
+                ownerEmail: accountData.email,
+                ownerFirstName: accountData.firstName,
+                ownerLastName: accountData.lastName || "",
+                ownerPhone: values.phone || null,
+                country: values.country,
+                userId,
+            }),
+        })
+
+        const result = await res.json()
+        if (!result.success) {
+            businessForm.setError("root", { message: result.error || "Failed to submit request." })
+            setIsLoading(false)
+            return
+        }
+
+        setIsLoading(false)
+        setStep(3)
+    }
+
+    // ── Success screen ────────────────────────────────────────────────────────
+    if (step === 3) {
         return (
             <div className="flex flex-col gap-6">
                 <Card className="border-0 shadow-lg rounded-2xl">
                     <CardHeader className="text-center">
-                        <CardTitle>Account Created</CardTitle>
+                        <div className="flex justify-center mb-2">
+                            <CheckCircle className="h-12 w-12 text-green-500" />
+                        </div>
+                        <CardTitle>Application Submitted!</CardTitle>
                         <CardDescription>
-                            Your Valanthir ID has been registered successfully.
+                            Your business registration is under review.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
                         <p className="text-sm text-muted-foreground mb-6">
-                            Before accessing your POS, please verify your email address.
-                            Depending on configuration, a business admin may still need to assign you to a tenant.
+                            Our team will review your application and activate your account
+                            shortly. You&apos;ll receive an email once your business is ready.
                         </p>
                         <Button asChild className="w-full h-11">
-                            <Link href="/login">
-                                Proceed to Login
-                            </Link>
+                            <Link href="/login">Back to Login</Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -108,6 +146,7 @@ export default function SignupPage() {
         )
     }
 
+    // ── Header ────────────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2 text-center">
@@ -116,130 +155,209 @@ export default function SignupPage() {
                 </div>
                 <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
                 <p className="text-balance text-sm text-muted-foreground">
-                    Create a new Valanthir ID
+                    {step === 1 ? "Create your account" : "Tell us about your business"}
                 </p>
             </div>
-            <Card className="border-0 shadow-lg rounded-2xl">
-                <CardHeader>
-                    <CardTitle>Create Account</CardTitle>
-                    <CardDescription>
-                        Complete the form below to register
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form
-                            onSubmit={form.handleSubmit(onSubmit)}
-                            className="grid gap-4"
-                        >
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="firstName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>First Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="John"
-                                                    disabled={isLoading}
-                                                    className="h-11"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="lastName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Last Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Doe"
-                                                    disabled={isLoading}
-                                                    className="h-11"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="name@example.com"
-                                                type="email"
-                                                autoComplete="email"
-                                                disabled={isLoading}
-                                                className="h-11"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Password</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="password"
-                                                placeholder="••••••••"
-                                                autoComplete="new-password"
-                                                disabled={isLoading}
-                                                className="h-11"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            {form.formState.errors.root && (
-                                <p className="text-sm font-medium text-destructive mt-1">
-                                    {form.formState.errors.root.message}
-                                </p>
-                            )}
-                            <Button
-                                type="submit"
-                                className="w-full h-11 mt-2"
-                                disabled={isLoading}
+
+            {/* ── Step 1: Account details ──────────────────────────────────── */}
+            {step === 1 && (
+                <Card className="border-0 shadow-lg rounded-2xl">
+                    <CardHeader>
+                        <CardTitle>Create Account</CardTitle>
+                        <CardDescription>Step 1 of 2 — Your personal details</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...accountForm}>
+                            <form
+                                onSubmit={accountForm.handleSubmit(onAccountSubmit)}
+                                className="grid gap-4"
                             >
-                                {isLoading && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={accountForm.control}
+                                        name="firstName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>First Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="John" disabled={isLoading} className="h-11" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={accountForm.control}
+                                        name="lastName"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Last Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Doe" disabled={isLoading} className="h-11" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <FormField
+                                    control={accountForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="name@example.com"
+                                                    type="email"
+                                                    autoComplete="email"
+                                                    disabled={isLoading}
+                                                    className="h-11"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={accountForm.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Password</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="password"
+                                                    placeholder="••••••••"
+                                                    autoComplete="new-password"
+                                                    disabled={isLoading}
+                                                    className="h-11"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {accountForm.formState.errors.root && (
+                                    <p className="text-sm font-medium text-destructive">
+                                        {accountForm.formState.errors.root.message}
+                                    </p>
                                 )}
-                                Sign Up
-                            </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-                <CardFooter className="flex justify-center flex-col gap-2">
-                    <p className="text-sm text-muted-foreground">
-                        Already have an account?{" "}
-                        <Link
-                            href="/login"
-                            className="underline underline-offset-4 hover:text-primary"
-                        >
-                            Sign In
-                        </Link>
-                    </p>
-                </CardFooter>
-            </Card>
+                                <Button type="submit" className="w-full h-11 mt-2" disabled={isLoading}>
+                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Continue
+                                </Button>
+                            </form>
+                        </Form>
+                    </CardContent>
+                    <CardFooter className="flex justify-center">
+                        <p className="text-sm text-muted-foreground">
+                            Already have an account?{" "}
+                            <Link href="/login" className="underline underline-offset-4 hover:text-primary">
+                                Sign In
+                            </Link>
+                        </p>
+                    </CardFooter>
+                </Card>
+            )}
+
+            {/* ── Step 2: Business details ─────────────────────────────────── */}
+            {step === 2 && (
+                <Card className="border-0 shadow-lg rounded-2xl">
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-muted-foreground" />
+                            <CardTitle>Business Details</CardTitle>
+                        </div>
+                        <CardDescription>Step 2 of 2 — Tell us about your business</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...businessForm}>
+                            <form
+                                onSubmit={businessForm.handleSubmit(onBusinessSubmit)}
+                                className="grid gap-4"
+                            >
+                                <FormField
+                                    control={businessForm.control}
+                                    name="companyName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Business Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Acme Store"
+                                                    disabled={isLoading}
+                                                    className="h-11"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={businessForm.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Phone Number <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="+977 98XXXXXXXX"
+                                                    disabled={isLoading}
+                                                    className="h-11"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={businessForm.control}
+                                    name="country"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Country</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Nepal"
+                                                    disabled={isLoading}
+                                                    className="h-11"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {businessForm.formState.errors.root && (
+                                    <p className="text-sm font-medium text-destructive">
+                                        {businessForm.formState.errors.root.message}
+                                    </p>
+                                )}
+                                <div className="flex gap-3 mt-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1 h-11"
+                                        disabled={isLoading}
+                                        onClick={() => setStep(1)}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button type="submit" className="flex-1 h-11" disabled={isLoading}>
+                                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                        Submit Application
+                                    </Button>
+                                </div>
+                            </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

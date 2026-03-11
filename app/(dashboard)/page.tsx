@@ -59,5 +59,25 @@ export default async function DashboardPage() {
         )
     }
 
+    if (!profile.tenant_id) {
+        return (
+            <div className="mx-auto flex min-h-[60vh] max-w-xl items-center">
+                <Card className="w-full rounded-2xl border-0 shadow-lg">
+                    <CardHeader>
+                        <CardTitle>Welcome to Valanthir IMS</CardTitle>
+                        <CardDescription>
+                            Your account is ready! A tenant workspace hasn&apos;t been linked yet. Please contact your administrator or complete the setup process.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex gap-3">
+                        <Button asChild className="btn-pill">
+                            <Link href="/settings">Go to Settings</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
     return <OwnerDashboard />
 }

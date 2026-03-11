@@ -87,8 +87,23 @@ export default function SettingsPageClient() {
     const [userRole, setUserRole] = useState("admin")
     const [forceOverride, setForceOverride] = useState(false)
 
-    // Load settings from backend
+    // User account info
+    const [userName, setUserName] = useState("")
+    const [userEmail, setUserEmail] = useState("")
+
+    // Load user + settings from backend
     useEffect(() => {
+        async function loadUser() {
+            const supabase = createSupabaseBrowserClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                setUserEmail(user.email || "")
+                const meta = user.user_metadata || {}
+                const name = [meta.first_name, meta.last_name].filter(Boolean).join(" ")
+                setUserName(name || user.email?.split("@")[0] || "User")
+            }
+        }
+        loadUser()
         async function loadSettings() {
             try {
                 const settings = await getSettings()
@@ -222,9 +237,8 @@ export default function SettingsPageClient() {
             return
         }
 
-        toast.success("Logged out successfully")
-        router.push("/login")
-        router.refresh()
+        // Hard redirect to fully clear in-memory auth state
+        window.location.href = "/login"
     }
 
     if (isLoading) {
@@ -262,31 +276,17 @@ export default function SettingsPageClient() {
                     <div className="flex items-center gap-4">
                         <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                             <span className="text-xl font-bold text-primary">
-                                VA
+                                {userName ? userName.slice(0, 2).toUpperCase() : "?"}
                             </span>
                         </div>
                         <div className="flex-1">
-                            <p className="font-semibold">Store Admin</p>
+                            <p className="font-semibold">{userName || "Loading..."}</p>
                             <p className="text-sm text-muted-foreground">
-                                admin@store.com
+                                {userEmail}
                             </p>
                         </div>
                         <Badge className={`${badgeStyles.info} text-xs`}>
-                            Admin
-                        </Badge>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium">
-                                Subscription Plan
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Current billing cycle: Jan 1 - Jan 31
-                            </p>
-                        </div>
-                        <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 text-xs">
-                            Pro Plan
+                            {userRole === "superadmin" ? "Super Admin" : userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                         </Badge>
                     </div>
                 </CardContent>

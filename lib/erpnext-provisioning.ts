@@ -56,65 +56,81 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
     } = input;
 
     try {
-        // Step 1: Create Company
-        const company = await client.createDoc<any>('Company', {
-            company_name: companyName,
-            abbr: companyAbbr,
-            default_currency: currency,
-            country: country,
-            chart_of_accounts: 'Standard',
-        });
+        // Step 1: Create Company (idempotent — reuse if already exists)
+        let company = await client.getDoc<any>('Company', companyName);
+        if (!company) {
+            company = await client.createDoc<any>('Company', {
+                company_name: companyName,
+                abbr: companyAbbr,
+                default_currency: currency,
+                country: country,
+                chart_of_accounts: 'Standard',
+            });
+        }
 
         if (!company) {
             return { success: false, error: 'Failed to create Company in ERPNext', step: 'company' };
         }
 
-        console.log(`[Provision] Company created: ${company.name}`);
+        console.log(`[Provision] Company ready: ${company.name}`);
 
-        // Step 2: Create default Warehouse
+        // Step 2: Create default Warehouse (non-fatal if it already exists)
         const warehouseName = `${companyName} - Stores - ${companyAbbr}`;
-        const warehouse = await client.createDoc<any>('Warehouse', {
-            warehouse_name: 'Stores',
-            company: company.name,
-            is_group: 0,
-        });
+        let warehouse = await client.getDoc<any>('Warehouse', `Stores - ${companyAbbr}`);
+        if (!warehouse) {
+            warehouse = await client.createDoc<any>('Warehouse', {
+                warehouse_name: 'Stores',
+                company: company.name,
+                is_group: 0,
+            });
+        }
 
         if (!warehouse) {
             console.warn(`[Provision] Warehouse may already exist or failed for ${companyName}`);
         } else {
-            console.log(`[Provision] Warehouse created: ${warehouse.name}`);
+            console.log(`[Provision] Warehouse ready: ${warehouse.name}`);
         }
 
-        // Step 3: Create User
-        const user = await client.createDoc<any>('User', {
-            email: ownerEmail,
-            first_name: ownerFirstName,
-            last_name: ownerLastName,
-            send_welcome_email: 0,
-            new_password: generateTempPassword(),
-            user_type: 'System User',
-            roles: [
-                { role: 'Sales User' },
-                { role: 'Stock User' },
-                { role: 'Accounts User' },
-            ],
-        });
+        // Step 3: Create User (idempotent — reuse if already exists)
+        let user = await client.getDoc<any>('User', ownerEmail);
+        if (!user) {
+            user = await client.createDoc<any>('User', {
+                email: ownerEmail,
+                first_name: ownerFirstName,
+                last_name: ownerLastName,
+                send_welcome_email: 0,
+                new_password: generateTempPassword(),
+                user_type: 'System User',
+                roles: [
+                    { role: 'Sales User' },
+                    { role: 'Stock User' },
+                    { role: 'Accounts User' },
+                ],
+            });
+        }
 
         if (!user) {
             return { success: false, error: 'Failed to create User in ERPNext', step: 'user', company: company.name };
         }
 
-        console.log(`[Provision] User created: ${user.name}`);
+        console.log(`[Provision] User ready: ${user.name}`);
 
-        // Step 4: Set User Permission (restrict to this Company only)
-        await client.createDoc('User Permission', {
-            user: ownerEmail,
-            allow: 'Company',
-            for_value: company.name,
-            apply_to_all_doctypes: 1,
+        // Step 4: Set User Permission (idempotent — ignore duplicate errors)
+        const existingPerms = await client.getList<any>('User Permission', {
+            filters: [['user', '=', ownerEmail], ['allow', '=', 'Company'], ['for_value', '=', company.name]],
+            fields: ['name'],
+            limit: 1,
         });
+        if (!existingPerms || existingPerms.length === 0) {
+            await client.createDoc('User Permission', {
+                user: ownerEmail,
+                allow: 'Company',
+                for_value: company.name,
+                apply_to_all_doctypes: 1,
+            });
+        }
 
-        console.log(`[Provision] User permission set for ${ownerEmail} → ${company.name}`);
+        console.log(`[Provision] User permission ready for ${ownerEmail} → ${company.name}`);
 
         // Step 4.5: Create Global Walk-in Customer for this POS tenant if not exists
         const customerName = `Walk-in Customer - ${companyAbbr}`;
