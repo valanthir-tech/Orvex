@@ -5,7 +5,7 @@
  * for new tenants. Called by the provisioning API route.
  */
 
-import { ERPNextClient, ERPNextConfig } from './erpnext';
+import { ERPNextClient, ERPNextConfig, ERPNextAPIError } from './erpnext';
 
 export interface TenantProvisionInput {
     companyName: string;
@@ -21,7 +21,11 @@ export interface TenantProvisionInput {
 export interface TenantProvisionResult {
     success: boolean;
     company?: string;
+    companyAbbr?: string;
     warehouse?: string;
+    priceList?: string;
+    customer?: string;
+    posProfile?: string;
     user?: string;
     apiKey?: string;
     apiSecret?: string;
@@ -58,31 +62,54 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
     try {
         // Step 1: Create Company (idempotent — reuse if already exists)
         let company = await client.getDoc<any>('Company', companyName);
-        if (!company) {
-            company = await client.createDoc<any>('Company', {
-                company_name: companyName,
-                abbr: companyAbbr,
-                default_currency: currency,
-                country: country,
-                chart_of_accounts: 'Standard',
-            });
-        }
+        let finalAbbr = companyAbbr;
 
         if (!company) {
-            return { success: false, error: 'Failed to create Company in ERPNext', step: 'company' };
+            // Try creating with the given abbreviation; if it conflicts, append a digit
+            let created = false;
+            for (let attempt = 0; attempt < 10; attempt++) {
+                const tryAbbr = attempt === 0 ? companyAbbr : `${companyAbbr.slice(0, 4)}${attempt}`;
+                try {
+                    company = await client.createDoc<any>('Company', {
+                        company_name: companyName,
+                        abbr: tryAbbr,
+                        default_currency: currency,
+                        country: country,
+                        chart_of_accounts: 'Standard',
+                    });
+                    finalAbbr = tryAbbr;
+                    created = true;
+                    break;
+                } catch (err: any) {
+                    if (err.message?.toLowerCase().includes('abbreviation already used') && attempt < 9) {
+                        console.warn(`[Provision] Abbr "${tryAbbr}" taken, trying next...`);
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            if (!created || !company) {
+                return { success: false, error: 'Failed to create Company — all abbreviation variants taken', step: 'company' };
+            }
+        } else {
+            finalAbbr = company.abbr || companyAbbr;
         }
 
-        console.log(`[Provision] Company ready: ${company.name}`);
+        console.log(`[Provision] Company ready: ${company.name} (abbr: ${finalAbbr})`);
 
-        // Step 2: Create default Warehouse (non-fatal if it already exists)
-        const warehouseName = `${companyName} - Stores - ${companyAbbr}`;
-        let warehouse = await client.getDoc<any>('Warehouse', `Stores - ${companyAbbr}`);
+        // Step 2: Create default Warehouse
+        const warehouseName = `${companyName} - Main`;
+        let warehouse = await client.getDoc<any>('Warehouse', warehouseName);
         if (!warehouse) {
-            warehouse = await client.createDoc<any>('Warehouse', {
-                warehouse_name: 'Stores',
-                company: company.name,
-                is_group: 0,
-            });
+            try {
+                warehouse = await client.createDoc<any>('Warehouse', {
+                    warehouse_name: `${companyName} - Main`,
+                    company: company.name,
+                    is_group: 0,
+                });
+            } catch (whErr: any) {
+                console.warn(`[Provision] Warehouse creation notice: ${whErr.message || 'May already exist'}`);
+            }
         }
 
         if (!warehouse) {
@@ -91,7 +118,25 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             console.log(`[Provision] Warehouse ready: ${warehouse.name}`);
         }
 
-        // Step 3: Create User (idempotent — reuse if already exists)
+        // Step 3: Create Price List
+        const priceListName = `${companyName} Selling`;
+        let priceList = await client.getDoc<any>('Price List', priceListName);
+        if (!priceList) {
+            try {
+                priceList = await client.createDoc<any>('Price List', {
+                    price_list_name: priceListName,
+                    enabled: 1,
+                    buying: 0,
+                    selling: 1,
+                    currency: currency,
+                });
+                console.log(`[Provision] Price List ready: ${priceList.name}`);
+            } catch (plErr: any) {
+                console.warn(`[Provision] Price List creation notice: ${plErr.message || 'May already exist'}`);
+            }
+        }
+
+        // Step 4: Create User (idempotent — reuse if already exists)
         let user = await client.getDoc<any>('User', ownerEmail);
         if (!user) {
             user = await client.createDoc<any>('User', {
@@ -122,29 +167,66 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             limit: 1,
         });
         if (!existingPerms || existingPerms.length === 0) {
-            await client.createDoc('User Permission', {
-                user: ownerEmail,
-                allow: 'Company',
-                for_value: company.name,
-                apply_to_all_doctypes: 1,
-            });
+            try {
+                await client.createDoc('User Permission', {
+                    user: ownerEmail,
+                    allow: 'Company',
+                    for_value: company.name,
+                    apply_to_all_doctypes: 1,
+                });
+            } catch (permErr: any) {
+                console.warn(`[Provision] User permission notice: ${permErr.message || 'May already exist'}`);
+            }
         }
 
         console.log(`[Provision] User permission ready for ${ownerEmail} → ${company.name}`);
 
         // Step 4.5: Create Global Walk-in Customer for this POS tenant if not exists
-        const customerName = `Walk-in Customer - ${companyAbbr}`;
+        let customerName = `Walk-in Customer`;
         try {
-            await client.createDoc('Customer', {
-                customer_name: 'Walk-in Customer',
+            const cust = await client.createDoc('Customer', {
+                customer_name: customerName,
                 customer_type: 'Individual',
                 customer_group: 'All Customer Groups', // Default in ERPNext
                 territory: 'All Territories', // Default in ERPNext
                 company: company.name,
             });
+            customerName = (cust as any)?.name || 'Walk-in Customer';
             console.log(`[Provision] Created default POS customer for ${company.name}`);
         } catch (err: any) {
             console.warn(`[Provision] Default customer setup notice: ${err.message || 'May already exist'}`);
+            // If exists, name is usually "Walk-in Customer" or appended by abbreviation
+            customerName = "Walk-in Customer";
+        }
+
+        // Step 4.6: Create POS Profile
+        const posProfileName = `${companyName} POS`;
+        let posProfile;
+        try {
+            posProfile = await client.createDoc<any>('POS Profile', {
+                name: posProfileName,
+                company: company.name,
+                warehouse: warehouse?.name || warehouseName,
+                selling_price_list: priceListName,
+                campaign: '',
+                company_address: '',
+                currency: currency,
+                customer: customerName,
+                disabled: 0,
+                hide_images: 0,
+                hide_unavailable_items: 0,
+                ignore_pricing_rule: 0,
+                update_stock: 1, // Keep stock updated immediately
+                write_off_account: '',
+                write_off_cost_center: '',
+                payments: [{
+                    mode_of_payment: 'Cash',
+                    default: 1
+                }]
+            });
+            console.log(`[Provision] POS Profile ready: ${posProfileName}`);
+        } catch (err: any) {
+             console.warn(`[Provision] POS Profile setup notice: ${err.message || 'May already exist'}`);
         }
 
         // Step 5: Generate API Keys for the user
@@ -153,7 +235,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             { user: ownerEmail }
         );
 
-        if (!apiKeys) {
+        if (!apiKeys?.api_secret) {
             return {
                 success: false,
                 error: 'Failed to generate API keys',
@@ -163,19 +245,24 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             };
         }
 
-        // Fetch the api_secret (generate_keys returns api_secret only on creation)
-        const userDoc = await client.getDoc<any>('User', ownerEmail);
-        const apiSecret = userDoc?.api_secret || apiKeys.api_secret;
+        // generate_keys returns the real api_secret; the User doc masks it as "***************"
+        // so we must use the value from generate_keys directly
+        const apiKey = apiKeys.api_key;
+        const apiSecret = apiKeys.api_secret;
 
         console.log(`[Provision] API keys generated for ${ownerEmail}`);
 
         return {
             success: true,
             company: company.name,
+            companyAbbr: finalAbbr,
             warehouse: warehouse?.name || warehouseName,
+            priceList: priceListName,
+            customer: customerName,
+            posProfile: posProfileName,
             user: ownerEmail,
-            apiKey: apiKeys.api_key || userDoc?.api_key,
-            apiSecret: apiSecret,
+            apiKey,
+            apiSecret,
         };
 
     } catch (error: any) {

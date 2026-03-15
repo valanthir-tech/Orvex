@@ -1,6 +1,7 @@
 "use server"
 
-import { getTenantClient } from "@/lib/tenant"
+import { getTenantContext } from "@/lib/tenant"
+import { createSupabaseServerClient } from "@/lib/tenant"
 
 export interface LowStockItem {
     name: string
@@ -11,9 +12,21 @@ export interface LowStockItem {
 
 export async function getLowStockItems(limit: number = 5): Promise<LowStockItem[]> {
     try {
-        const client = await getTenantClient()
+        const { client, tenantId, warehouseName } = await getTenantContext()
+        const supabase = await createSupabaseServerClient();
 
-        // We fetch items that have safety_stock defined
+        // 1. Fetch allowed items for this tenant
+        const { data: tenantItems, error: tbError } = await supabase
+            .from('tenant_items')
+            .select('item_code')
+            .eq('tenant_id', tenantId);
+
+        if (tbError || !tenantItems || tenantItems.length === 0) {
+            return [];
+        }
+
+        const itemCodes = tenantItems.map((ti: any) => ti.item_code);
+
         const items = await client.getList<{
             item_code: string
             item_name: string
@@ -23,7 +36,8 @@ export async function getLowStockItems(limit: number = 5): Promise<LowStockItem[
             filters: [
                 ["disabled", "=", 0],
                 ["is_stock_item", "=", 1],
-                ["safety_stock", ">", 0]
+                ["safety_stock", ">", 0],
+                ["name", "in", itemCodes]
             ],
             limit: 0,
         })
@@ -35,14 +49,15 @@ export async function getLowStockItems(limit: number = 5): Promise<LowStockItem[
             safety_stock: i.safety_stock
         }]))
 
-        // Get stock balances
+        // Get stock balances matching exactly the warehouse
         const bins = await client.getList<{
             item_code: string
             actual_qty: number
         }>("Bin", {
             fields: ["item_code", "actual_qty"],
             filters: [
-                ["item_code", "in", Array.from(itemCodeMap.keys())]
+                ["item_code", "in", Array.from(itemCodeMap.keys())],
+                ["warehouse", "=", warehouseName]
             ],
             limit: 0,
         })
@@ -71,7 +86,7 @@ export async function getLowStockItems(limit: number = 5): Promise<LowStockItem[
 
         return lowStock.sort((a, b) => a.current - b.current).slice(0, limit)
     } catch (error) {
-        console.error("Failed to get low stock items:", error)
+        console.error("Failed to get low stock items:", error instanceof Error ? error.message : String(error))
         return []
     }
 }

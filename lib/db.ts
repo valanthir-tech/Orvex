@@ -4,7 +4,7 @@ import Dexie, { Table } from 'dexie';
 // TYPES
 // ----------------------------------------------------------------------
 
-export interface Item {
+export interface Product {
   id: string;
   name: string;
   sku: string;
@@ -21,7 +21,7 @@ export interface Item {
 }
 
 export interface CartItem {
-  itemId: string;
+  productId: string;
   name: string;
   sku: string;
   price: number;
@@ -40,7 +40,7 @@ export interface Order {
   taxTotal: number;
   grandTotal: number;
   discountTotal: number;
-  items: CartItem[];
+  products: CartItem[];
   paymentMode: 'CASH' | 'CARD' | 'QR' | 'CREDIT';
   paidAmount: number;
   changeAmount: number;
@@ -74,7 +74,7 @@ export interface SyncLog {
 // ----------------------------------------------------------------------
 
 export class ValanthirPOSDB extends Dexie {
-  items!: Table<Item>;
+  products!: Table<Product>;
   orders!: Table<Order>;
   sessions!: Table<PosSession>;
   syncLogs!: Table<SyncLog>;
@@ -83,7 +83,7 @@ export class ValanthirPOSDB extends Dexie {
     super('ValanthirPOSDB');
 
     this.version(1).stores({
-      items: '&id, name, sku, category, barcode, isActive',
+      products: '&id, name, sku, category, barcode, isActive',
       orders: '++id, &uuid, status, createdAt, paymentMode',
       sessions: '++id, status, openedBy',
       syncLogs: '++id, orderUuid, action, timestamp',

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { createClient } from "@supabase/supabase-js"
 import DashboardLayoutClient from "./dashboard-layout-client"
 import { getUserProfile } from "@/lib/user"
+import { createSubscriptionExpiryNotification } from "@/app/actions/notifications"
+import { getTenantFeatures } from "@/app/actions/subscriptions"
 
 export default async function DashboardLayout({
     children,
@@ -25,7 +27,11 @@ export default async function DashboardLayout({
         status: string
         gracePeriodEnd: string | null
         daysRemaining: number | null
+        features: Awaited<ReturnType<typeof getTenantFeatures>>
     } | null = null
+
+    // Get features safely
+    const features = await getTenantFeatures()
 
     if (profile?.tenant_id) {
         const adminClient = createClient(
@@ -52,8 +58,24 @@ export default async function DashboardLayout({
                 status: tenant.subscription_status,
                 gracePeriodEnd: sub?.grace_period_end ?? null,
                 daysRemaining: end ? Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null,
+                features
+            }
+        } else {
+             subscriptionInfo = {
+                status: tenant?.subscription_status || 'active',
+                gracePeriodEnd: null,
+                daysRemaining: null,
+                features
             }
         }
+    }
+
+    // Trigger subscription expiry notification (non-blocking, once per day)
+    if (subscriptionInfo?.daysRemaining !== null && subscriptionInfo !== null && (subscriptionInfo.daysRemaining ?? 99) <= 7) {
+        createSubscriptionExpiryNotification({
+            daysRemaining: subscriptionInfo.daysRemaining ?? 0,
+            expiryDate: subscriptionInfo.gracePeriodEnd ?? new Date().toISOString(),
+        }).catch(() => {})
     }
 
     return (
@@ -61,6 +83,7 @@ export default async function DashboardLayout({
             defaultOpen={defaultOpen}
             userProfile={profile}
             subscriptionInfo={subscriptionInfo}
+            features={features}
         >
             {children}
         </DashboardLayoutClient>

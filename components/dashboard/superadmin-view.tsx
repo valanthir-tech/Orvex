@@ -110,7 +110,7 @@ async function PendingSignupsTable() {
                     <Users className="h-5 w-5" />
                     Pending Approvals
                 </CardTitle>
-                <CardDescription>Review and approve new tenant requests to trigger ERPNext provisioning.</CardDescription>
+                <CardDescription>Review and approve new tenant requests to provision their workspace.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="border rounded-md overflow-hidden">
@@ -182,7 +182,7 @@ async function ActiveTenantsTable() {
         <Card className="card-float">
             <CardHeader>
                 <CardTitle>Tenant Registry</CardTitle>
-                <CardDescription>All provisioned ERPNext environments and POS tenants.</CardDescription>
+                <CardDescription>All provisioned workspaces and POS tenants.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="border rounded-md overflow-hidden">
@@ -212,7 +212,7 @@ async function ActiveTenantsTable() {
                                     </TableCell>
                                     <TableCell className="font-medium">
                                         {tenant.company_name}
-                                        <div className="text-xs text-muted-foreground">{tenant.erpnext_url}</div>
+                                        <div className="text-xs text-muted-foreground">{tenant.erpnext_url ? new URL(tenant.erpnext_url).hostname : ''}</div>
                                     </TableCell>
                                     <TableCell>
                                         {tenant.owner_first_name} {tenant.owner_last_name}

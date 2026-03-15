@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js'
 import { randomBytes, createHash } from 'crypto'
 import { sendEmail, storefrontPasswordResetEmail } from '@/lib/email'
 import { z } from 'zod'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const forgotSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -35,6 +36,16 @@ function hashToken(token: string): string {
 }
 
 export const POST = withApiAuth(async (req, ctx) => {
+    // Rate limit: 5 password reset requests per IP per hour
+    const ip = getClientIp(req)
+    const rl = rateLimit(`forgot:${ip}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
+    if (!rl.success) {
+        return NextResponse.json(
+            { message: 'If an account with that email exists, a password reset link has been sent.' },
+            { status: 200 }
+        )
+    }
+
     const body = await req.json()
     const validation = forgotSchema.safeParse(body)
 

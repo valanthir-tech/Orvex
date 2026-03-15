@@ -271,34 +271,6 @@ export function OwnerDashboard() {
                 </Suspense>
             </ErrorBoundary>
 
-            {/* Quick Actions */}
-            <div className="flex gap-3 flex-wrap">
-                <Button className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20" asChild>
-                    <Link href="/pos">
-                        <Zap className="h-4 w-4" />
-                        New Sale
-                    </Link>
-                </Button>
-                <Button variant="secondary" className="btn-pill gap-2 h-11" asChild>
-                    <Link href="/items/new">
-                        <Plus className="h-4 w-4" />
-                        Add Item
-                    </Link>
-                </Button>
-                <Button variant="secondary" className="btn-pill gap-2 h-11" asChild>
-                    <Link href="/stock/entries/new">
-                        <Package className="h-4 w-4" />
-                        Stock Entry
-                    </Link>
-                </Button>
-                <Button variant="secondary" className="btn-pill gap-2 h-11" asChild>
-                    <Link href="/reports">
-                        <BarChart3 className="h-4 w-4" />
-                        Reports
-                    </Link>
-                </Button>
-            </div>
-
             {/* Main Content Grid */}
             <div className="grid gap-6 lg:grid-cols-3">
                 {/* Recent Sales block */}
@@ -347,7 +319,7 @@ export function OwnerDashboard() {
                 <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 pb-4 mb-6">
                     <div>
                         <CardTitle className="text-lg font-heading">Top Selling Items</CardTitle>
-                        <CardDescription>Best performers this month (fetched directly from ERPNext)</CardDescription>
+                        <CardDescription>Best performers this month</CardDescription>
                     </div>
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1" asChild>
                         <Link href="/reports">View report <ArrowRight className="h-3.5 w-3.5" /></Link>

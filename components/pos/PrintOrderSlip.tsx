@@ -158,17 +158,17 @@ export function PrintOrderSlipDialog({
                             </div>
                             <p>{"─".repeat(32)}</p>
                             <div className="text-left">
-                                {data.items.map((item, i) => (
+                                {data.products.map((product, i) => (
                                     <div key={i}>
-                                        <p>{item.name}</p>
+                                        <p>{product.name}</p>
                                         <p className="flex justify-between">
                                             <span>
-                                                &nbsp;&nbsp;{item.qty} x Rs.{" "}
-                                                {item.rate.toLocaleString()}
+                                                &nbsp;&nbsp;{product.qty} x Rs.{" "}
+                                                {product.rate.toLocaleString()}
                                             </span>
                                             <span>
                                                 Rs.{" "}
-                                                {item.amount.toLocaleString()}
+                                                {product.amount.toLocaleString()}
                                             </span>
                                         </p>
                                     </div>

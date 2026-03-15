@@ -1,29 +1,29 @@
-// Types for Items module
+// Types for Products module
 import { z } from "zod"
 import { badgeStyles } from "@/lib/theme"
 
 // Validation Schemas
-export const createItemSchema = z.object({
+export const createProductSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
-    itemCode: z.string().min(2, "Item Code is required"),
+    productCode: z.string().min(2, "Product Code is required"),
     description: z.string().optional(),
-    itemGroupId: z.string().optional(),
+    productGroupId: z.string().optional(),
     stockUom: z.string().default("Nos"),
     standardRate: z.coerce.number().min(0, "Selling price cannot be negative"),
     valuationRate: z.coerce.number().min(0, "Cost price cannot be negative").default(0),
     currentStock: z.coerce.number().int().default(0),
     minStockLevel: z.coerce.number().int().min(0).default(0),
     barcode: z.string().optional(),
-    isStockItem: z.boolean().default(true),
+    isStockProduct: z.boolean().default(true),
     hasBatchNo: z.boolean().default(false),
 })
 
-export const updateItemSchema = createItemSchema.partial().extend({
+export const updateProductSchema = createProductSchema.partial().extend({
     id: z.string(),
 })
 
-export type CreateItemInput = z.infer<typeof createItemSchema>
-export type UpdateItemInput = z.infer<typeof updateItemSchema>
+export type CreateProductInput = z.infer<typeof createProductSchema>
+export type UpdateProductInput = z.infer<typeof updateProductSchema>
 
 // Unit of Measure options
 export const UOM_OPTIONS = [
@@ -41,7 +41,7 @@ export const UOM_OPTIONS = [
     { value: "Feet", label: "Feet" },
 ] as const
 
-// Default Item Categories for Nepal retail
+// Default Product Categories for Nepal retail
 export const DEFAULT_CATEGORIES = [
     { name: "Groceries", icon: "🛒" },
     { name: "Beverages", icon: "🥤" },

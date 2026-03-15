@@ -2,30 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react"
 import {
-    Users, Search, Plus, Phone, Mail, MapPin,
-    CreditCard, Loader2, MoreVertical, FileText,
+    Users, Search, Plus,
+    CreditCard, Loader2, FileText,
     ArrowDownCircle, ArrowUpCircle, Wallet, Pencil,
-    Trash2, Eye,
+    Trash2, Eye, RefreshCw, X,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+    Table, TableBody, TableCell, TableHead,
+    TableHeader, TableRow,
+} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
     DialogFooter, DialogDescription,
 } from "@/components/ui/dialog"
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
-import { badgeStyles } from "@/lib/theme"
+import { badgeStyles, cardStyles } from "@/lib/theme"
 import {
     getCustomers, createCustomer, updateCustomer, deleteCustomer,
     recordPayment, getCustomerTransactions,
@@ -40,7 +40,8 @@ function formatPrice(amount: number) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function CustomersPageClient() {
+export default function CustomersPageClient({ hasKhataAccess = false }: { hasKhataAccess?: boolean }) {
+    const router = useRouter()
     const [customers, setCustomers] = useState<Customer[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [search, setSearch] = useState("")
@@ -110,6 +111,17 @@ export default function CustomersPageClient() {
 
     // Open khata view
     async function openKhata(customer: Customer) {
+        if (!hasKhataAccess) {
+            toast('Feature Locked', {
+                description: 'Please upgrade to the Growth plan to unlock Khata (Credit Tracking).',
+                action: {
+                    label: 'Upgrade',
+                    onClick: () => router.push('/settings/subscription')
+                },
+            });
+            return;
+        }
+
         setViewCustomer(customer)
         setLoadingTx(true)
         try {
@@ -202,30 +214,30 @@ export default function CustomersPageClient() {
         <div className="space-y-4">
             <div className="space-y-2">
                 <Label>Customer Name *</Label>
-                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Full name" className="h-11" />
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Full name" className="h-11 rounded-xl" />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Phone</Label>
-                    <Input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="9841234567" className="h-11" />
+                    <Input value={formPhone} onChange={(e) => setFormPhone(e.target.value)} placeholder="9841234567" className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-2">
                     <Label>Email</Label>
-                    <Input value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="email@example.com" className="h-11" />
+                    <Input value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="email@example.com" className="h-11 rounded-xl" />
                 </div>
             </div>
             <div className="space-y-2">
                 <Label>Address</Label>
-                <Input value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Kathmandu, Nepal" className="h-11" />
+                <Input value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Kathmandu, Nepal" className="h-11 rounded-xl" />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>PAN Number</Label>
-                    <Input value={formPan} onChange={(e) => setFormPan(e.target.value)} placeholder="PAN" className="h-11" />
+                    <Input value={formPan} onChange={(e) => setFormPan(e.target.value)} placeholder="PAN" className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-2">
                     <Label>Credit Limit (Rs.)</Label>
-                    <Input type="number" value={formCreditLimit} onChange={(e) => setFormCreditLimit(e.target.value)} placeholder="0" className="h-11" />
+                    <Input type="number" value={formCreditLimit} onChange={(e) => setFormCreditLimit(e.target.value)} placeholder="0" className="h-11 rounded-xl" />
                 </div>
             </div>
             <div className="space-y-2">
@@ -238,179 +250,259 @@ export default function CustomersPageClient() {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold font-heading tracking-tight">Customers</h2>
                     <p className="text-sm text-muted-foreground mt-0.5">
                         Manage customers and track credit (Khata)
                     </p>
                 </div>
-                <Button onClick={() => { resetForm(); setAddOpen(true) }} className="btn-pill shadow-lg shadow-primary/20 gap-2">
-                    <Plus className="h-4 w-4" /> Add Customer
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl h-11 w-11"
+                        onClick={() => { setIsLoading(true); loadCustomers() }}
+                        disabled={isLoading}
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                    </Button>
+                    <Button
+                        className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
+                        onClick={() => { resetForm(); setAddOpen(true) }}
+                    >
+                        <Plus className="h-4 w-4" /> Add Customer
+                    </Button>
+                </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="card-float border-0 rounded-2xl">
-                    <CardContent className="p-5">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{totalCustomers}</p>
-                                <p className="text-xs text-muted-foreground">Total Customers</p>
-                            </div>
+            {/* Stat Cards */}
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
+                <Card className={cardStyles.teal.card}>
+                    <div className={cardStyles.teal.overlay} />
+                    <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Total Customers
+                        </CardTitle>
+                        <div className={cardStyles.teal.icon}>
+                            <Users className="h-5 w-5 text-white" />
                         </div>
+                    </CardHeader>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold font-heading">{totalCustomers}</div>
+                        <div className="text-xs mt-2 text-muted-foreground">excluding walk-in</div>
                     </CardContent>
                 </Card>
-                <Card className="card-float border-0 rounded-2xl">
-                    <CardContent className="p-5">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                                <Wallet className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{formatPrice(totalOutstanding)}</p>
-                                <p className="text-xs text-muted-foreground">Total Outstanding</p>
-                            </div>
+
+                <Card className={cardStyles.amber.card}>
+                    <div className={cardStyles.amber.overlay} />
+                    <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Total Outstanding
+                        </CardTitle>
+                        <div className={cardStyles.amber.icon}>
+                            <Wallet className="h-5 w-5 text-white" />
                         </div>
+                    </CardHeader>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold font-heading">{formatPrice(totalOutstanding)}</div>
+                        <div className="text-xs mt-2 text-muted-foreground">pending balance</div>
                     </CardContent>
                 </Card>
-                <Card className="card-float border-0 rounded-2xl">
-                    <CardContent className="p-5">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                <CreditCard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{activeCustomers}</p>
-                                <p className="text-xs text-muted-foreground">Active Customers</p>
-                            </div>
+
+                <Card className={cardStyles.emerald.card}>
+                    <div className={cardStyles.emerald.overlay} />
+                    <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Active Customers
+                        </CardTitle>
+                        <div className={cardStyles.emerald.icon}>
+                            <CreditCard className="h-5 w-5 text-white" />
                         </div>
+                    </CardHeader>
+                    <CardContent className="relative">
+                        <div className="text-3xl font-bold font-heading">{activeCustomers}</div>
+                        <div className="text-xs mt-2 text-muted-foreground">currently active</div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Search */}
-            <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name or phone..."
-                    className="pl-10 h-11 rounded-xl"
-                />
+            <div className="flex items-center gap-3 max-w-md">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by name or phone..."
+                        className="pl-10 h-11 rounded-xl"
+                    />
+                    {search && (
+                        <button
+                            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-muted flex items-center justify-center"
+                            onClick={() => setSearch("")}
+                        >
+                            <X className="h-3 w-3" />
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {/* Customer List */}
-            {isLoading ? (
-                <div className="flex items-center justify-center h-40">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            ) : customers.length === 0 ? (
-                <Card className="card-float border-0 rounded-2xl">
-                    <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
-                        <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center">
-                            <Users className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <p className="text-muted-foreground">No customers yet</p>
-                        <Button variant="outline" onClick={() => { resetForm(); setAddOpen(true) }}>
-                            <Plus className="h-4 w-4 mr-2" /> Add First Customer
-                        </Button>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid gap-3">
-                    {customers.filter(c => c.name !== "Walk-in Customer").map((customer) => (
-                        <Card key={customer.id} className="card-float border-0 rounded-2xl hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                    {/* Avatar */}
-                                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
-                                        <span className="text-lg font-bold text-primary">
-                                            {customer.name.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-semibold truncate">{customer.name}</p>
-                                            {!customer.is_active && (
-                                                <Badge variant="secondary" className="text-xs">Inactive</Badge>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                                            {customer.phone && (
-                                                <span className="flex items-center gap-1">
-                                                    <Phone className="h-3 w-3" /> {customer.phone}
+            {/* Customer Table */}
+            <Card className="card-float border-0 rounded-2xl overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableHead className="pl-6">Customer</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Address</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Outstanding</TableHead>
+                            <TableHead className="text-right pr-6">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            Array(5)
+                                .fill(0)
+                                .map((_, i) => (
+                                    <TableRow key={i}>
+                                        {Array(6)
+                                            .fill(0)
+                                            .map((_, j) => (
+                                                <TableCell key={j}>
+                                                    <div className="h-5 bg-muted rounded animate-pulse" />
+                                                </TableCell>
+                                            ))}
+                                    </TableRow>
+                                ))
+                        ) : customers.filter(c => c.name !== "Walk-in Customer").length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={6}
+                                    className="text-center py-20 text-muted-foreground"
+                                >
+                                    <Users className="h-8 w-8 mx-auto mb-3 text-muted-foreground/40" />
+                                    <p className="font-medium">No customers found</p>
+                                    <p className="text-sm">
+                                        {search ? "Try a different search term." : "Add your first customer to get started."}
+                                    </p>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            customers.filter(c => c.name !== "Walk-in Customer").map((customer) => (
+                                <TableRow key={customer.id} className="group hover:bg-muted/20">
+                                    <TableCell className="pl-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+                                                <span className="text-sm font-bold text-primary">
+                                                    {customer.name.charAt(0).toUpperCase()}
                                                 </span>
-                                            )}
-                                            {customer.address && (
-                                                <span className="flex items-center gap-1 hidden sm:flex">
-                                                    <MapPin className="h-3 w-3" /> {customer.address}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Balance */}
-                                    <div className="text-right shrink-0">
-                                        {customer.outstanding_balance > 0 ? (
-                                            <div>
-                                                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                    {formatPrice(customer.outstanding_balance)}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">outstanding</p>
                                             </div>
+                                            <div>
+                                                <p className="font-medium">{customer.name}</p>
+                                                {customer.email && (
+                                                    <p className="text-xs text-muted-foreground">{customer.email}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {customer.phone || "—"}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {customer.address || "—"}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            variant="secondary"
+                                            className={
+                                                customer.is_active
+                                                    ? badgeStyles.success
+                                                    : "bg-gray-50 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400"
+                                            }
+                                        >
+                                            {customer.is_active ? "Active" : "Inactive"}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {customer.outstanding_balance > 0 ? (
+                                            <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                                {formatPrice(customer.outstanding_balance)}
+                                            </span>
                                         ) : (
                                             <Badge className={`${badgeStyles.success} text-xs`}>Clear</Badge>
                                         )}
-                                    </div>
-
-                                    {/* Actions */}
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                                                <MoreVertical className="h-4 w-4" />
+                                    </TableCell>
+                                    <TableCell className="text-right pr-6">
+                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-xl hover:bg-muted"
+                                                onClick={() => openKhata(customer)}
+                                                title="View Khata"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
                                             </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => openKhata(customer)}>
-                                                <Eye className="h-4 w-4 mr-2" /> View Khata
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => { setPaymentCustomer(customer); setPaymentOpen(true) }}>
-                                                <ArrowDownCircle className="h-4 w-4 mr-2" /> Record Payment
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => openEdit(customer)}>
-                                                <Pencil className="h-4 w-4 mr-2" /> Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(customer)}>
-                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20"
+                                                onClick={() => {
+                                                    if (!hasKhataAccess) {
+                                                        toast('Feature Locked', {
+                                                            description: 'Please upgrade to the Growth plan to unlock Khata payments.',
+                                                            action: { label: 'Upgrade', onClick: () => router.push('/settings/subscription') },
+                                                        });
+                                                        return;
+                                                    }
+                                                    setPaymentCustomer(customer); setPaymentOpen(true) 
+                                                }}
+                                                title="Record Payment"
+                                            >
+                                                <ArrowDownCircle className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-xl hover:bg-muted"
+                                                onClick={() => openEdit(customer)}
+                                                title="Edit"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-xl hover:bg-destructive/10 hover:text-destructive"
+                                                onClick={() => handleDelete(customer)}
+                                                title="Delete"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </Card>
 
             {/* Add Customer Dialog */}
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>Add Customer</DialogTitle>
                         <DialogDescription>Add a new customer to your store</DialogDescription>
                     </DialogHeader>
                     <CustomerForm />
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        <Button variant="outline" className="rounded-xl" onClick={() => setAddOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving} className="rounded-xl gap-2">
+                            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                             Add Customer
                         </Button>
                     </DialogFooter>
@@ -419,16 +511,16 @@ export default function CustomersPageClient() {
 
             {/* Edit Customer Dialog */}
             <Dialog open={!!editCustomer} onOpenChange={(open) => !open && setEditCustomer(null)}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>Edit Customer</DialogTitle>
                         <DialogDescription>Update customer information</DialogDescription>
                     </DialogHeader>
                     <CustomerForm />
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditCustomer(null)}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        <Button variant="outline" className="rounded-xl" onClick={() => setEditCustomer(null)}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving} className="rounded-xl gap-2">
+                            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                             Save Changes
                         </Button>
                     </DialogFooter>
@@ -437,7 +529,7 @@ export default function CustomersPageClient() {
 
             {/* Record Payment Dialog */}
             <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
-                <DialogContent className="sm:max-w-sm">
+                <DialogContent className="sm:max-w-sm rounded-2xl">
                     <DialogHeader>
                         <DialogTitle>Record Payment</DialogTitle>
                         <DialogDescription>
@@ -457,7 +549,7 @@ export default function CustomersPageClient() {
                                 value={paymentAmount}
                                 onChange={(e) => setPaymentAmount(e.target.value)}
                                 placeholder="0"
-                                className="h-11 text-lg"
+                                className="h-11 rounded-xl text-lg"
                                 autoFocus
                             />
                         </div>
@@ -467,13 +559,13 @@ export default function CustomersPageClient() {
                                 value={paymentDescription}
                                 onChange={(e) => setPaymentDescription(e.target.value)}
                                 placeholder="Payment received"
-                                className="h-11"
+                                className="h-11 rounded-xl"
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setPaymentOpen(false)}>Cancel</Button>
-                        <Button onClick={handlePayment} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+                        <Button variant="outline" className="rounded-xl" onClick={() => setPaymentOpen(false)}>Cancel</Button>
+                        <Button onClick={handlePayment} disabled={isSaving} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
                             {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                             Record Payment
                         </Button>
@@ -483,7 +575,7 @@ export default function CustomersPageClient() {
 
             {/* Khata / Transaction History Dialog */}
             <Dialog open={!!viewCustomer} onOpenChange={(open) => !open && setViewCustomer(null)}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg rounded-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5" />
@@ -540,7 +632,7 @@ export default function CustomersPageClient() {
                         )}
                     </ScrollArea>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setViewCustomer(null)}>Close</Button>
+                        <Button variant="outline" className="rounded-xl" onClick={() => setViewCustomer(null)}>Close</Button>
                         {viewCustomer && viewCustomer.outstanding_balance > 0 && (
                             <Button
                                 onClick={() => {
@@ -548,7 +640,7 @@ export default function CustomersPageClient() {
                                     setViewCustomer(null)
                                     setPaymentOpen(true)
                                 }}
-                                className="bg-emerald-600 hover:bg-emerald-700"
+                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700"
                             >
                                 Record Payment
                             </Button>

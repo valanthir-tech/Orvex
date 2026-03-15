@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     Search, ShoppingCart, Trash2, Banknote, QrCode,
     Plus, Minus, Package, CreditCard, Loader2,
-    CheckCircle2, User, X, Delete, Percent,
+    CheckCircle2, User, UserPlus, X, Delete, Percent,
     Hash, LayoutGrid, List, ScanLine, History,
     RefreshCw, Printer, WifiOff, Wifi, CloudOff,
     ArrowLeft, Clock
@@ -29,6 +29,7 @@ import { syncPendingOrders } from "@/lib/sync-engine"
 import { getPOSItems } from "@/app/actions/pos"
 import QrScanner from "@/components/pos/QrScanner"
 import SyncLogsPanel from "@/components/pos/SyncLogsPanel"
+import { CustomerPickerDialog } from "@/components/pos/CustomerPickerDialog"
 import { Activity } from "lucide-react"
 
 type NumpadMode = "qty" | "discount" | "price"
@@ -48,8 +49,8 @@ export default function POSInterface() {
         try {
             const items = await getPOSItems()
             if (items.length > 0) {
-                await db.items.clear()
-                await db.items.bulkAdd(items)
+                await db.products.clear()
+                await db.products.bulkAdd(items)
             }
         } catch (err) {
             console.error('Failed to sync items from ERPNext:', err)
@@ -68,7 +69,7 @@ export default function POSInterface() {
 
     // Read products from Dexie (reactive)
     const products = useLiveQuery(
-        () => db.items.toArray(),
+        () => db.products.toArray(),
         [],
         []
     )
@@ -84,6 +85,8 @@ export default function POSInterface() {
     const {
         cart, addToCart, removeFromCart, updateQuantity,
         clearCart, getTotals, checkout, lastOrder,
+        setCustomer, customerName, customerPan,
+        applyDiscount, overridePrice,
     } = usePosStore()
 
     // Local UI state
@@ -103,6 +106,7 @@ export default function POSInterface() {
     const [isSyncing, setIsSyncing] = useState(false)
     const [qrScannerOpen, setQrScannerOpen] = useState(false)
     const [syncLogsOpen, setSyncLogsOpen] = useState(false)
+    const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
     const searchInputRef = useRef<HTMLInputElement>(null)
 
     // Order history from Dexie
@@ -152,15 +156,27 @@ export default function POSInterface() {
         if (value === "DEL") { setNumpadValue(prev => prev.slice(0, -1)); return }
         if (value === "ENTER") {
             const num = parseFloat(numpadValue) || 0
-            if (numpadMode === "qty" && num > 0) {
-                updateQuantity(selectedItemId, Math.floor(num))
+            if (numpadMode === "qty") {
+                if (num > 0) updateQuantity(selectedItemId, Math.floor(num))
+            } else if (numpadMode === "discount") {
+                if (num < 0 || num > 100) {
+                    toast.error("Discount must be between 0 and 100")
+                } else {
+                    applyDiscount(selectedItemId, num)
+                    toast.success(num > 0 ? `${num}% discount applied` : "Discount cleared")
+                }
+            } else if (numpadMode === "price") {
+                if (num > 0) {
+                    overridePrice(selectedItemId, num)
+                    toast.success(`Price set to Rs. ${num.toLocaleString()}`)
+                }
             }
             setNumpadValue("")
             return
         }
         if (value === "." && numpadValue.includes(".")) return
         setNumpadValue(prev => prev + value)
-    }, [selectedItemId, numpadMode, numpadValue, updateQuantity])
+    }, [selectedItemId, numpadMode, numpadValue, updateQuantity, applyDiscount, overridePrice])
 
     // Checkout
     const handleCheckout = () => {
@@ -268,14 +284,31 @@ export default function POSInterface() {
                 <div className="hidden lg:flex w-[380px] flex-col h-full bg-background border-r shadow-lg">
                     {/* Customer */}
                     <div className="p-3 border-b bg-muted/30">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-background border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <div
+                            className="flex items-center gap-3 p-3 rounded-xl bg-background border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors"
+                            onClick={() => setCustomerPickerOpen(true)}
+                        >
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                                 <User className="h-5 w-5 text-primary" />
                             </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-sm">Walk-in Customer</p>
-                                <p className="text-xs text-muted-foreground">Click to select customer</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">
+                                    {customerName || "Walk-in Customer"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {customerName && customerName !== "Walk-in Customer"
+                                        ? "Tap to change"
+                                        : "Tap to select customer"}
+                                </p>
                             </div>
+                            {customerName && customerName !== "Walk-in Customer" && (
+                                <button
+                                    className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0"
+                                    onClick={(e) => { e.stopPropagation(); setCustomer("", "") }}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -320,43 +353,46 @@ export default function POSInterface() {
                                     </div>
                                 ) : (
                                     <div className="space-y-1">
-                                        {cart.map(item => (
+                                        {cart.map(product => (
                                             <div
-                                                key={item.itemId}
-                                                onClick={() => { setSelectedItemId(item.itemId); setNumpadValue("") }}
-                                                className={`grid grid-cols-[1fr_80px_80px] gap-2 items-center p-2 rounded-lg cursor-pointer transition-colors ${selectedItemId === item.itemId
+                                                key={product.productId}
+                                                onClick={() => { setSelectedItemId(product.productId); setNumpadValue("") }}
+                                                className={`grid grid-cols-[1fr_80px_80px] gap-2 items-center p-2 rounded-lg cursor-pointer transition-colors ${selectedItemId === product.productId
                                                     ? 'bg-primary/10 border border-primary/30'
                                                     : 'hover:bg-muted/50'
                                                     }`}
                                             >
                                                 <div className="min-w-0">
-                                                    <p className="font-medium text-sm truncate">{item.name}</p>
+                                                    <p className="font-medium text-sm truncate">{product.name}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        @ Rs. {item.price.toLocaleString()}
+                                                        @ Rs. {product.price.toLocaleString()}
+                                                        {product.discount > 0 && (
+                                                            <span className="ml-1.5 text-emerald-600 font-medium">-{product.discount}%</span>
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button
                                                         className="h-6 w-6 rounded bg-muted hover:bg-muted/70 flex items-center justify-center"
-                                                        onClick={(e) => { e.stopPropagation(); updateQuantity(item.itemId, item.quantity - 1) }}
+                                                        onClick={(e) => { e.stopPropagation(); updateQuantity(product.productId, product.quantity - 1) }}
                                                     >
                                                         <Minus className="h-3 w-3" />
                                                     </button>
-                                                    <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                                                    <span className="w-8 text-center font-bold text-sm">{product.quantity}</span>
                                                     <button
                                                         className="h-6 w-6 rounded bg-muted hover:bg-muted/70 flex items-center justify-center"
-                                                        onClick={(e) => { e.stopPropagation(); updateQuantity(item.itemId, item.quantity + 1) }}
+                                                        onClick={(e) => { e.stopPropagation(); updateQuantity(product.productId, product.quantity + 1) }}
                                                     >
                                                         <Plus className="h-3 w-3" />
                                                     </button>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="font-bold text-sm">
-                                                        {(item.quantity * item.price).toLocaleString()}
+                                                        {(product.quantity * product.price).toLocaleString()}
                                                     </p>
                                                     <button
                                                         className="text-xs text-destructive hover:underline"
-                                                        onClick={(e) => { e.stopPropagation(); removeFromCart(item.itemId) }}
+                                                        onClick={(e) => { e.stopPropagation(); removeFromCart(product.productId) }}
                                                     >
                                                         Remove
                                                     </button>
@@ -552,7 +588,7 @@ export default function POSInterface() {
                         ) : viewMode === "grid" ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                                 {filteredProducts.map(product => {
-                                    const cartQty = cart.find(c => c.itemId === product.id)?.quantity || 0
+                                    const cartQty = cart.find(c => c.productId === product.id)?.quantity || 0
                                     return (
                                         <Card
                                             key={product.id}
@@ -595,7 +631,7 @@ export default function POSInterface() {
                         ) : (
                             <div className="space-y-2">
                                 {filteredProducts.map(product => {
-                                    const cartQty = cart.find(c => c.itemId === product.id)?.quantity || 0
+                                    const cartQty = cart.find(c => c.productId === product.id)?.quantity || 0
                                     return (
                                         <div
                                             key={product.id}
@@ -673,25 +709,25 @@ export default function POSInterface() {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {cart.map(item => (
-                                    <div key={item.itemId} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                                {cart.map(product => (
+                                    <div key={product.productId} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm truncate">{item.name}</p>
-                                            <p className="text-xs text-muted-foreground">@ Rs. {item.price.toLocaleString()}</p>
+                                            <p className="font-medium text-sm truncate">{product.name}</p>
+                                            <p className="text-xs text-muted-foreground">@ Rs. {product.price.toLocaleString()}</p>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <button className="h-8 w-8 rounded-lg bg-background border flex items-center justify-center" onClick={() => updateQuantity(item.itemId, item.quantity - 1)}>
+                                            <button className="h-8 w-8 rounded-xl bg-background border flex items-center justify-center" onClick={() => updateQuantity(product.productId, product.quantity - 1)}>
                                                 <Minus className="h-3 w-3" />
                                             </button>
-                                            <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                                            <button className="h-8 w-8 rounded-lg bg-background border flex items-center justify-center" onClick={() => updateQuantity(item.itemId, item.quantity + 1)}>
+                                            <span className="w-8 text-center font-bold text-sm">{product.quantity}</span>
+                                            <button className="h-8 w-8 rounded-xl bg-background border flex items-center justify-center" onClick={() => updateQuantity(product.productId, product.quantity + 1)}>
                                                 <Plus className="h-3 w-3" />
                                             </button>
                                         </div>
                                         <div className="text-right min-w-[70px]">
-                                            <p className="font-bold text-sm">Rs. {(item.quantity * item.price).toLocaleString()}</p>
+                                            <p className="font-bold text-sm">Rs. {(product.quantity * product.price).toLocaleString()}</p>
                                         </div>
-                                        <button className="text-destructive hover:bg-destructive/10 h-8 w-8 rounded-lg flex items-center justify-center" onClick={() => removeFromCart(item.itemId)}>
+                                        <button className="text-destructive hover:bg-destructive/10 h-8 w-8 rounded-xl flex items-center justify-center" onClick={() => removeFromCart(product.productId)}>
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -851,12 +887,12 @@ export default function POSInterface() {
                                         <span className="text-center">Qty</span>
                                         <span className="text-right">Amt</span>
                                     </div>
-                                    {receiptOrder.items.map((item, i) => (
+                                    {receiptOrder.products.map((product, i) => (
                                         <div key={i} className="grid grid-cols-[1fr_40px_60px] gap-1 text-sm py-1">
-                                            <span className="truncate">{item.name}</span>
-                                            <span className="text-center">{item.quantity}</span>
+                                            <span className="truncate">{product.name}</span>
+                                            <span className="text-center">{product.quantity}</span>
                                             <span className="text-right font-medium">
-                                                {(item.price * item.quantity).toLocaleString()}
+                                                {(product.price * product.quantity).toLocaleString()}
                                             </span>
                                         </div>
                                     ))}
@@ -951,7 +987,7 @@ export default function POSInterface() {
                                             <div>
                                                 <p className="text-sm font-medium">{order.customerName}</p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {order.items.length} item(s) • {order.paymentMode}
+                                                    {order.products.length} item(s) • {order.paymentMode}
                                                 </p>
                                             </div>
                                             <div className="text-right">
@@ -985,6 +1021,14 @@ export default function POSInterface() {
             <SyncLogsPanel
                 open={syncLogsOpen}
                 onClose={() => setSyncLogsOpen(false)}
+            />
+
+            {/* ─── CUSTOMER PICKER ─── */}
+            <CustomerPickerDialog
+                open={customerPickerOpen}
+                onOpenChange={setCustomerPickerOpen}
+                onSelect={setCustomer}
+                currentName={customerName}
             />
         </>
     )

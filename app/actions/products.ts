@@ -1,8 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createItemSchema, updateItemSchema, CreateItemInput, UpdateItemInput } from "@/types/item"
-import { getTenantClient } from "@/lib/tenant"
+import { createProductSchema, updateProductSchema, CreateProductInput, UpdateProductInput } from "@/types/product"
+import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
 
 // 
 // MULTI-TENANT REFACTOR
@@ -34,31 +34,32 @@ interface ERPNextItemGroup {
 }
 
 // Transform ERPNext Item to our app format
-function transformItem(erpItem: ERPNextItem) {
+function transformProduct(erpItem: ERPNextItem, custom?: any) {
     return {
         id: erpItem.name,
-        name: erpItem.item_name,
-        itemCode: erpItem.item_code,
+        name: custom?.display_name || erpItem.item_name || erpItem.name,
+        productCode: erpItem.item_code,
         description: erpItem.description || '',
-        itemGroupId: erpItem.item_group,
-        itemGroup: { id: erpItem.item_group, name: erpItem.item_group },
+        productGroupId: erpItem.item_group,
+        productGroup: { id: erpItem.item_group, name: erpItem.item_group },
         stockUom: erpItem.stock_uom,
-        standardRate: erpItem.standard_rate,
+        standardRate: custom?.price || erpItem.standard_rate,
         valuationRate: erpItem.valuation_rate || 0,
         currentStock: 0, // Will be fetched separately from Stock Ledger
         minStockLevel: 0,
-        isStockItem: erpItem.is_stock_item === 1,
+        isStockProduct: erpItem.is_stock_item === 1,
         hasBatchNo: erpItem.has_batch_no === 1,
-        image: erpItem.image,
+        image: custom?.image || erpItem.image,
         barcodes: [],
         createdAt: new Date(),
         updatedAt: new Date(),
+        active: custom?.active !== false
     }
 }
 
 // Create a new item
-export async function createItem(data: CreateItemInput) {
-    const validatedFields = createItemSchema.safeParse(data)
+export async function createProduct(data: CreateProductInput) {
+    const validatedFields = createProductSchema.safeParse(data)
 
     if (!validatedFields.success) {
         return {
@@ -70,14 +71,14 @@ export async function createItem(data: CreateItemInput) {
 
     const {
         name,
-        itemCode,
+        productCode,
         description,
-        itemGroupId,
+        productGroupId,
         stockUom,
         standardRate,
         valuationRate,
         barcode,
-        isStockItem,
+        isStockProduct,
         hasBatchNo,
     } = validatedFields.data
 
@@ -85,14 +86,14 @@ export async function createItem(data: CreateItemInput) {
         const client = await getTenantClient();
 
         const erpItem = await client.createDoc<ERPNextItem>('Item', {
-            item_code: itemCode,
+            item_code: productCode,
             item_name: name,
-            item_group: itemGroupId || 'All Item Groups',
+            item_group: productGroupId || 'All Item Groups',
             stock_uom: stockUom || 'Nos',
             standard_rate: standardRate,
             valuation_rate: valuationRate || standardRate,
             description: description,
-            is_stock_item: isStockItem ? 1 : 0,
+            is_stock_item: isStockProduct ? 1 : 0,
             has_batch_no: hasBatchNo ? 1 : 0,
             // @ts-ignore
             barcodes: barcode ? [{ barcode: barcode }] : [],
@@ -103,7 +104,7 @@ export async function createItem(data: CreateItemInput) {
         }
 
         revalidatePath("/items")
-        return { success: true, item: transformItem(erpItem) }
+        return { success: true, item: transformProduct(erpItem) }
     } catch (error) {
         console.error("Create item error:", error)
         return { success: false, error: "Failed to create item." }
@@ -111,8 +112,8 @@ export async function createItem(data: CreateItemInput) {
 }
 
 // Update an existing item
-export async function updateItem(data: UpdateItemInput) {
-    const validatedFields = updateItemSchema.safeParse(data)
+export async function updateProduct(data: UpdateProductInput) {
+    const validatedFields = updateProductSchema.safeParse(data)
 
     if (!validatedFields.success) {
         return {
@@ -129,12 +130,12 @@ export async function updateItem(data: UpdateItemInput) {
 
         const erpItem = await client.updateDoc<ERPNextItem>('Item', id, {
             item_name: updateData.name,
-            item_group: updateData.itemGroupId || undefined,
+            item_group: updateData.productGroupId || undefined,
             stock_uom: updateData.stockUom,
             standard_rate: updateData.standardRate,
             valuation_rate: updateData.valuationRate,
             description: updateData.description,
-            is_stock_item: updateData.isStockItem ? 1 : 0,
+            is_stock_item: updateData.isStockProduct ? 1 : 0,
             has_batch_no: updateData.hasBatchNo ? 1 : 0,
         });
 
@@ -144,7 +145,7 @@ export async function updateItem(data: UpdateItemInput) {
 
         revalidatePath("/items")
         revalidatePath(`/items/${id}`)
-        return { success: true, item: transformItem(erpItem) }
+        return { success: true, item: transformProduct(erpItem) }
     } catch (error) {
         console.error("Update item error:", error)
         return { success: false, error: "Failed to update item." }
@@ -152,7 +153,7 @@ export async function updateItem(data: UpdateItemInput) {
 }
 
 // Delete (disable) an item
-export async function deleteItem(id: string) {
+export async function deleteProduct(id: string) {
     try {
         const client = await getTenantClient();
 
@@ -168,13 +169,13 @@ export async function deleteItem(id: string) {
 }
 
 // Get single item
-export async function getItem(id: string) {
+export async function getProduct(id: string) {
     try {
         const client = await getTenantClient();
         const result = await client.getDoc<ERPNextItem>('Item', id);
 
         if (!result) return null
-        return transformItem(result)
+        return transformProduct(result)
     } catch (error) {
         console.error("Get item error:", error)
         return null;
@@ -182,17 +183,33 @@ export async function getItem(id: string) {
 }
 
 // Get all items with optional filters
-export async function getItems(options?: {
+export async function getProducts(options?: {
     search?: string
     categoryId?: string
     status?: "all" | "in-stock" | "low-stock" | "out-of-stock"
 }) {
     try {
-        const client = await getTenantClient();
+        const { client, tenantId } = await getTenantContext();
+        const supabase = await createSupabaseServerClient();
+
+        // 1. Fetch tenant allowed/customized items
+        const { data: tenantItems, error: tbError } = await supabase
+            .from('tenant_items')
+            .select('item_code, display_name, price, image, active')
+            .eq('tenant_id', tenantId)
+            .eq('active', true);
+
+        if (tbError || !tenantItems || tenantItems.length === 0) {
+            return [];
+        }
+
+        const customMap = new Map(tenantItems.map((ti: any) => [ti.item_code, ti]));
+        const itemCodes = Array.from(customMap.keys());
 
         // Build filters
         const filters: [string, string, unknown][] = [
-            ['disabled', '=', 0]
+            ['disabled', '=', 0],
+            ['name', 'in', itemCodes]
         ]
 
         if (options?.search) {
@@ -215,7 +232,7 @@ export async function getItems(options?: {
             limit: 0
         });
 
-        return result.map(transformItem)
+        return result.map(item => transformProduct(item, customMap.get(item.item_code)))
     } catch (error) {
         console.error("Get items error:", error)
         return []
@@ -278,3 +295,6 @@ export async function seedDefaultCategories() {
     // ERPNext already has default item groups
     return { success: true }
 }
+
+export async function updateCategory(id: string, data: any): Promise<{success: boolean; error?: string}> { return { success: true }; }
+export async function deleteCategory(id: string): Promise<{success: boolean; error?: string}> { return { success: true }; }

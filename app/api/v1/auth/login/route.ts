@@ -11,6 +11,7 @@ import { withApiAuth, signCustomerJwt } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
 import { compare } from 'bcryptjs'
 import { z } from 'zod'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const loginSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -25,6 +26,16 @@ function getServiceClient() {
 }
 
 export const POST = withApiAuth(async (req, ctx) => {
+    // Rate limit: 10 login attempts per IP per 15 minutes
+    const ip = getClientIp(req)
+    const rl = rateLimit(`login:${ip}:${ctx.tenantId}`, { limit: 10, windowSecs: 900, prefix: 'auth' })
+    if (!rl.success) {
+        return NextResponse.json(
+            { error: 'Too many login attempts. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        )
+    }
+
     const body = await req.json()
     const validation = loginSchema.safeParse(body)
 

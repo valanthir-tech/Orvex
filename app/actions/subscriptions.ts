@@ -130,6 +130,41 @@ export async function getTenantSubscription(): Promise<TenantSubscription | null
     return data as TenantSubscription | null
 }
 
+export async function getTenantFeatures() {
+    try {
+        const sub = await getTenantSubscription()
+        
+        // Default strictly to Starter limits
+        const defaultFeatures = {
+            pos: true,
+            inventory: true,
+            reports: "basic" as const,
+            khata: false,
+            multi_warehouse: false,
+            api_access: false
+        }
+
+        if (sub && ['active', 'past_due', 'trialing'].includes(sub.status) && sub.plan) {
+            return {
+                ...defaultFeatures,
+                ...(sub.plan.features || {})
+            }
+        }
+        
+        return defaultFeatures
+    } catch {
+        // If unauthenticated or no tenant, return safe defaults
+        return {
+            pos: false,
+            inventory: false,
+            reports: "basic" as const,
+            khata: false,
+            multi_warehouse: false,
+            api_access: false
+        }
+    }
+}
+
 // ─── Check Subscription Status ────────────────────────────────────────────────
 
 export async function checkSubscriptionStatus(tenantId: string): Promise<{
@@ -186,6 +221,13 @@ export async function submitPayment(data: {
     const { userId, tenantId } = await getAuthenticatedTenantId()
     const adminClient = getAdminClient()
 
+    // Fetch tenant name for readable filename
+    const { data: tenant } = await adminClient
+        .from("tenants")
+        .select("company_name")
+        .eq("id", tenantId)
+        .single()
+
     // Validate plan exists
     const { data: plan } = await adminClient
         .from("subscription_plans")
@@ -196,9 +238,23 @@ export async function submitPayment(data: {
 
     if (!plan) throw new Error("Invalid subscription plan")
 
+    // Validate proof file: max 5 MB, images and PDF only
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+    const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+    if (!ALLOWED_TYPES.includes(data.proofFile.type)) {
+        throw new Error("Invalid file type. Please upload a JPEG, PNG, WebP, GIF, or PDF.")
+    }
+    if (data.proofFile.size > MAX_SIZE_BYTES) {
+        throw new Error("File is too large. Maximum allowed size is 5 MB.")
+    }
+
     // Upload payment proof to Supabase Storage
     const fileExt = data.proofFile.name.split(".").pop()
-    const fileName = `${tenantId}/${Date.now()}-proof.${fileExt}`
+    const datePart = new Date().toISOString().slice(0, 10)
+    const storeSlug = (tenant?.company_name ?? "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 25)
+    const planSlug  = data.planId.toLowerCase().replace(/[^a-z0-9]/g, "-")
+    const txnSlug   = data.transactionReference.replace(/[^a-zA-Z0-9]/g, "-").slice(0, 20)
+    const fileName  = `${tenantId}/${datePart}_${storeSlug}_${planSlug}_${txnSlug}.${fileExt}`
 
     const { error: uploadError } = await adminClient.storage
         .from("payment-proofs")
@@ -213,6 +269,31 @@ export async function submitPayment(data: {
     const { data: urlData } = adminClient.storage
         .from("payment-proofs")
         .getPublicUrl(fileName)
+
+    // Fetch old pending proof URL so we can delete it after upload
+    const { data: oldSubmission } = await adminClient
+        .from("payment_submissions")
+        .select("payment_proof_url")
+        .eq("tenant_id", tenantId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    // Delete old proof file from storage if it exists
+    if (oldSubmission?.payment_proof_url) {
+        try {
+            // Extract the storage path: everything after "/payment-proofs/"
+            const marker = "/payment-proofs/"
+            const markerIdx = oldSubmission.payment_proof_url.indexOf(marker)
+            if (markerIdx !== -1) {
+                const oldPath = oldSubmission.payment_proof_url.slice(markerIdx + marker.length)
+                await adminClient.storage.from("payment-proofs").remove([oldPath])
+            }
+        } catch {
+            // Non-fatal: old file cleanup failure should not block new upload
+        }
+    }
 
     // Get or create tenant subscription record (pending)
     const { data: existingSub } = await adminClient

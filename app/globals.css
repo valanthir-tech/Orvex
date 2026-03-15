@@ -25,13 +25,13 @@
 
 :root {
   /* 🎨 MAIN BRAND COLOR - Change this to set your primary brand color */
-  --brand-hue: 25;
+  --brand-hue: 156;
   /* Orange-brown hue (change to any 0-360 value) */
-  --brand-saturation: 30%;
+  --brand-saturation: 100%;
   /* Color intensity */
 
   /* Primary Colors (auto-calculated from brand) */
-  --primary: hsl(var(--brand-hue) var(--brand-saturation) 15%);
+  --primary: hsl(var(--brand-hue) var(--brand-saturation) 25%);
   --primary-foreground: hsl(var(--brand-hue) 5% 98%);
 
   /* 🎨 STATUS COLORS - Used for alerts, badges, and indicators */
@@ -84,11 +84,11 @@
      BASE UI COLORS (usually don't need to change)
      ============================================ */
   --radius: 0.625rem;
-  --background: hsl(0 0% 100%);
+  --background: hsl(66 38% 95%);
   --foreground: hsl(var(--brand-hue) 10% 10%);
-  --card: hsl(0 0% 100%);
+  --card: hsl(66 38% 95%);
   --card-foreground: hsl(var(--brand-hue) 10% 10%);
-  --popover: hsl(0 0% 100%);
+  --popover: hsl(66 38% 95%);
   --popover-foreground: hsl(var(--brand-hue) 10% 10%);
   --secondary: hsl(var(--brand-hue) 5% 96%);
   --secondary-foreground: hsl(var(--brand-hue) 10% 15%);

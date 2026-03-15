@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createPOSInvoice } from '@/app/actions/pos';
+import { createSupabaseServerClient } from '@/lib/tenant';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/sync
@@ -8,7 +10,23 @@ import { createPOSInvoice } from '@/app/actions/pos';
  * ERPNext via the createPOSInvoice server action. Each order's UUID is
  * passed as the idempotency key to prevent duplicate invoice creation.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    // Auth guard — require a valid session
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limit: 60 syncs per minute per user
+    const rl = rateLimit(user.id, { limit: 60, windowSecs: 60, prefix: 'sync' });
+    if (!rl.success) {
+        return NextResponse.json(
+            { success: false, error: 'Too many sync requests. Please wait before retrying.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        );
+    }
+
     try {
         const body = await req.json();
 
@@ -30,14 +48,18 @@ export async function POST(req: Request) {
 
             try {
                 const formData = new FormData();
-                formData.append('paymentMode', order.paymentMode || 'CASH');
+                // Avoid zod validation errors when frontend passes "QR"
+                let mappedPayment = order.paymentMode || 'CASH';
+                if (mappedPayment === 'QR') mappedPayment = 'QR_ESEWA';
+                
+                formData.append('paymentMode', mappedPayment);
                 formData.append('paidAmount', String(order.paidAmount ?? order.grandTotal));
                 formData.append('posUuid', order.uuid);
 
                 const items = (order.items || []).map((item: any) => ({
                     itemId: item.sku || item.itemId,
                     qty: item.quantity,
-                    rate: item.price,
+                    rate: item.rate || item.price,
                     discount: item.discount || 0,
                 }));
 

@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/breadcrumb"
 import { PaymentReminderBanner } from "@/components/payment/payment-reminder-banner"
 
-
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 
@@ -31,13 +30,12 @@ const pageTitles: Record<string, string> = {
     "/products": "Products",
     "/inventory": "Inventory",
     "/customers": "Customers",
-    "/items": "Items & Products",
-    "/items/new": "New Item",
     "/warehouses": "Warehouses",
     "/stock/entries": "Stock Entries",
     "/reports": "Reports",
     "/settings": "Settings",
     "/settings/subscription": "Subscription",
+    "/notifications": "Notifications",
 }
 
 export default function DashboardLayoutClient({
@@ -45,6 +43,7 @@ export default function DashboardLayoutClient({
     defaultOpen,
     userProfile,
     subscriptionInfo,
+    features,
 }: {
     children: React.ReactNode
     defaultOpen: boolean
@@ -54,6 +53,7 @@ export default function DashboardLayoutClient({
         gracePeriodEnd: string | null
         daysRemaining: number | null
     } | null
+    features: any
 }) {
     const pathname = usePathname()
     const [sidebarOpen, setSidebarOpen] = useState(defaultOpen)
@@ -65,7 +65,7 @@ export default function DashboardLayoutClient({
 
     let title = pageTitles[pathname]
     if (!title) {
-        if (pathname.startsWith("/items/")) title = "Items"
+        if (pathname.startsWith("/products/")) title = "Products"
         else title = "Dashboard"
     }
 
@@ -75,29 +75,27 @@ export default function DashboardLayoutClient({
                 name: [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ') || userProfile.email?.split('@')[0] || 'Admin',
                 email: userProfile.email,
                 avatar: "/avatars/shadcn.jpg"
-            } : undefined} />
+            } : undefined} features={features} />
             <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2">
-                    <div className="flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator
-                            orientation="vertical"
-                            className="mr-2 data-[orientation=vertical]:h-4"
-                        />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/">
-                                        Inventory
-                                    </BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>{title}</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
-                    </div>
+                <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator
+                        orientation="vertical"
+                        className="mr-2 data-[orientation=vertical]:h-4"
+                    />
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem className="hidden md:block">
+                                <BreadcrumbLink href="/">
+                                    Inventory
+                                </BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator className="hidden md:block" />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>{title}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
                 </header>
                 <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
                     {subscriptionInfo && ["past_due", "pending_payment"].includes(subscriptionInfo.status) && (

@@ -1,4 +1,6 @@
 import { getStockEntries } from "@/app/actions/stock-entry"
+import { getProducts } from "@/app/actions/products"
+import NewStockEntryDialog from "@/components/stock/new-stock-entry-dialog"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +20,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function StockEntriesPage() {
     const entries = await getStockEntries()
+
+    const products = await getProducts({ status: "all" })
+    const transformedItems = products.map(p => ({
+        id: p.productCode,
+        name: p.name,
+        productCode: p.productCode,
+        currentStock: p.currentStock || 0
+    }))
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -55,12 +65,7 @@ export default async function StockEntriesPage() {
                         Track all material movements, receipts, and issues
                     </p>
                 </div>
-                <Button className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20" asChild>
-                    <Link href="/stock/entries/new">
-                        <Plus className="h-4 w-4" />
-                        New Entry
-                    </Link>
-                </Button>
+                <NewStockEntryDialog items={transformedItems} />
             </div>
 
             {/* Stats Cards */}
@@ -175,7 +180,7 @@ export default async function StockEntriesPage() {
                                             </TableCell>
                                             <TableCell className="text-right font-semibold font-heading">{entry.totalAmount}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" className="rounded-lg text-muted-foreground hover:text-foreground gap-1" asChild>
+                                                <Button variant="ghost" size="sm" className="rounded-xl text-muted-foreground hover:text-foreground gap-1" asChild>
                                                     <Link href={`/stock/entries/${entry.id}`}>View <ArrowRight className="h-3.5 w-3.5" /></Link>
                                                 </Button>
                                             </TableCell>

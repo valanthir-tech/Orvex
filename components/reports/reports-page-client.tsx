@@ -438,8 +438,8 @@ export default function ReportsPageClient() {
 
             {/* Disclaimer */}
             <p className="text-xs text-muted-foreground text-center">
-                This report is generated from your ERPNext data. For official
-                tax filing purposes, please use ERPNext&apos;s built-in tax reports.
+                This report is generated from your live store data. For official
+                tax filing purposes, consult your accountant or accounting software.
                 This is not a substitute for proper accounting records.
             </p>
         </div>

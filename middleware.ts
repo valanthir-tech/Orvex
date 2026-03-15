@@ -109,9 +109,10 @@ export async function middleware(request: NextRequest) {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         )
+        // Optimize: Fetch profile and tenant data in a single joined query
         const { data: profile } = await adminClient
             .from('profiles')
-            .select('role, tenant_id')
+            .select('role, tenant_id, tenants(subscription_status, is_blocked)')
             .eq('id', user.id)
             .single()
 
@@ -125,11 +126,10 @@ export async function middleware(request: NextRequest) {
 
         // Subscription & access check for tenant users
         if (profile?.tenant_id) {
-            const { data: tenant } = await adminClient
-                .from('tenants')
-                .select('subscription_status, is_blocked')
-                .eq('id', profile.tenant_id)
-                .single()
+            // @ts-ignore - The joined query returns an object or array of objects, we handle both safely
+            const tenantObj = Array.isArray(profile.tenants) ? profile.tenants[0] : profile.tenants;
+            const isBlocked = tenantObj?.is_blocked;
+            const subscriptionStatus = tenantObj?.subscription_status;
 
             const isPaymentRoute = url.pathname.startsWith('/payment')
             const isBlockedRoute = url.pathname.startsWith('/blocked')
@@ -137,21 +137,21 @@ export async function middleware(request: NextRequest) {
             const isExempt = isPaymentRoute || isBlockedRoute || isLogoutRoute
 
             // Hard block: account fully suspended
-            if (tenant?.is_blocked && !isExempt) {
+            if (isBlocked && !isExempt) {
                 url.pathname = '/blocked'
                 url.search = ''
                 return NextResponse.redirect(url)
             }
 
             // Pending payment: redirect to payment page
-            if (tenant?.subscription_status === 'pending_payment' && !isExempt) {
+            if (subscriptionStatus === 'pending_payment' && !isExempt) {
                 url.pathname = '/payment'
                 url.search = ''
                 return NextResponse.redirect(url)
             }
 
             // Past due on payment route: redirect to dashboard (they have grace period)
-            if (isPaymentRoute && tenant?.subscription_status === 'active') {
+            if (isPaymentRoute && subscriptionStatus === 'active') {
                 url.pathname = '/'
                 url.search = ''
                 return NextResponse.redirect(url)

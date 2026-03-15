@@ -12,10 +12,10 @@ export default function ProductGrid() {
     const addToCart = usePosStore((state) => state.addToCart);
 
     // Live Query from Dexie (Offline First)
-    const items = useLiveQuery(async () => {
-        if (!searchTerm) return db.items.limit(20).toArray();
-        return db.items
-            .filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    const products = useLiveQuery(async () => {
+        if (!searchTerm) return db.products.limit(20).toArray();
+        return db.products
+            .filter((product) => product.name.toLowerCase().includes(searchTerm.toLowerCase()))
             .limit(20)
             .toArray();
     }, [searchTerm]);
@@ -40,29 +40,29 @@ export default function ProductGrid() {
 
             {/* Grid Content */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-4 content-start">
-                {items?.map((item) => (
+                {products?.map((product) => (
                     <Card
-                        key={item.id}
+                        key={product.id}
                         className="cursor-pointer hover:shadow-md transition-all active:scale-95 border shadow-sm bg-card group"
-                        onClick={() => addToCart(item)}
+                        onClick={() => addToCart(product)}
                     >
                         <CardContent className="p-3">
                             <div className="aspect-square rounded-xl bg-muted mb-3 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
                                 {/* Placeholder for Product Image */}
                                 <span className="text-2xl font-bold text-muted-foreground/30 select-none">
-                                    {item.name.substring(0, 2).toUpperCase()}
+                                    {product.name.substring(0, 2).toUpperCase()}
                                 </span>
                             </div>
                             <div className="space-y-1">
                                 <h3 className="font-medium text-sm leading-tight line-clamp-2 min-h-[2.5em]">
-                                    {item.name}
+                                    {product.name}
                                 </h3>
                                 <div className="flex justify-between items-center">
-                                    <span className="font-bold text-primary font-heading">
-                                        Rs. {item.price}
+                                    <span className="font-bold text-primary font-heading font-mono text-base tracking-tight">
+                                        Rs. {product.price}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                                        Qty: {item.stock}
+                                        Qty: {product.stock}
                                     </span>
                                 </div>
                             </div>
@@ -70,7 +70,7 @@ export default function ProductGrid() {
                     </Card>
                 ))}
 
-                {items?.length === 0 && (
+                {products?.length === 0 && (
                     <div className="col-span-full flex flex-col items-center justify-center p-10 text-muted-foreground gap-2">
                         <Search className="h-8 w-8 opacity-20" />
                         <p>No products found</p>

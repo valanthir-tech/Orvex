@@ -12,6 +12,7 @@ import { signCustomerJwt } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
 import { hash } from 'bcryptjs'
 import { z } from 'zod'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
@@ -28,6 +29,16 @@ function getServiceClient() {
 }
 
 export const POST = withApiAuth(async (req, ctx) => {
+    // Rate limit: 5 registrations per IP per hour
+    const ip = getClientIp(req)
+    const rl = rateLimit(`register:${ip}:${ctx.tenantId}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
+    if (!rl.success) {
+        return NextResponse.json(
+            { error: 'Too many registration attempts. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+        )
+    }
+
     const body = await req.json()
     const validation = registerSchema.safeParse(body)
 

@@ -42,13 +42,13 @@ export function CookieConsent() {
                 <div className="flex gap-2 shrink-0">
                     <button
                         onClick={decline}
-                        className="px-3 py-1.5 text-sm rounded-lg border hover:bg-muted transition-colors"
+                        className="px-3 py-1.5 text-sm rounded-xl border hover:bg-muted transition-colors"
                     >
                         Essential Only
                     </button>
                     <button
                         onClick={accept}
-                        className="px-4 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        className="px-4 py-1.5 text-sm rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
                         Accept
                     </button>

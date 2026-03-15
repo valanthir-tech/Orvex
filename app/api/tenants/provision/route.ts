@@ -109,12 +109,16 @@ export async function POST(req: NextRequest) {
         // Save to Supabase tenants table (with encrypted credentials)
         const tenantData = {
             company_name: companyName,
-            company_abbr: abbr.toLowerCase(), // Save abbreviation as lowercase
+            company_abbr: (result.companyAbbr || abbr).toLowerCase(),
             owner_email: ownerEmail,
             owner_first_name: ownerFirstName,
             owner_last_name: ownerLastName || '',
             owner_phone: ownerPhone || null,
             status: 'active',
+            plan: 'starter',
+            warehouse_name: result.warehouse || `${companyName} - Main`,
+            price_list: result.priceList || `${companyName} Selling`,
+            pos_profile: result.posProfile || `${companyName} POS`,
             erpnext_url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080',
             erpnext_api_key: encrypted?.encryptedApiKey || '',
             erpnext_api_secret: encrypted?.encryptedApiSecret || '',

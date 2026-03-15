@@ -17,7 +17,7 @@ export default function POSLayoutClient({
             {/* Header */}
             <header className="h-14 border-b bg-background/95 backdrop-blur-sm px-4 flex items-center justify-between shrink-0 sticky top-0 z-50">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="rounded-lg h-9 w-9 hover:bg-muted" asChild>
+                    <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 hover:bg-muted" asChild>
                         <Link href="/">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>

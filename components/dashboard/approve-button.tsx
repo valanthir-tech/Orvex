@@ -25,7 +25,7 @@ export function ApproveButton({ signupId }: { signupId: string }) {
                 setIsDeploying(false)
             }
         } catch (error) {
-            alert('Network Error occurred while attempting to provision ERPNext instance.')
+            alert('Network error occurred while attempting to provision the workspace.')
             setIsDeploying(false)
         }
     }

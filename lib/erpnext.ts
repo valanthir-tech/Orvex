@@ -26,6 +26,13 @@ interface FrappeListResponse<T> {
     data: T[];
 }
 
+export class ERPNextAPIError extends Error {
+    constructor(message: string, public statusCode: number) {
+        super(message);
+        this.name = 'ERPNextAPIError';
+    }
+}
+
 export interface ERPNextConfig {
     url: string;
     apiKey: string;
@@ -65,6 +72,23 @@ export class ERPNextClient {
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error(`ERPNext Error [${response.status}]:`, errorText);
+                    
+                    // For write operations, throw with the actual ERPNext error so callers can surface it
+                    if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method)) {
+                        let message = `ERPNext ${response.status} error`;
+                        try {
+                            const parsed = JSON.parse(errorText);
+                            if (parsed._server_messages) {
+                                const msgs = JSON.parse(parsed._server_messages);
+                                const first = typeof msgs[0] === 'string' ? JSON.parse(msgs[0]) : msgs[0];
+                                message = first.message || message;
+                            } else if (parsed.exception) {
+                                message = parsed.exception.split(':').pop()?.trim() || message;
+                            }
+                        } catch { /* use default message */ }
+                        throw new ERPNextAPIError(message, response.status);
+                    }
+                    
                     return null;
                 }
 
@@ -78,7 +102,11 @@ export class ERPNextClient {
                 return data as T;
 
             } catch (error) {
-                console.error('ERPNext Network Error:', error);
+                // Re-throw intentional ERPNext API errors from write operations
+                if (error instanceof ERPNextAPIError) {
+                    throw error;
+                }
+                console.error('ERPNext Network Error:', error instanceof Error ? error.message : String(error));
                 return null;
             }
         });

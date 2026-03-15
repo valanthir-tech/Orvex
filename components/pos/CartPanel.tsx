@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Minus, Plus, Trash2, Printer, CreditCard, Banknote, QrCode, House } from "lucide-react";
+import { Minus, Plus, Trash2, Printer, CreditCard, Banknote, QrCode, House, MessageCircleHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { PrintOrderSlipDialog } from "@/components/pos/PrintOrderSlip";
 import type { OrderSlipData } from "@/lib/thermal-printer";
+import { generateWhatsAppOrderLink } from "@/lib/whatsapp";
 
 const PAYMENT_LABELS: Record<string, string> = {
     CASH: "Cash",
@@ -43,7 +44,7 @@ export default function CartPanel() {
                     hour: "2-digit",
                     minute: "2-digit",
                 }),
-                items: cart.map((item) => ({
+                products: cart.map((item) => ({
                     name: item.name,
                     qty: item.quantity,
                     rate: item.price,
@@ -61,6 +62,21 @@ export default function CartPanel() {
         }
     };
 
+    const handleShareWhatsApp = () => {
+        if (cart.length === 0) return toast.error("Cart is empty");
+        
+        // TODO: Map to actual tenant phone/name when dynamic settings are implemented
+        const link = generateWhatsAppOrderLink(
+            "9779800000000", // Example phone
+            "Our Store",
+            cart,
+            totals.total
+        );
+        
+        window.open(link, '_blank');
+        toast.success("Opening WhatsApp...");
+    };
+
     const handlePrintCurrent = () => {
         if (cart.length === 0) return toast.error("Cart is empty");
 
@@ -76,7 +92,7 @@ export default function CartPanel() {
                 hour: "2-digit",
                 minute: "2-digit",
             }),
-            items: cart.map((item) => ({
+            products: cart.map((item) => ({
                 name: item.name,
                 qty: item.quantity,
                 rate: item.price,
@@ -104,16 +120,28 @@ export default function CartPanel() {
                     <h2 className="font-heading font-semibold text-lg truncate">Current Order</h2>
                     <p className="text-xs text-muted-foreground truncate">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearCart}
-                    disabled={cart.length === 0}
-                    className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 shrink-0"
-                >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear
-                </Button>
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleShareWhatsApp}
+                        disabled={cart.length === 0}
+                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20 shrink-0"
+                        title="Share Cart to WhatsApp"
+                    >
+                        <MessageCircleHeart className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearCart}
+                        disabled={cart.length === 0}
+                        className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 shrink-0"
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear
+                    </Button>
+                </div>
             </div>
 
             {/* Cart Items List */}
@@ -121,14 +149,14 @@ export default function CartPanel() {
                 <ScrollArea className="h-full">
                     <div className="p-4 space-y-3">
                         {cart.map((item) => (
-                            <div key={item.itemId} className="flex gap-3 group">
+                            <div key={item.productId} className="flex gap-3 group">
                                 {/* Qty Controls */}
                                 <div className="flex flex-col items-center justify-center gap-1">
                                     <Button
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6 rounded-full border-input"
-                                        onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
+                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                     >
                                         <Plus className="h-3 w-3" />
                                     </Button>
@@ -137,7 +165,7 @@ export default function CartPanel() {
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6 rounded-full border-input"
-                                        onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
+                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                                     >
                                         <Minus className="h-3 w-3" />
                                     </Button>
@@ -152,7 +180,7 @@ export default function CartPanel() {
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-sm">Rs. {item.price * item.quantity}</p>
+                                        <p className="font-semibold text-sm font-mono tracking-tight">Rs. {item.price * item.quantity}</p>
                                     </div>
                                 </Card>
 
@@ -161,7 +189,7 @@ export default function CartPanel() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-auto w-8 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => removeFromCart(item.itemId)}
+                                    onClick={() => removeFromCart(item.productId)}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -185,7 +213,7 @@ export default function CartPanel() {
                 <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between text-muted-foreground">
                         <span>Subtotal</span>
-                        <span>Rs. {totals.subTotal.toLocaleString()}</span>
+                        <span className="font-mono">Rs. {totals.subTotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                         <span>Tax (13%)</span>
@@ -193,7 +221,7 @@ export default function CartPanel() {
                     </div>
                     <div className="flex justify-between items-end pt-2">
                         <span className="font-semibold text-base">Total Amount</span>
-                        <span className="font-bold text-2xl text-primary font-heading">
+                        <span className="font-bold text-2xl text-primary font-heading font-mono -tracking-wider">
                             Rs. {totals.total.toLocaleString()}
                         </span>
                     </div>

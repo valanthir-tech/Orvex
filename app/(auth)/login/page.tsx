@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -33,7 +33,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Box, Loader2 } from "lucide-react"
-import { checkUserRole } from "@/app/actions/auth"
 
 const loginSchema = z.object({
     email: z
@@ -48,7 +47,6 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-    const router = useRouter()
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -64,7 +62,7 @@ export default function LoginPage() {
         setIsLoading(true)
         const supabase = createSupabaseBrowserClient()
 
-        const { data: signInData, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
             email: values.email,
             password: values.password,
         })
@@ -75,20 +73,8 @@ export default function LoginPage() {
             return
         }
 
-        // Role guard: only superadmin is blocked — they belong in the admin portal
-        const role = await checkUserRole(signInData.user.id)
-
-        if (role === "superadmin") {
-            await supabase.auth.signOut()
-            form.setError("root", {
-                message: "Superadmin accounts cannot access this app. Please use the Admin Portal.",
-            })
-            setIsLoading(false)
-            return
-        }
-
-        router.push("/")
-        router.refresh()
+        // Skip client-side role check and let middleware handle it for faster redirect
+        window.location.href = "/"
     }
 
     return (

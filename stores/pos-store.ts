@@ -17,8 +17,10 @@ interface PosState {
 
     // Actions
     addToCart: (item: { id: string; name: string; sku: string; price: number; stock: number }) => void;
-    removeFromCart: (itemId: string) => void;
-    updateQuantity: (itemId: string, newQty: number) => void;
+    removeFromCart: (productId: string) => void;
+    updateQuantity: (productId: string, newQty: number) => void;
+    applyDiscount: (productId: string, pct: number) => void;
+    overridePrice: (productId: string, newPrice: number) => void;
     clearCart: () => void;
     setCustomer: (name: string, pan: string) => void;
 
@@ -43,17 +45,17 @@ export const usePosStore = create<PosState>((set, get) => ({
     lastOrder: null,
 
     addToCart: (item) => set((state) => {
-        const existing = state.cart.find((i) => i.itemId === item.id);
+        const existing = state.cart.find((i) => i.productId === item.id);
         if (existing) {
             return {
                 cart: state.cart.map((i) =>
-                    i.itemId === item.id ? { ...i, quantity: i.quantity + 1 } : i
+                    i.productId === item.id ? { ...i, quantity: i.quantity + 1 } : i
                 ),
             };
         }
         return {
             cart: [...state.cart, {
-                itemId: item.id,
+                productId: item.id,
                 name: item.name,
                 sku: item.sku,
                 price: item.price,
@@ -63,20 +65,32 @@ export const usePosStore = create<PosState>((set, get) => ({
         };
     }),
 
-    removeFromCart: (itemId) => set((state) => ({
-        cart: state.cart.filter((i) => i.itemId !== itemId),
+    removeFromCart: (productId) => set((state) => ({
+        cart: state.cart.filter((i) => i.productId !== productId),
     })),
 
-    updateQuantity: (itemId, newQty) => set((state) => {
+    updateQuantity: (productId, newQty) => set((state) => {
         if (newQty <= 0) {
-            return { cart: state.cart.filter((i) => i.itemId !== itemId) };
+            return { cart: state.cart.filter((i) => i.productId !== productId) };
         }
         return {
             cart: state.cart.map((i) =>
-                i.itemId === itemId ? { ...i, quantity: newQty } : i
+                i.productId === productId ? { ...i, quantity: newQty } : i
             ),
         };
     }),
+
+    applyDiscount: (productId, pct) => set((state) => ({
+        cart: state.cart.map((i) =>
+            i.productId === productId ? { ...i, discount: Math.min(100, Math.max(0, pct)) } : i
+        ),
+    })),
+
+    overridePrice: (productId, newPrice) => set((state) => ({
+        cart: state.cart.map((i) =>
+            i.productId === productId ? { ...i, price: Math.max(0, newPrice) } : i
+        ),
+    })),
 
     clearCart: () => set({ cart: [], customerName: '', customerPan: '' }),
 
@@ -115,7 +129,7 @@ export const usePosStore = create<PosState>((set, get) => ({
             taxTotal: totals.tax,
             grandTotal: totals.total,
             discountTotal: totals.discount,
-            items: [...state.cart],
+            products: [...state.cart],
             paymentMode,
             paidAmount,
             changeAmount: Math.max(0, paidAmount - totals.total),
@@ -127,9 +141,9 @@ export const usePosStore = create<PosState>((set, get) => ({
 
         // Deduct stock locally
         for (const cartItem of state.cart) {
-            const dbItem = await db.items.get(cartItem.itemId);
+            const dbItem = await db.products.get(cartItem.productId);
             if (dbItem) {
-                await db.items.update(cartItem.itemId, {
+                await db.products.update(cartItem.productId, {
                     stock: Math.max(0, dbItem.stock - cartItem.quantity),
                 });
             }

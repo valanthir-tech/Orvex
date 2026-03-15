@@ -56,28 +56,28 @@ import {
 } from "@/components/ui/select"
 import { badgeStyles, cardStyles } from "@/lib/theme"
 import {
-    getItems,
-    createItem,
-    updateItem,
-    deleteItem,
+    getProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct,
     getCategories,
-} from "@/app/actions/items"
+} from "@/app/actions/products"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Product {
     id: string
     name: string
-    itemCode: string
+    productCode: string
     description: string
-    itemGroupId: string
-    itemGroup: { id: string; name: string }
+    productGroupId: string
+    productGroup: { id: string; name: string }
     stockUom: string
     standardRate: number
     valuationRate: number
     currentStock: number
     minStockLevel: number
-    isStockItem: boolean
+    isStockProduct: boolean
     hasBatchNo: boolean
     image?: string | null
     barcodes: string[]
@@ -94,7 +94,7 @@ interface Category {
 
 const productSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
-    itemCode: z.string().min(2, "Item code is required"),
+    productCode: z.string().min(2, "product code is required"),
     price: z.coerce.number().min(0, "Price cannot be negative"),
     cost: z.coerce.number().min(0, "Cost cannot be negative"),
     category: z.string().min(1, "Category is required"),
@@ -117,11 +117,28 @@ export default function ProductsPageClient() {
     const loadData = useCallback(async () => {
         try {
             const [items, cats] = await Promise.all([
-                getItems(),
+                getProducts(),
                 getCategories(),
             ])
             setProducts(items as Product[])
             setCategories(cats)
+
+            // Trigger low-stock notifications (non-blocking)
+            const lowStockItems = (items as Product[]).filter(
+                (p) => p.currentStock > 0 && p.currentStock <= p.minStockLevel && p.minStockLevel > 0
+            )
+            if (lowStockItems.length > 0) {
+                import("@/app/actions/notifications").then(({ reportLowStockItems }) => {
+                    reportLowStockItems(
+                        lowStockItems.map((p) => ({
+                            productCode: p.productCode,
+                            productName: p.name,
+                            currentQty: p.currentStock,
+                            threshold: p.minStockLevel,
+                        }))
+                    ).catch(() => {})
+                })
+            }
         } catch {
             toast.error("Failed to load products")
         } finally {
@@ -137,8 +154,8 @@ export default function ProductsPageClient() {
         return products.filter(
             (p) =>
                 p.name.toLowerCase().includes(term) ||
-                p.itemCode.toLowerCase().includes(term) ||
-                p.itemGroupId.toLowerCase().includes(term)
+                p.productCode.toLowerCase().includes(term) ||
+                p.productGroupId.toLowerCase().includes(term)
         )
     }, [products, search])
 
@@ -154,7 +171,7 @@ export default function ProductsPageClient() {
         resolver: zodResolver(productSchema) as never,
         defaultValues: {
             name: "",
-            itemCode: "",
+            productCode: "",
             price: 0,
             cost: 0,
             category: "",
@@ -166,7 +183,7 @@ export default function ProductsPageClient() {
         setEditingProduct(null)
         form.reset({
             name: "",
-            itemCode: "",
+            productCode: "",
             price: 0,
             cost: 0,
             category: "",
@@ -179,10 +196,10 @@ export default function ProductsPageClient() {
         setEditingProduct(product)
         form.reset({
             name: product.name,
-            itemCode: product.itemCode,
+            productCode: product.productCode,
             price: product.standardRate,
             cost: product.valuationRate,
-            category: product.itemGroupId,
+            category: product.productGroupId,
             description: product.description,
         })
         setIsModalOpen(true)
@@ -192,10 +209,10 @@ export default function ProductsPageClient() {
         setIsSubmitting(true)
 
         if (editingProduct) {
-            const result = await updateItem({
+            const result = await updateProduct({
                 id: editingProduct.id,
                 name: values.name,
-                itemGroupId: values.category,
+                productGroupId: values.category,
                 standardRate: values.price,
                 valuationRate: values.cost,
                 description: values.description,
@@ -208,15 +225,15 @@ export default function ProductsPageClient() {
                 toast.error(result.error || "Failed to update product")
             }
         } else {
-            const result = await createItem({
+            const result = await createProduct({
                 name: values.name,
-                itemCode: values.itemCode,
-                itemGroupId: values.category,
+                productCode: values.productCode,
+                productGroupId: values.category,
                 standardRate: values.price,
                 valuationRate: values.cost,
                 description: values.description,
                 stockUom: "Nos",
-                isStockItem: true,
+                isStockProduct: true,
                 currentStock: 0,
                 minStockLevel: 0,
                 hasBatchNo: false,
@@ -234,7 +251,7 @@ export default function ProductsPageClient() {
     }
 
     async function handleDelete(product: Product) {
-        const result = await deleteItem(product.id)
+        const result = await deleteProduct(product.id)
         if (result.success) {
             toast.success(`${product.name} deleted`)
             loadData()
@@ -330,7 +347,7 @@ export default function ProductsPageClient() {
                     </CardHeader>
                     <CardContent className="relative">
                         <div className="text-3xl font-bold font-heading">{stats.inStock}</div>
-                        <div className="text-xs mt-2 text-muted-foreground">items available</div>
+                        <div className="text-xs mt-2 text-muted-foreground">products available</div>
                     </CardContent>
                 </Card>
 
@@ -412,7 +429,7 @@ export default function ProductsPageClient() {
                                 <TableRow>
                                     <TableHead className="w-[50px]">Image</TableHead>
                                     <TableHead>Name</TableHead>
-                                    <TableHead>Item Code</TableHead>
+                                    <TableHead>Product Code</TableHead>
                                     <TableHead className="text-right">Price</TableHead>
                                     <TableHead className="text-right">Stock</TableHead>
                                     <TableHead>Status</TableHead>
@@ -449,7 +466,7 @@ export default function ProductsPageClient() {
                                                 {product.name}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs text-muted-foreground">
-                                                {product.itemCode}
+                                                {product.productCode}
                                             </TableCell>
                                             <TableCell className="text-right font-semibold">
                                                 Rs. {product.standardRate.toLocaleString()}
@@ -515,7 +532,7 @@ export default function ProductsPageClient() {
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <span className="text-xs text-muted-foreground font-mono">
-                                                {product.itemCode}
+                                                {product.productCode}
                                             </span>
                                             {getStockBadge(product)}
                                         </div>
@@ -591,10 +608,10 @@ export default function ProductsPageClient() {
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
-                                    name="itemCode"
+                                    name="productCode"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Item Code</FormLabel>
+                                            <FormLabel>Product Code</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="e.g. HOD-001"

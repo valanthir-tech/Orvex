@@ -175,7 +175,7 @@ export function SubscriptionSettingsClient({ subscription, submissions, plans, q
 
             {/* Payment Modal */}
             <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-[1000px] max-h-[95vh] overflow-y-auto w-[95vw] p-4 sm:p-6">
                     <DialogHeader>
                         <DialogTitle>Submit Payment</DialogTitle>
                     </DialogHeader>

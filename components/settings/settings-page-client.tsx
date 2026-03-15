@@ -7,11 +7,8 @@ import {
     Bell,
     Shield,
     LogOut,
-    Moon,
-    Sun,
     Loader2,
     User,
-    Palette,
     Receipt,
     MapPin,
     Phone,
@@ -24,7 +21,6 @@ import {
     EyeOff,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -46,11 +42,12 @@ import {
 import { badgeStyles } from "@/lib/theme"
 import { getSettings, updateSettings } from "@/app/actions/settings"
 import { listApiKeys, createApiKey, revokeApiKey, type ApiKeyRecord } from "@/app/actions/api-keys"
+import { ReceiptPreview } from "./receipt-preview"
+import { StaffSettingsCard } from "./staff-settings-card"
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SettingsPageClient() {
-    const { theme, setTheme } = useTheme()
     const router = useRouter()
     const [isSaving, setIsSaving] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
@@ -261,6 +258,11 @@ export default function SettingsPageClient() {
                 </p>
             </div>
 
+            {/* Team & Staff Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <StaffSettingsCard />
+            </div>
+
             {/* Row 1: Account + Store Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -363,11 +365,11 @@ export default function SettingsPageClient() {
 
             </div>{/* end row 1 */}
 
-            {/* Row 2: Tax & Currency + Receipt */}
+            {/* Row 2: Tax & Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* Tax & Currency */}
-            <Card className="card-float border-0 rounded-2xl">
+            <Card className="card-float border-0 rounded-2xl md:col-span-1">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -431,101 +433,87 @@ export default function SettingsPageClient() {
                 </CardContent>
             </Card>
 
-            {/* Receipt Customization */}
-            <Card className="card-float border-0 rounded-2xl">
-                <CardHeader className="pb-3">
+            {/* Receipt Customization - Spans Full Width for Designer View */}
+            <Card className="card-float border-0 rounded-2xl md:col-span-2">
+                <CardHeader className="pb-3 border-b border-border/50 mb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Receipt className="h-4 w-4 text-muted-foreground" />
-                        Order Slip / Receipt
+                        Order Slip / Receipt Designer
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                    <div className="space-y-2">
-                        <Label>Receipt Title</Label>
-                        <Input
-                            value={receiptHeader}
-                            onChange={(e) => setReceiptHeader(e.target.value)}
-                            className="h-11"
-                            placeholder="ORDER SLIP"
-                        />
-                        <p className="text-xs text-muted-foreground">Displayed at the top of every receipt</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Receipt Footer Message</Label>
-                        <Textarea
-                            value={receiptFooter}
-                            onChange={(e) => setReceiptFooter(e.target.value)}
-                            placeholder="This is an order slip for record-keeping only..."
-                            rows={3}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Disclaimer Text</Label>
-                        <Textarea
-                            value={receiptDisclaimer}
-                            onChange={(e) => setReceiptDisclaimer(e.target.value)}
-                            placeholder="This order slip is for your purchase record only..."
-                            rows={3}
-                        />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium">Show Disclaimer</p>
-                            <p className="text-xs text-muted-foreground">Display disclaimer on every receipt</p>
+                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Left side: Inputs */}
+                    <div className="space-y-5">
+                        <div className="space-y-2">
+                            <Label>Receipt Title</Label>
+                            <Input
+                                value={receiptHeader}
+                                onChange={(e) => setReceiptHeader(e.target.value)}
+                                className="h-11"
+                                placeholder="ORDER SLIP"
+                            />
+                            <p className="text-xs text-muted-foreground">Displayed at the top of every receipt</p>
                         </div>
-                        <Switch checked={receiptShowDisclaimer} onCheckedChange={setReceiptShowDisclaimer} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium">Show Cashier Name</p>
-                            <p className="text-xs text-muted-foreground">Print cashier name on receipt</p>
+                        <div className="space-y-2">
+                            <Label>Receipt Footer Message</Label>
+                            <Textarea
+                                value={receiptFooter}
+                                onChange={(e) => setReceiptFooter(e.target.value)}
+                                placeholder="This is an order slip for record-keeping only..."
+                                rows={3}
+                            />
                         </div>
-                        <Switch checked={receiptShowCashier} onCheckedChange={setReceiptShowCashier} />
+                        <div className="space-y-2">
+                            <Label>Disclaimer Text</Label>
+                            <Textarea
+                                value={receiptDisclaimer}
+                                onChange={(e) => setReceiptDisclaimer(e.target.value)}
+                                placeholder="This order slip is for your purchase record only..."
+                                rows={3}
+                            />
+                        </div>
+                        <Separator />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium">Show Disclaimer</p>
+                                <p className="text-xs text-muted-foreground">Display disclaimer on every receipt</p>
+                            </div>
+                            <Switch checked={receiptShowDisclaimer} onCheckedChange={setReceiptShowDisclaimer} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium">Show Cashier Name</p>
+                                <p className="text-xs text-muted-foreground">Print cashier name on receipt</p>
+                            </div>
+                            <Switch checked={receiptShowCashier} onCheckedChange={setReceiptShowCashier} />
+                        </div>
+                    </div>
+
+                    {/* Right side: Live Preview */}
+                    <div className="flex flex-col items-center justify-center bg-muted/30 rounded-xl p-6 border border-dashed">
+                        <p className="text-sm font-medium text-muted-foreground mb-4">Live Preview (80mm Thermal)</p>
+                        <ReceiptPreview 
+                            storeName={storeName}
+                            storeAddress={storeAddress}
+                            storePhone={storePhone}
+                            receiptHeader={receiptHeader}
+                            receiptFooter={receiptFooter}
+                            receiptDisclaimer={receiptDisclaimer}
+                            showDisclaimer={receiptShowDisclaimer}
+                            showCashier={receiptShowCashier}
+                            currencySymbol={currencySymbol}
+                        />
                     </div>
                 </CardContent>
             </Card>
 
             </div>{/* end row 2 */}
 
-            {/* Row 3: Appearance + Notifications */}
+            {/* Row 3: Notifications */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* Appearance */}
-            <Card className="card-float border-0 rounded-2xl">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <Palette className="h-4 w-4 text-muted-foreground" />
-                        Appearance
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            {theme === "dark" ? (
-                                <Moon className="h-5 w-5 text-muted-foreground" />
-                            ) : (
-                                <Sun className="h-5 w-5 text-amber-500" />
-                            )}
-                            <div>
-                                <p className="text-sm font-medium">Dark Mode</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Switch between light and dark themes
-                                </p>
-                            </div>
-                        </div>
-                        <Switch
-                            checked={theme === "dark"}
-                            onCheckedChange={(checked) =>
-                                setTheme(checked ? "dark" : "light")
-                            }
-                        />
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Notifications */}
-            <Card className="card-float border-0 rounded-2xl">
+            <Card id="notifications" className="card-float border-0 rounded-2xl scroll-mt-24">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Bell className="h-4 w-4 text-muted-foreground" />

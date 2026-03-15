@@ -191,94 +191,56 @@ export async function getTopSellingItems(
         const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
         const today = now.toISOString().split("T")[0]
 
-        // Get invoice items for this month
-        const items = await client.getList<{
-            item_code: string
-            item_name: string
-            qty: number
-            amount: number
-        }>("Sales Invoice Item", {
+        // Fetch submitted invoices for this month, then aggregate items via getDoc
+        const invoices = await client.getList<{
+            name: string
+        }>("Sales Invoice", {
             filters: [
-                ["parent", "in", []], // will need a subquery approach
+                ["posting_date", ">=", monthStart],
+                ["posting_date", "<=", today],
+                ["docstatus", "=", 1],
             ],
-            fields: ["item_code", "item_name", "qty", "amount"],
-            limit: 0,
+            fields: ["name"],
+            limit: 100,
         })
 
-        // If the above doesn't work due to ERPNext API limitations,
-        // fall back to fetching recent invoices and aggregating items
-        if (items.length === 0) {
-            const invoices = await client.getList<{
-                name: string
-            }>("Sales Invoice", {
-                filters: [
-                    ["posting_date", ">=", monthStart],
-                    ["posting_date", "<=", today],
-                    ["docstatus", "=", 1],
-                ],
-                fields: ["name"],
-                limit: 100,
-            })
-
-            const itemMap = new Map<
-                string,
-                {
-                    itemCode: string
-                    itemName: string
-                    totalQty: number
-                    totalAmount: number
-                }
-            >()
-
-            for (const inv of invoices) {
-                try {
-                    const doc = await client.getDoc<{
-                        items: Array<{
-                            item_code: string
-                            item_name: string
-                            qty: number
-                            amount: number
-                        }>
-                    }>("Sales Invoice", inv.name)
-
-                    if (doc?.items) {
-                        for (const item of doc.items) {
-                            const existing = itemMap.get(item.item_code) || {
-                                itemCode: item.item_code,
-                                itemName: item.item_name,
-                                totalQty: 0,
-                                totalAmount: 0,
-                            }
-                            existing.totalQty += item.qty
-                            existing.totalAmount += item.amount
-                            itemMap.set(item.item_code, existing)
-                        }
-                    }
-                } catch {
-                    // Skip failed individual fetches
-                }
-            }
-
-            return Array.from(itemMap.values())
-                .sort((a, b) => b.totalAmount - a.totalAmount)
-                .slice(0, limit)
-        }
-
-        // Aggregate items
         const itemMap = new Map<
             string,
-            TopSellingItem
-        >()
-        for (const item of items) {
-            const existing = itemMap.get(item.item_code) || {
-                itemCode: item.item_code,
-                itemName: item.item_name,
-                totalQty: 0,
-                totalAmount: 0,
+            {
+                itemCode: string
+                itemName: string
+                totalQty: number
+                totalAmount: number
             }
-            existing.totalQty += item.qty
-            existing.totalAmount += item.amount
-            itemMap.set(item.item_code, existing)
+        >()
+
+        for (const inv of invoices) {
+            try {
+                const doc = await client.getDoc<{
+                    items: Array<{
+                        item_code: string
+                        item_name: string
+                        qty: number
+                        amount: number
+                    }>
+                }>("Sales Invoice", inv.name)
+
+                if (doc?.items) {
+                    for (const item of doc.items) {
+                        const existing = itemMap.get(item.item_code) || {
+                            itemCode: item.item_code,
+                            itemName: item.item_name,
+                            totalQty: 0,
+                            totalAmount: 0,
+                        }
+                        existing.totalQty += item.qty
+                        existing.totalAmount += item.amount
+                        itemMap.set(item.item_code, existing)
+                    }
+                }
+            } catch {
+                // Skip failed individual fetches
+            }
         }
 
         return Array.from(itemMap.values())

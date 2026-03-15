@@ -8,6 +8,7 @@ import {
     LogOut,
     Sparkles,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import {
     Avatar,
@@ -41,6 +42,7 @@ export function NavUser({
     }
 }) {
     const { isMobile } = useSidebar()
+    const router = useRouter()
 
     async function handleLogout() {
         const supabase = createSupabaseBrowserClient()
@@ -88,22 +90,22 @@ export function NavUser({
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push("/settings/subscription")}>
                                 <Sparkles />
                                 Upgrade to Pro
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push("/settings")}>
                                 <BadgeCheck />
                                 Account
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push("/settings/subscription")}>
                                 <CreditCard />
                                 Billing
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push("/notifications")}>
                                 <Bell />
                                 Notifications
                             </DropdownMenuItem>

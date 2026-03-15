@@ -166,7 +166,7 @@ export interface OrderSlipData {
     date: string
     time: string
     cashierName?: string
-    items: OrderSlipItem[]
+    products: OrderSlipItem[]
     subtotal: number
     discount: number
     amountPaid: number
@@ -213,11 +213,11 @@ export function buildOrderSlip(data: OrderSlipData): Uint8Array {
     r.bold().line("ITEMS PURCHASED:").bold(false)
     r.emptyLine()
 
-    for (const item of data.items) {
-        r.line(item.name)
+    for (const product of data.products) {
+        r.line(product.name)
         r.leftRight(
-            `  Qty: ${item.qty} @ Rs. ${item.rate.toLocaleString()}`,
-            `Rs. ${item.amount.toLocaleString()}`
+            `  Qty: ${product.qty} @ Rs. ${product.rate.toLocaleString()}`,
+            `Rs. ${product.amount.toLocaleString()}`
         )
     }
 

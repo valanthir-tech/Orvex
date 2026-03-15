@@ -202,7 +202,7 @@ export default function InventoryPageClient() {
                     </Button>
                     <Button
                         onClick={() => openAdjustModal()}
-                        className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
+                        className="rounded-xl px-6 gap-2 h-11 shadow-lg shadow-primary/20"
                     >
                         <ArrowUpDown className="h-4 w-4" />
                         Stock Adjustment
@@ -389,7 +389,7 @@ export default function InventoryPageClient() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="rounded-lg"
+                                                        className="rounded-xl"
                                                         onClick={() =>
                                                             openAdjustModal(
                                                                 product.id
@@ -459,7 +459,7 @@ export default function InventoryPageClient() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="w-full rounded-lg h-8 text-xs"
+                                            className="w-full rounded-xl h-8 text-xs"
                                             onClick={() =>
                                                 openAdjustModal(product.id)
                                             }
@@ -526,7 +526,7 @@ export default function InventoryPageClient() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="rounded-lg"
+                                                    className="rounded-xl"
                                                     onClick={() =>
                                                         openAdjustModal(product.id)
                                                     }

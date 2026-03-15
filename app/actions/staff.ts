@@ -59,6 +59,44 @@ export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
         const ctx = await requireAdminContext()
         const serviceClient = getServiceClient()
 
+        // ─── Enforce Staff Limit based on Subscription ────────────────────────────
+        
+        // 1. Fetch active subscription for limit checks
+        const { data: tenantSub } = await serviceClient
+            .from('tenant_subscriptions')
+            .select('status, plan:subscription_plans(max_staff)')
+            .eq('tenant_id', ctx.tenantId)
+            // Consider active, past_due, or trialing as valid states checking limits
+            .in('status', ['active', 'past_due', 'trialing']) 
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            
+        // 2. Default to Starter limit (2) if no plan found, negative is unlimited
+        // Casting is needed because Supabase join type is complex
+        const planData = tenantSub?.plan as any
+        const maxStaffLimit: number = planData?.max_staff ?? 2 
+        
+        if (maxStaffLimit >= 0) {
+            // Count total existing profiles under this tenant
+            const { count: currentStaffCount, error: countError } = await serviceClient
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('tenant_id', ctx.tenantId)
+                
+            if (countError) {
+                return { success: false, error: "Unable to verify current staff count." }
+            }
+            
+            if (currentStaffCount !== null && currentStaffCount >= maxStaffLimit) {
+                return { 
+                    success: false, 
+                    error: `You have reached your plan's limit of ${maxStaffLimit} staff profile${maxStaffLimit === 1 ? '' : 's'}. Please upgrade your subscription to add more staff.` 
+                }
+            }
+        }
+        // ──────────────────────────────────────────────────────────────────────────
+
         // Check if email already exists as a profile in this tenant
         const { data: existingProfile } = await serviceClient
             .from('profiles')

@@ -42,8 +42,22 @@ import { ERPNextClient, ERPNextConfig } from './erpnext'
 import { decryptCredentials } from './encryption'
 import { createClient } from '@supabase/supabase-js'
 
+// Tenant context: ERPNext client + company name for data isolation
+export interface TenantContext {
+    client: ERPNextClient
+    tenantId: string
+    companyName: string
+    warehouseName: string
+    priceList: string | null
+}
+
+// Security Helper: standardizes the filter needed to ensure strict data isolation
+export function tenantFilter(warehouseName: string): [string, string, unknown][] {
+    return [["warehouse", "=", warehouseName]];
+}
+
 // Cached per request to avoid double DB hits
-export const getTenantClient = cache(async () => {
+export const getTenantContext = cache(async (): Promise<TenantContext> => {
     const supabase = await createSupabaseServerClient();
 
     // 1. Get current user
@@ -120,10 +134,10 @@ export const getTenantClient = cache(async () => {
     }
 
     // 4. Fetch Decrypted Credentials for this Tenant
-    // In production, use KMS or similar. For MVP, we assume RLS protects the row.
-    const { data: tenant, error: tenantError } = await supabase
+    // Use service-role client to bypass RLS — auth is already verified above.
+    const { data: tenant, error: tenantError } = await adminClient
         .from('tenants')
-        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status')
+        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status, company_name, warehouse_name, price_list')
         .eq('id', targetTenantId)
         .single();
 
@@ -152,10 +166,22 @@ export const getTenantClient = cache(async () => {
         throw new Error("Misconfigured Tenant: Unable to access credentials");
     }
 
-    // 7. Return Configured Client
-    return new ERPNextClient({
-        url: tenant.erpnext_url,
-        apiKey: decryptedApiKey,
-        apiSecret: decryptedApiSecret
-    });
+    // 7. Return Configured Client + Company Name & Warehouse
+    return {
+        client: new ERPNextClient({
+            url: tenant.erpnext_url,
+            apiKey: decryptedApiKey,
+            apiSecret: decryptedApiSecret
+        }),
+        tenantId: targetTenantId,
+        companyName: tenant.company_name,
+        warehouseName: tenant.warehouse_name || `${tenant.company_name} - Main`,
+        priceList: tenant.price_list || 'Standard Selling'
+    };
+});
+
+// Backward-compatible helper: returns just the ERPNext client
+export const getTenantClient = cache(async () => {
+    const ctx = await getTenantContext();
+    return ctx.client;
 });
