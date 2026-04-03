@@ -18,6 +18,8 @@ import {
     Warehouse,
 } from "lucide-react"
 
+import { Logo } from "@/components/ui/logo"
+
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -57,11 +59,6 @@ const navigationBlocks = {
             icon: Package,
         },
         {
-            title: "Inventory",
-            url: "/inventory",
-            icon: Warehouse,
-        },
-        {
             title: "Customers",
             url: "/customers",
             icon: Users,
@@ -72,12 +69,12 @@ const navigationBlocks = {
             icon: Box,
             items: [
                 {
-                    title: "Categories",
-                    url: "/categories",
+                    title: "Inventory",
+                    url: "/stock/inventory",
                 },
                 {
-                    title: "Warehouses",
-                    url: "/warehouses",
+                    title: "Categories",
+                    url: "/categories",
                 },
                 {
                     title: "Stock Entries",
@@ -127,17 +124,7 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
     const [feedbackOpen, setFeedbackOpen] = useState(false)
 
     // Filter main navigation based on features
-    const filteredNavMain = navigationBlocks.navMain.map(navItem => {
-        if (navItem.title === "Stock Management") {
-            // Filter warehouses from Stock Management if no multi_warehouse feature
-            const filteredItems = navItem.items?.filter(subItem => {
-                if (subItem.url === "/warehouses" && !features?.multi_warehouse) return false;
-                return true;
-            })
-            return { ...navItem, items: filteredItems }
-        }
-        return navItem;
-    })
+    const filteredNavMain = navigationBlocks.navMain
 
     const navSecondaryWithHandlers = navigationBlocks.navSecondary.map((item) =>
         item.title === "Feedback"
@@ -146,18 +133,18 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
     )
 
     return (
-        <Sidebar variant="inset" collapsible="icon" {...props}>
+        <Sidebar variant="floating" className="rounded-[1.5rem] !drop-shadow-xl overflow-hidden border-border/10" collapsible="icon" {...props}>
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <a href="/">
                                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                    <Command className="size-4" />
+                                    <Logo className="size-5" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">Valanthir IMS</span>
-                                    <span className="truncate text-xs">Store Workspace</span>
+                                    <span className="truncate font-medium text-base tracking-tight">Orvex</span>
+                                    <span className="truncate text-xs text-muted-foreground/70">by valanthir tech</span>
                                 </div>
                             </a>
                         </SidebarMenuButton>

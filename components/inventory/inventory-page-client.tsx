@@ -44,6 +44,7 @@ import {
     getInventory, getStockLedger, createInventoryAdjustment,
     type InventoryItem, type StockLedgerEntry,
 } from "@/app/actions/inventory"
+import WarehousesTab from "@/components/warehouses/warehouses-page-client"
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -171,14 +172,6 @@ export default function InventoryPageClient() {
         return Math.min(100, Math.max(0, (product.stock / maxLevel) * 100))
     }
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        )
-    }
-
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -269,7 +262,7 @@ export default function InventoryPageClient() {
                 </Card>
             </div>
 
-            {/* Tabs: All Stock / Low Stock / History */}
+            {/* Tabs: All Stock / Low Stock / Locations / History */}
             <Tabs defaultValue="all" className="space-y-4">
                 <TabsList className="bg-muted/50 rounded-xl p-1">
                     <TabsTrigger value="all" className="rounded-lg">
@@ -285,6 +278,9 @@ export default function InventoryPageClient() {
                                 {lowStockProducts.length}
                             </Badge>
                         )}
+                    </TabsTrigger>
+                    <TabsTrigger value="locations" className="rounded-lg">
+                        Locations
                     </TabsTrigger>
                     <TabsTrigger value="history" className="rounded-lg">
                         Adjustments
@@ -336,7 +332,20 @@ export default function InventoryPageClient() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredProducts.map((product) => (
+                                        {isLoading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                                    <Loader2 className="h-6 w-6 animate-spin mx-auto opacity-50" />
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : filteredProducts.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                                    No products found.
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            filteredProducts.map((product) => (
                                             <TableRow
                                                 key={product.id}
                                                 className={`hover:bg-muted/30 ${
@@ -401,14 +410,23 @@ export default function InventoryPageClient() {
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        )))}
                                     </TableBody>
                                 </Table>
                             </div>
 
                             {/* Mobile List */}
                             <div className="md:hidden divide-y divide-border/50">
-                                {filteredProducts.map((product) => (
+                                {isLoading ? (
+                                    <div className="h-32 flex items-center justify-center text-muted-foreground">
+                                        <Loader2 className="h-6 w-6 animate-spin mx-auto opacity-50" />
+                                    </div>
+                                ) : filteredProducts.length === 0 ? (
+                                    <div className="h-32 flex items-center justify-center text-muted-foreground">
+                                        No products found.
+                                    </div>
+                                ) : (
+                                    filteredProducts.map((product) => (
                                     <div
                                         key={product.id}
                                         className={`p-4 space-y-2 ${
@@ -468,7 +486,7 @@ export default function InventoryPageClient() {
                                             Adjust Stock
                                         </Button>
                                     </div>
-                                ))}
+                                )))}
                             </div>
                         </CardContent>
                     </Card>
@@ -541,6 +559,10 @@ export default function InventoryPageClient() {
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
+
+                <TabsContent value="locations" className="space-y-4">
+                    <WarehousesTab />
                 </TabsContent>
 
                 {/* Adjustment History Tab */}

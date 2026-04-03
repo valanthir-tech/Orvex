@@ -12,7 +12,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit';
 export async function POST(req: NextRequest) {
     // Rate limit: 3 signup attempts per IP per hour
     const ip = getClientIp(req)
-    const rl = rateLimit(`signup:${ip}`, { limit: 3, windowSecs: 3600, prefix: 'tenant' })
+    const rl = await rateLimit(`signup:${ip}`, { limit: 3, windowSecs: 3600, prefix: 'tenant' })
     if (!rl.success) {
         return NextResponse.json(
             { success: false, error: 'Too many signup attempts. Please try again later.' },
@@ -76,13 +76,22 @@ export async function POST(req: NextRequest) {
 
         if (error) {
             console.error('[Signup] Database error saving signup:', error);
+            
+            // Check for foreign key violation on user_id (usually error code 23503)
+            if (error.code === '23503' && error.message.includes('tenant_signups_user_id_fkey')) {
+                return NextResponse.json(
+                    { success: false, error: 'Database error: Invalid user session or duplicate email detected. Please log out and start over.' },
+                    { status: 400 }
+                );
+            }
+
             return NextResponse.json(
-                { success: false, error: 'Database error saving signup' },
+                { success: false, error: 'Database error saving signup: ' + error.message },
                 { status: 500 }
             );
         }
 
-        console.log(`[Signup] New signup request: ${companyName} (${ownerEmail}) — awaiting approval`);
+
 
         return NextResponse.json(
             { success: true, signupId: data.id, message: "Signup queued for approval" },

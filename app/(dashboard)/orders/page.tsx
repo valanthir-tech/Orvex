@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Orders | Valanthir IMS"
+    title: "Orders | Orvex"
 }
 
 import OrdersPageClient from "@/components/orders/orders-page-client"

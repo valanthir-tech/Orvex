@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createPOSInvoice } from '@/app/actions/pos';
 import { createSupabaseServerClient } from '@/lib/tenant';
 import { rateLimit } from '@/lib/rate-limit';
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate limit: 60 syncs per minute per user
-    const rl = rateLimit(user.id, { limit: 60, windowSecs: 60, prefix: 'sync' });
+    const rl = await rateLimit(user.id, { limit: 60, windowSecs: 60, prefix: 'sync' });
     if (!rl.success) {
         return NextResponse.json(
             { success: false, error: 'Too many sync requests. Please wait before retrying.' },
@@ -56,9 +57,9 @@ export async function POST(req: NextRequest) {
                 formData.append('paidAmount', String(order.paidAmount ?? order.grandTotal));
                 formData.append('posUuid', order.uuid);
 
-                const items = (order.items || []).map((item: any) => ({
-                    itemId: item.sku || item.itemId,
-                    qty: item.quantity,
+                const items = (order.products || order.items || []).map((item: any) => ({
+                    itemId: item.sku || item.itemId || item.productId,
+                    qty: item.quantity || item.qty,
                     rate: item.rate || item.price,
                     discount: item.discount || 0,
                 }));
@@ -73,9 +74,15 @@ export async function POST(req: NextRequest) {
                     errors.push({ id: order.uuid, error: result.error || 'Unknown server error' });
                 }
             } catch (err: any) {
-                console.error(`[Sync] Failed order ${order.uuid}:`, err);
+                // Silenced in production
                 errors.push({ id: order.uuid, error: err.message || 'Network error' });
             }
+        }
+
+        // Revalidate Server Components to ensure the dashboard instantly reflects synced orders
+        if (syncedIds.length > 0) {
+            revalidatePath('/', 'layout');
+            // console.log(`[Sync] Revalidated app cache for ${syncedIds.length} synced orders.`);
         }
 
         return NextResponse.json({
@@ -85,7 +92,7 @@ export async function POST(req: NextRequest) {
             errors,
         });
     } catch (error) {
-        console.error('[Sync] API Error:', error);
+        // Silenced in production
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 }

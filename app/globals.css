@@ -25,14 +25,14 @@
 
 :root {
   /* 🎨 MAIN BRAND COLOR - Change this to set your primary brand color */
-  --brand-hue: 156;
-  /* Orange-brown hue (change to any 0-360 value) */
-  --brand-saturation: 100%;
+  --brand-hue: 229;
+  /* Acid Green/Chartreuse */
+  --brand-saturation: 88%;
   /* Color intensity */
 
   /* Primary Colors (auto-calculated from brand) */
-  --primary: hsl(var(--brand-hue) var(--brand-saturation) 25%);
-  --primary-foreground: hsl(var(--brand-hue) 5% 98%);
+  --primary: hsl(var(--brand-hue) var(--brand-saturation) 57%);
+  --primary-foreground: hsl(0 0% 100%);
 
   /* 🎨 STATUS COLORS - Used for alerts, badges, and indicators */
   /* Success - Green */
@@ -83,23 +83,23 @@
   /* ============================================
      BASE UI COLORS (usually don't need to change)
      ============================================ */
-  --radius: 0.625rem;
-  --background: hsl(66 38% 95%);
-  --foreground: hsl(var(--brand-hue) 10% 10%);
-  --card: hsl(66 38% 95%);
-  --card-foreground: hsl(var(--brand-hue) 10% 10%);
-  --popover: hsl(66 38% 95%);
-  --popover-foreground: hsl(var(--brand-hue) 10% 10%);
-  --secondary: hsl(var(--brand-hue) 5% 96%);
-  --secondary-foreground: hsl(var(--brand-hue) 10% 15%);
-  --muted: hsl(var(--brand-hue) 5% 96%);
-  --muted-foreground: hsl(var(--brand-hue) 10% 45%);
-  --accent: hsl(var(--brand-hue) 5% 96%);
-  --accent-foreground: hsl(var(--brand-hue) 10% 15%);
+  --radius: 1rem;
+  --background: hsl(40 15% 98%);
+  --foreground: hsl(220 15% 10%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 15% 10%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 15% 10%);
+  --secondary: hsl(40 10% 92%);
+  --secondary-foreground: hsl(220 15% 20%);
+  --muted: hsl(40 10% 92%);
+  --muted-foreground: hsl(220 10% 45%);
+  --accent: hsl(var(--brand-hue) var(--brand-saturation) 44% / 0.1);
+  --accent-foreground: hsl(220 15% 15%);
   --destructive: hsl(var(--danger));
-  --border: hsl(var(--brand-hue) 10% 90%);
-  --input: hsl(var(--brand-hue) 10% 90%);
-  --ring: hsl(var(--brand-hue) var(--brand-saturation) 40%);
+  --border: hsl(40 10% 88%);
+  --input: hsl(40 10% 88%);
+  --ring: hsl(var(--brand-hue) var(--brand-saturation) 44%);
 
   /* Chart colors */
   --chart-1: hsl(var(--accent-teal));
@@ -121,25 +121,25 @@
 
 /* Dark Mode */
 .dark {
-  --primary: hsl(var(--brand-hue) var(--brand-saturation) 85%);
-  --primary-foreground: hsl(var(--brand-hue) 10% 10%);
+  --primary: hsl(var(--brand-hue) var(--brand-saturation) 57%);
+  --primary-foreground: hsl(0 0% 100%);
 
-  --background: hsl(var(--brand-hue) 10% 8%);
-  --foreground: hsl(var(--brand-hue) 5% 95%);
-  --card: hsl(var(--brand-hue) 10% 12%);
-  --card-foreground: hsl(var(--brand-hue) 5% 95%);
-  --popover: hsl(var(--brand-hue) 10% 12%);
-  --popover-foreground: hsl(var(--brand-hue) 5% 95%);
-  --secondary: hsl(var(--brand-hue) 10% 18%);
-  --secondary-foreground: hsl(var(--brand-hue) 5% 95%);
-  --muted: hsl(var(--brand-hue) 10% 18%);
-  --muted-foreground: hsl(var(--brand-hue) 10% 60%);
-  --accent: hsl(var(--brand-hue) 10% 18%);
-  --accent-foreground: hsl(var(--brand-hue) 5% 95%);
-  --destructive: hsl(0 62% 55%);
-  --border: hsl(var(--brand-hue) 10% 20%);
-  --input: hsl(var(--brand-hue) 10% 20%);
-  --ring: hsl(var(--brand-hue) var(--brand-saturation) 60%);
+  --background: hsl(220 18% 6%);
+  --foreground: hsl(40 10% 96%);
+  --card: hsl(220 16% 8%);
+  --card-foreground: hsl(40 10% 96%);
+  --popover: hsl(220 16% 8%);
+  --popover-foreground: hsl(40 10% 96%);
+  --secondary: hsl(220 14% 14%);
+  --secondary-foreground: hsl(40 10% 96%);
+  --muted: hsl(220 14% 14%);
+  --muted-foreground: hsl(220 10% 64%);
+  --accent: hsl(var(--brand-hue) var(--brand-saturation) 48% / 0.15);
+  --accent-foreground: hsl(40 10% 96%);
+  --destructive: hsl(0 80% 55%);
+  --border: hsl(220 18% 18%);
+  --input: hsl(220 18% 18%);
+  --ring: hsl(var(--brand-hue) var(--brand-saturation) 48%);
 
   /* Dark mode status colors */
   --success: 145 65% 50%;

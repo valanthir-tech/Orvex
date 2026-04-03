@@ -6,6 +6,7 @@
  */
 
 import { ERPNextClient, ERPNextConfig, ERPNextAPIError } from './erpnext';
+import { POS_DEFAULT_CUSTOMER } from './constants';
 
 export interface TenantProvisionInput {
     companyName: string;
@@ -35,7 +36,7 @@ export interface TenantProvisionResult {
 
 function getAdminClient(): ERPNextClient {
     const config: ERPNextConfig = {
-        url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080',
+        url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'https://erp.valanthir.com',
         apiKey: process.env.ERPNEXT_API_KEY || '',
         apiSecret: process.env.ERPNEXT_API_SECRET || '',
     };
@@ -75,13 +76,15 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
                         abbr: tryAbbr,
                         default_currency: currency,
                         country: country,
-                        chart_of_accounts: 'Standard',
+                        chart_of_accounts: 'Standard with Numbers',
+                        create_chart_of_accounts_based_on: 'Standard Template',
                     });
                     finalAbbr = tryAbbr;
                     created = true;
                     break;
-                } catch (err: any) {
-                    if (err.message?.toLowerCase().includes('abbreviation already used') && attempt < 9) {
+                } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    if (msg.toLowerCase().includes('abbreviation already used') && attempt < 9) {
                         console.warn(`[Provision] Abbr "${tryAbbr}" taken, trying next...`);
                         continue;
                     }
@@ -95,7 +98,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             finalAbbr = company.abbr || companyAbbr;
         }
 
-        console.log(`[Provision] Company ready: ${company.name} (abbr: ${finalAbbr})`);
+
 
         // Step 2: Create default Warehouse
         const warehouseName = `${companyName} - Main`;
@@ -115,7 +118,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
         if (!warehouse) {
             console.warn(`[Provision] Warehouse may already exist or failed for ${companyName}`);
         } else {
-            console.log(`[Provision] Warehouse ready: ${warehouse.name}`);
+
         }
 
         // Step 3: Create Price List
@@ -130,7 +133,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
                     selling: 1,
                     currency: currency,
                 });
-                console.log(`[Provision] Price List ready: ${priceList.name}`);
+
             } catch (plErr: any) {
                 console.warn(`[Provision] Price List creation notice: ${plErr.message || 'May already exist'}`);
             }
@@ -150,6 +153,10 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
                     { role: 'Sales User' },
                     { role: 'Stock User' },
                     { role: 'Accounts User' },
+                    { role: 'Item Manager' },
+                    { role: 'Stock Manager' },
+                    { role: 'Sales Master Manager' },
+                    { role: 'Sales Manager' },
                 ],
             });
         }
@@ -158,7 +165,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             return { success: false, error: 'Failed to create User in ERPNext', step: 'user', company: company.name };
         }
 
-        console.log(`[Provision] User ready: ${user.name}`);
+
 
         // Step 4: Set User Permission (idempotent — ignore duplicate errors)
         const existingPerms = await client.getList<any>('User Permission', {
@@ -179,10 +186,10 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
             }
         }
 
-        console.log(`[Provision] User permission ready for ${ownerEmail} → ${company.name}`);
+
 
         // Step 4.5: Create Global Walk-in Customer for this POS tenant if not exists
-        let customerName = `Walk-in Customer`;
+        let customerName = POS_DEFAULT_CUSTOMER;
         try {
             const cust = await client.createDoc('Customer', {
                 customer_name: customerName,
@@ -191,14 +198,30 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
                 territory: 'All Territories', // Default in ERPNext
                 company: company.name,
             });
-            customerName = (cust as any)?.name || 'Walk-in Customer';
-            console.log(`[Provision] Created default POS customer for ${company.name}`);
-        } catch (err: any) {
-            console.warn(`[Provision] Default customer setup notice: ${err.message || 'May already exist'}`);
-            // If exists, name is usually "Walk-in Customer" or appended by abbreviation
-            customerName = "Walk-in Customer";
-        }
+            customerName = (cust as {name?: string})?.name || POS_DEFAULT_CUSTOMER;
 
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`[Provision] Default customer setup notice: ${msg || 'May already exist'}`);
+            // If exists, name is usually "Walk-in Customer" or appended by abbreviation
+            customerName = POS_DEFAULT_CUSTOMER;
+        }
+        // Step 4.2.1: Add necessary custom fields
+        try {
+
+            await client.createDoc('Custom Field', {
+                dt: 'Sales Invoice',
+                fieldname: 'custom_pos_uuid',
+                label: 'POS UUID',
+                fieldtype: 'Data',
+                insert_after: 'customer_name'
+            });
+
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            // Usually fails if it already exists, which is fine
+
+        }
         // Step 4.6: Create POS Profile
         const posProfileName = `${companyName} POS`;
         let posProfile;
@@ -224,9 +247,10 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
                     default: 1
                 }]
             });
-            console.log(`[Provision] POS Profile ready: ${posProfileName}`);
-        } catch (err: any) {
-             console.warn(`[Provision] POS Profile setup notice: ${err.message || 'May already exist'}`);
+
+        } catch (err: unknown) {
+             const msg = err instanceof Error ? err.message : String(err);
+             console.warn(`[Provision] POS Profile setup notice: ${msg || 'May already exist'}`);
         }
 
         // Step 5: Generate API Keys for the user
@@ -250,7 +274,7 @@ export async function provisionTenant(input: TenantProvisionInput): Promise<Tena
         const apiKey = apiKeys.api_key;
         const apiSecret = apiKeys.api_secret;
 
-        console.log(`[Provision] API keys generated for ${ownerEmail}`);
+
 
         return {
             success: true,

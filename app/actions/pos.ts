@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
 import { ERPNextSalesInvoice } from "@/lib/erpnext"
+import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
 
 // 
 // MULTI-TENANT REFACTOR
@@ -19,7 +20,7 @@ export type CartItem = {
 
 const invoiceSchema = z.object({
     items: z.string(), // JSON string of CartItem[]
-    paymentMode: z.enum(['CASH', 'CARD', 'QR_ESEWA', 'QR_KHALTI', 'QR_FONEPAY', 'BANK_TRANSFER']),
+    paymentMode: z.enum(['CASH', 'CARD', 'QR', 'CREDIT', 'QR_ESEWA', 'QR_KHALTI', 'QR_FONEPAY', 'BANK_TRANSFER']),
     paidAmount: z.coerce.number().min(0)
 })
 
@@ -27,6 +28,8 @@ const invoiceSchema = z.object({
 const PAYMENT_MODE_MAP: Record<string, string> = {
     'CASH': 'Cash',
     'CARD': 'Credit Card',
+    'QR': 'Cash',
+    'CREDIT': 'Cash', // Changed from 'Credit' to 'Cash' to avoid Missing Mode of Payment
     'QR_ESEWA': 'Cash', // Will need to create custom modes in ERPNext
     'QR_KHALTI': 'Cash',
     'QR_FONEPAY': 'Cash',
@@ -52,6 +55,7 @@ export async function createPOSInvoice(formData: FormData) {
 
     try {
         const { client, companyName, warehouseName, priceList, tenantId } = await getTenantContext();
+        const supabase = await createSupabaseServerClient()
 
         // Calculate totals
         let netTotal = 0
@@ -59,6 +63,26 @@ export async function createPOSInvoice(formData: FormData) {
         const invoiceItems: any[] = []
 
         for (const cartItem of cartItems) {
+            // VALIDATION: Never trust client-provided rate. Fetch from source of truth.
+            const erpItem = await client.getDoc<{ standard_rate: number }>('Item', cartItem.itemId)
+            if (!erpItem) throw new Error(`Item ${cartItem.itemId} not found in ERPNext.`)
+
+            // Check if tenant has a custom price override
+            const { data: tenantItem } = await supabase
+                .from('tenant_items')
+                .select('price')
+                .eq('tenant_id', tenantId)
+                .eq('item_code', cartItem.itemId)
+                .single()
+
+            const validatedRate = tenantItem?.price || erpItem.standard_rate || 0
+
+            // If mismatch is too high, overwrite with server rate
+            if (Math.abs(cartItem.rate - validatedRate) > validatedRate * 0.05) {
+                console.warn(`[SECURITY] Price mismatch on ${cartItem.itemId}: Client:${cartItem.rate} Server:${validatedRate}`)
+                cartItem.rate = validatedRate // Override with validated rate
+            }
+
             const amount = cartItem.qty * cartItem.rate
             netTotal += amount
             totalDiscount += (cartItem.discount || 0)
@@ -79,43 +103,36 @@ export async function createPOSInvoice(formData: FormData) {
         const invoiceData: Partial<ERPNextSalesInvoice> & Record<string, any> = {
             company: companyName,
             set_warehouse: warehouseName,
-            selling_price_list: priceList,
-            customer: 'Walk-in Customer', // ERPNext needs a customer - create this in ERPNext
+            selling_price_list: priceList || undefined,
+            customer: POS_DEFAULT_CUSTOMER, // ERPNext needs a customer - create this in ERPNext
             posting_date: new Date().toISOString().split('T')[0],
             is_pos: 1,
             update_stock: 1,
-            // @ts-ignore - Some ERPNext types are dynamic
             items: invoiceItems,
-            payments: [{
+            payments: paidAmount > 0 ? [{
                 mode_of_payment: PAYMENT_MODE_MAP[paymentMode] || 'Cash',
                 amount: paidAmount,
-            }],
+            }] : [],
             paid_amount: paidAmount,
-            // @ts-ignore
             change_amount: Math.max(0, paidAmount - grandTotal),
         }
 
         const result = await client.createSalesInvoice(invoiceData, posUuid);
 
-        // Submit the invoice so stock drops!
-        if (result && result.name && (result as any).status !== 'already_synced') {
-            await client.post('/method/frappe.client.submit', { doc: { doctype: 'Sales Invoice', name: result.name } });
-        }
-
         if (!result || !result.name) {
             return { error: "Failed to create invoice in ERPNext" }
         }
 
-        if ((result as any).status === 'already_synced') {
+        if (result.status === 'already_synced') {
             return { success: true, invoiceId: result.name, alreadySynced: true }
         }
 
-        revalidatePath("/pos")
+        revalidatePath('/', 'layout')
         return { success: true, invoiceId: result.name }
 
     } catch (e: unknown) {
-        console.error("Sale processing error:", e instanceof Error ? e.message : String(e))
-        const error = e as Error
+        const error = e instanceof Error ? e : new Error(String(e))
+        // Silenced in production
         return { error: error.message || "Failed to process sale" }
     }
 }
@@ -207,9 +224,7 @@ export async function getPOSItems() {
             .eq('tenant_id', tenantId)
             .eq('active', true);
 
-        if (tbError || !tenantItems || tenantItems.length === 0) return [];
-        const itemCodes = tenantItems.map((ti: any) => ti.item_code);
-        const customMap = new Map(tenantItems.map((ti: any) => [ti.item_code, ti]));
+        const customMap = new Map((tenantItems || []).map((ti: any) => [ti.item_code, ti]));
 
         const items = await client.getList<{
             name: string;
@@ -222,7 +237,7 @@ export async function getPOSItems() {
             disabled: 0 | 1;
         }>('Item', {
             fields: ['name', 'item_name', 'item_code', 'item_group', 'standard_rate', 'valuation_rate', 'image', 'disabled'],
-            filters: [['disabled', '=', 0], ['is_stock_item', '=', 1], ['name', 'in', itemCodes]],
+            filters: [['disabled', '=', 0], ['is_stock_item', '=', 1]],
             limit: 0,
         });
 

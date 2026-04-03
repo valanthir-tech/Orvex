@@ -28,7 +28,7 @@ interface WarehouseRow {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function WarehousesPageClient() {
+export default function WarehousesTab() {
     const [warehouses, setWarehouses] = useState<WarehouseRow[]>([])
     const [inventory, setInventory] = useState<InventoryItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -65,26 +65,7 @@ export default function WarehousesPageClient() {
     const totalLowStock = inventory.filter((i) => i.stock > 0 && i.stock <= i.minStock).length
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold font-heading tracking-tight">Warehouses</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        Stock locations and inventory levels
-                    </p>
-                </div>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-xl h-11 w-11"
-                    onClick={loadData}
-                    disabled={isLoading}
-                    title="Refresh"
-                >
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-                </Button>
-            </div>
+        <div className="space-y-8 mt-6">
 
             {/* Stat Cards */}
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -315,7 +296,7 @@ export default function WarehousesPageClient() {
                                                 >
                                                     + {items.length - 10} more items — go to{" "}
                                                     <a
-                                                        href="/inventory"
+                                                        href="/stock/inventory"
                                                         className="text-primary underline underline-offset-4"
                                                     >
                                                         Inventory

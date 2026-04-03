@@ -66,7 +66,7 @@ export async function createStockEntry(formData: FormData) {
             doc: { doctype: 'Stock Entry', name: result.name },
         })
 
-        revalidatePath("/stock/entries")
+        revalidatePath('/', 'layout')
 
     } catch (e: unknown) {
         const error = e as Error

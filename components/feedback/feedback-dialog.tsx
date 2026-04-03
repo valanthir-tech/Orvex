@@ -70,7 +70,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                         <div>
                             <DialogTitle className="text-lg font-heading">Send Feedback</DialogTitle>
                             <DialogDescription className="text-sm">
-                                Help us improve Valanthir IMS
+                                Help us improve Orvex by valanthir tech
                             </DialogDescription>
                         </div>
                     </div>

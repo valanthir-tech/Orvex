@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNetwork } from '@/hooks/use-network';
 import { useSyncStore } from '@/stores/sync-store';
 import { syncPendingOrders, getPendingSyncCount } from '@/lib/sync-engine';
@@ -11,6 +12,7 @@ const POLL_INTERVAL_MS = 30_000;   // Check every 30s when idle
 const RETRY_MIN_INTERVAL_MS = 5_000; // Min gap between sync cycles
 
 export default function SyncWorker() {
+    const router = useRouter();
     const isOnline = useNetwork();
     const { setStatus, setPendingCount, setError, setLastSyncedAt } = useSyncStore();
     const isSyncingRef = useRef(false);
@@ -45,6 +47,8 @@ export default function SyncWorker() {
             if (result.synced > 0) {
                 setLastSyncedAt(new Date());
                 toast.success(`Synced ${result.synced} order(s)`);
+                // Refresh server components (dashboard/RSC cache) without a full page reload
+                router.refresh();
             }
 
             if (result.failed > 0) {
@@ -67,13 +71,13 @@ export default function SyncWorker() {
             setStatus(result.failed > 0 ? 'ERROR' : 'SUCCESS');
             setTimeout(() => setStatus('IDLE'), 3000);
         } catch (err: any) {
-            console.error('[SyncWorker] Error:', err);
+            console.error('[SyncWorker] Error:', err instanceof Error ? err.message : String(err));
             setStatus('ERROR');
-            setError(err.message || 'Unknown sync error');
+            setError(err?.message || 'Unknown sync error');
         } finally {
             isSyncingRef.current = false;
         }
-    }, [isOnline, setStatus, setLastSyncedAt, setError, setPendingCount]);
+    }, [isOnline, setStatus, setLastSyncedAt, setError, setPendingCount, router]);
 
     // Trigger sync when coming online
     useEffect(() => {

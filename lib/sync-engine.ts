@@ -13,7 +13,7 @@ interface SyncResult {
     errors: string[];
 }
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 99;
 const BASE_DELAY_MS = 1000;
 
 function getBackoffDelay(retries: number): number {
@@ -76,24 +76,40 @@ export async function syncPendingOrders(): Promise<SyncResult> {
                 result.synced++;
             } else {
                 const errorMsg = syncResult.errors?.find((e: any) => e.id === order.uuid)?.error || 'Sync failed on server';
+                // Silenced in production
                 const newRetries = (order.syncRetries || 0) + 1;
-                await db.orders.where('uuid').equals(order.uuid).modify({
-                    status: newRetries >= MAX_RETRIES ? 'sync_failed' : 'completed',
-                    syncRetries: newRetries,
-                    syncError: errorMsg,
-                });
+                
+                if (newRetries >= MAX_RETRIES) {
+                    await db.failedOrders.put({ ...order, status: 'sync_failed', syncRetries: newRetries, syncError: errorMsg });
+                    await db.orders.where('uuid').equals(order.uuid).delete();
+                } else {
+                    await db.orders.where('uuid').equals(order.uuid).modify({
+                        status: 'completed',
+                        syncRetries: newRetries,
+                        syncError: errorMsg,
+                    });
+                }
+                
                 await logSync(order.uuid, 'sync_failed', errorMsg);
                 result.failed++;
                 result.errors.push(`Order ${order.uuid.slice(0, 8)}: ${errorMsg}`);
             }
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Unknown sync error';
+            // Silenced in production
             const newRetries = (order.syncRetries || 0) + 1;
-            await db.orders.where('uuid').equals(order.uuid).modify({
-                status: newRetries >= MAX_RETRIES ? 'sync_failed' : 'completed',
-                syncRetries: newRetries,
-                syncError: errorMsg,
-            });
+            
+            if (newRetries >= MAX_RETRIES) {
+                await db.failedOrders.put({ ...order, status: 'sync_failed', syncRetries: newRetries, syncError: errorMsg });
+                await db.orders.where('uuid').equals(order.uuid).delete();
+            } else {
+                await db.orders.where('uuid').equals(order.uuid).modify({
+                    status: 'completed',
+                    syncRetries: newRetries,
+                    syncError: errorMsg,
+                });
+            }
+            
             await logSync(order.uuid, 'sync_failed', errorMsg);
             result.failed++;
             result.errors.push(`Order ${order.uuid.slice(0, 8)}: ${errorMsg}`);
@@ -129,9 +145,20 @@ export async function getSyncLogs(orderUuid: string): Promise<SyncLog[]> {
  * Force retry a specific failed order.
  */
 export async function retryOrder(orderUuid: string): Promise<void> {
-    await db.orders.where('uuid').equals(orderUuid).modify({
-        status: 'completed',
-        syncRetries: 0,
-        syncError: undefined,
-    });
+    const failedOrder = await db.failedOrders.where('uuid').equals(orderUuid).first();
+    if (failedOrder) {
+        await db.orders.put({
+            ...failedOrder,
+            status: 'completed',
+            syncRetries: 0,
+            syncError: undefined,
+        });
+        await db.failedOrders.where('uuid').equals(orderUuid).delete();
+    } else {
+        await db.orders.where('uuid').equals(orderUuid).modify({
+            status: 'completed',
+            syncRetries: 0,
+            syncError: undefined,
+        });
+    }
 }

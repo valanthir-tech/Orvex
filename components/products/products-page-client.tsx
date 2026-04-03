@@ -282,14 +282,6 @@ export default function ProductsPageClient() {
         )
     }
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        )
-    }
-
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -437,7 +429,13 @@ export default function ProductsPageClient() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredProducts.length === 0 ? (
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                                            <Loader2 className="h-6 w-6 animate-spin mx-auto opacity-50" />
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredProducts.length === 0 ? (
                                     <TableRow>
                                         <TableCell
                                             colSpan={7}
@@ -510,7 +508,11 @@ export default function ProductsPageClient() {
 
                     {/* Mobile Card List */}
                     <div className="md:hidden divide-y divide-border/50">
-                        {filteredProducts.length === 0 ? (
+                        {isLoading ? (
+                            <div className="h-32 flex items-center justify-center text-muted-foreground">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto opacity-50" />
+                            </div>
+                        ) : filteredProducts.length === 0 ? (
                             <div className="h-32 flex flex-col items-center justify-center text-muted-foreground">
                                 <Package className="h-8 w-8 text-muted-foreground/30 mb-2" />
                                 <p>No products found</p>

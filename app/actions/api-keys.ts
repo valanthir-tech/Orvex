@@ -110,7 +110,7 @@ export async function createApiKey(keyName: string, forceOverride: boolean = fal
 
         if (error) throw error
 
-        revalidatePath("/settings")
+        revalidatePath('/', 'layout')
         return { key, prefix }
     } catch (err) {
         console.error("createApiKey error:", err)
@@ -157,7 +157,7 @@ export async function revokeApiKey(keyId: string, forceOverride: boolean = false
 
         if (error) throw error
 
-        revalidatePath("/settings")
+        revalidatePath('/', 'layout')
         return {}
     } catch (err) {
         console.error("revokeApiKey error:", err)

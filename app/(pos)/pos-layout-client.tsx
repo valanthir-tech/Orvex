@@ -4,6 +4,8 @@ import Link from "next/link"
 import { ArrowLeft, Wifi, WifiOff, Clock, Store, Keyboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useOnlineStatus } from "@/hooks/use-online-status"
+import { useSyncWorker } from "@/hooks/use-sync-worker"
+import { Loader2 } from "lucide-react"
 
 export default function POSLayoutClient({
     children,
@@ -11,6 +13,7 @@ export default function POSLayoutClient({
     children: React.ReactNode
 }) {
     const isOnline = useOnlineStatus()
+    const { isSyncing } = useSyncWorker()
 
     return (
         <div className="min-h-screen bg-muted/30 flex flex-col">
@@ -46,6 +49,15 @@ export default function POSLayoutClient({
                         <Keyboard className="h-3 w-3" />
                         <span>Press <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">/</kbd> to search</span>
                     </div>
+
+                    {/* Sync Indicator */}
+                    {isSyncing && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />
+                            <span className="text-xs font-medium text-blue-700 dark:text-blue-400">Syncing...</span>
+                        </div>
+                    )}
+
                     {/* Real Online/Offline Status */}
                     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors ${isOnline
                             ? 'bg-emerald-100 dark:bg-emerald-900/30'

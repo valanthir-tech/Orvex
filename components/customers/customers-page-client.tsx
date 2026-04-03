@@ -24,6 +24,8 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
     DialogFooter, DialogDescription,
 } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import StorefrontCustomersTab from "./storefront-customers-tab"
 import { Textarea } from "@/components/ui/textarea"
 import { badgeStyles, cardStyles } from "@/lib/theme"
 import {
@@ -31,6 +33,7 @@ import {
     recordPayment, getCustomerTransactions,
     type Customer, type CustomerTransaction,
 } from "@/app/actions/customers"
+import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
 
 // ─── Format helpers ──────────────────────────────────────────────────────────
 
@@ -86,9 +89,9 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
     }, [loadCustomers])
 
     // Stats
-    const totalCustomers = customers.filter(c => c.name !== "Walk-in Customer").length
-    const totalOutstanding = customers.reduce((sum, c) => sum + c.outstanding_balance, 0)
-    const activeCustomers = customers.filter(c => c.is_active && c.name !== "Walk-in Customer").length
+    const totalCustomers = customers.filter(c => c.name !== POS_DEFAULT_CUSTOMER).length
+    const totalOutstanding = customers.reduce((sum, c) => sum + c.current_balance, 0)
+    const activeCustomers = customers.filter(c => c.is_active && c.name !== POS_DEFAULT_CUSTOMER).length
 
     // Reset form
     function resetForm() {
@@ -154,7 +157,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
             } else {
                 const result = await createCustomer({
                     name: formName,
-                    phone: formPhone || undefined,
+                    phone: formPhone || "",
                     email: formEmail || undefined,
                     address: formAddress || undefined,
                     pan_number: formPan || undefined,
@@ -193,7 +196,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
             const result = await recordPayment({
                 customer_id: paymentCustomer.id,
                 amount,
-                description: paymentDescription || undefined,
+                notes: paymentDescription || undefined,
             })
             if (result.error) { toast.error(result.error); return }
             toast.success(`Payment of ${formatPrice(amount)} recorded`)
@@ -277,8 +280,15 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                 </div>
             </div>
 
-            {/* Stat Cards */}
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
+            <Tabs defaultValue="pos" className="w-full space-y-6">
+                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+                    <TabsTrigger value="pos">Walk-in & Khata</TabsTrigger>
+                    <TabsTrigger value="storefront">Online Storefront</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="pos" className="space-y-8">
+                    {/* Stat Cards */}
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
                 <Card className={cardStyles.teal.card}>
                     <div className={cardStyles.teal.overlay} />
                     <CardHeader className="relative flex flex-row items-center justify-between pb-2">
@@ -377,7 +387,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                                             ))}
                                     </TableRow>
                                 ))
-                        ) : customers.filter(c => c.name !== "Walk-in Customer").length === 0 ? (
+                        ) : customers.filter(c => c.name !== POS_DEFAULT_CUSTOMER).length === 0 ? (
                             <TableRow>
                                 <TableCell
                                     colSpan={6}
@@ -391,7 +401,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            customers.filter(c => c.name !== "Walk-in Customer").map((customer) => (
+                            customers.filter(c => c.name !== POS_DEFAULT_CUSTOMER).map((customer) => (
                                 <TableRow key={customer.id} className="group hover:bg-muted/20">
                                     <TableCell className="pl-6">
                                         <div className="flex items-center gap-3">
@@ -427,9 +437,9 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {customer.outstanding_balance > 0 ? (
+                                        {customer.current_balance > 0 ? (
                                             <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                                                {formatPrice(customer.outstanding_balance)}
+                                                {formatPrice(customer.current_balance)}
                                             </span>
                                         ) : (
                                             <Badge className={`${badgeStyles.success} text-xs`}>Clear</Badge>
@@ -534,9 +544,9 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                         <DialogTitle>Record Payment</DialogTitle>
                         <DialogDescription>
                             {paymentCustomer && `Payment from ${paymentCustomer.name}`}
-                            {paymentCustomer && paymentCustomer.outstanding_balance > 0 && (
+                            {paymentCustomer && paymentCustomer.current_balance > 0 && (
                                 <span className="block mt-1 text-amber-600">
-                                    Outstanding: {formatPrice(paymentCustomer.outstanding_balance)}
+                                    Outstanding: {formatPrice(paymentCustomer.current_balance)}
                                 </span>
                             )}
                         </DialogDescription>
@@ -584,10 +594,10 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                         <DialogDescription>
                             {viewCustomer && (
                                 <span className="flex items-center gap-4 mt-2">
-                                    <span>Total Purchases: {formatPrice(viewCustomer.total_purchases)}</span>
+                                    <span>Total Sales: {formatPrice(viewCustomer.total_sales)}</span>
                                     <span>Paid: {formatPrice(viewCustomer.total_payments)}</span>
-                                    <span className={viewCustomer.outstanding_balance > 0 ? "text-amber-600 font-semibold" : "text-emerald-600"}>
-                                        Balance: {formatPrice(viewCustomer.outstanding_balance)}
+                                    <span className={viewCustomer.current_balance > 0 ? "text-amber-600 font-semibold" : "text-emerald-600"}>
+                                        Balance: {formatPrice(viewCustomer.current_balance)}
                                     </span>
                                 </span>
                             )}
@@ -618,7 +628,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium capitalize">{tx.type}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {tx.description} &middot; {new Date(tx.created_at).toLocaleDateString("en-NP")}
+                                                {tx.notes} &middot; {new Date(tx.created_at).toLocaleDateString("en-NP")}
                                             </p>
                                         </div>
                                         <p className={`text-sm font-semibold ${
@@ -633,7 +643,7 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                     </ScrollArea>
                     <DialogFooter>
                         <Button variant="outline" className="rounded-xl" onClick={() => setViewCustomer(null)}>Close</Button>
-                        {viewCustomer && viewCustomer.outstanding_balance > 0 && (
+                        {viewCustomer && viewCustomer.current_balance > 0 && (
                             <Button
                                 onClick={() => {
                                     setPaymentCustomer(viewCustomer)
@@ -648,6 +658,12 @@ export default function CustomersPageClient({ hasKhataAccess = false }: { hasKha
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            </TabsContent>
+
+            <TabsContent value="storefront">
+                <StorefrontCustomersTab />
+            </TabsContent>
+        </Tabs>
         </div>
     )
 }

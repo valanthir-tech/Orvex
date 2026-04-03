@@ -23,6 +23,7 @@ interface ERPNextItem {
     is_stock_item: 0 | 1
     has_batch_no: 0 | 1
     disabled: 0 | 1
+    barcodes?: { barcode: string }[]
 }
 
 // Type for ERPNext Item Group
@@ -83,7 +84,8 @@ export async function createProduct(data: CreateProductInput) {
     } = validatedFields.data
 
     try {
-        const client = await getTenantClient();
+        const { client, tenantId } = await getTenantContext();
+        const supabase = await createSupabaseServerClient();
 
         const erpItem = await client.createDoc<ERPNextItem>('Item', {
             item_code: productCode,
@@ -95,7 +97,6 @@ export async function createProduct(data: CreateProductInput) {
             description: description,
             is_stock_item: isStockProduct ? 1 : 0,
             has_batch_no: hasBatchNo ? 1 : 0,
-            // @ts-ignore
             barcodes: barcode ? [{ barcode: barcode }] : [],
         })
 
@@ -103,7 +104,24 @@ export async function createProduct(data: CreateProductInput) {
             return { success: false, error: "Failed to create item in ERPNext." }
         }
 
-        revalidatePath("/items")
+        const { error: insertError } = await supabase
+            .from('tenant_items')
+            .insert({
+                tenant_id: tenantId,
+                item_code: productCode,
+                display_name: name,
+                price: standardRate,
+                active: true
+            });
+
+        if (insertError) {
+            console.error("Failed to insert tenant_item in Supabase:", insertError);
+            // Optionally decide whether to fail or just log
+        }
+
+        revalidatePath('/', 'layout')
+        revalidatePath('/', 'layout')
+        revalidatePath('/', 'layout')
         return { success: true, item: transformProduct(erpItem) }
     } catch (error) {
         console.error("Create item error:", error)
@@ -143,8 +161,8 @@ export async function updateProduct(data: UpdateProductInput) {
             return { success: false, error: "Failed to update item in ERPNext." }
         }
 
-        revalidatePath("/items")
-        revalidatePath(`/items/${id}`)
+        revalidatePath('/', 'layout')
+        revalidatePath('/', 'layout')
         return { success: true, item: transformProduct(erpItem) }
     } catch (error) {
         console.error("Update item error:", error)
@@ -160,7 +178,7 @@ export async function deleteProduct(id: string) {
         // ERPNext doesn't delete items, it disables them
         const result = await client.updateDoc('Item', id, { disabled: 1 });
 
-        revalidatePath("/items")
+        revalidatePath('/', 'layout')
         return { success: !!result }
     } catch (error) {
         console.error("Delete item error:", error)
@@ -192,24 +210,18 @@ export async function getProducts(options?: {
         const { client, tenantId } = await getTenantContext();
         const supabase = await createSupabaseServerClient();
 
-        // 1. Fetch tenant allowed/customized items
+        // 1. Fetch tenant allowed/customized items (optional metadata)
         const { data: tenantItems, error: tbError } = await supabase
             .from('tenant_items')
             .select('item_code, display_name, price, image, active')
             .eq('tenant_id', tenantId)
             .eq('active', true);
 
-        if (tbError || !tenantItems || tenantItems.length === 0) {
-            return [];
-        }
-
-        const customMap = new Map(tenantItems.map((ti: any) => [ti.item_code, ti]));
-        const itemCodes = Array.from(customMap.keys());
+        const customMap = new Map((tenantItems || []).map((ti: any) => [ti.item_code, ti]));
 
         // Build filters
         const filters: [string, string, unknown][] = [
-            ['disabled', '=', 0],
-            ['name', 'in', itemCodes]
+            ['disabled', '=', 0]
         ]
 
         if (options?.search) {
@@ -232,7 +244,28 @@ export async function getProducts(options?: {
             limit: 0
         });
 
-        return result.map(item => transformProduct(item, customMap.get(item.item_code)))
+        // 2. Fetch stock levels from 'Bin' for the tenant's warehouse
+        const { warehouseName } = await getTenantContext();
+        let stockMap = new Map<string, number>();
+
+        try {
+            const bins = await client.getList<{ item_code: string; actual_qty: number }>('Bin', {
+                fields: ['item_code', 'actual_qty'],
+                limit: 0
+            });
+            for (const bin of bins) {
+                // If you want warehouse-specific filtering, add it to filters or filter here
+                stockMap.set(bin.item_code, (stockMap.get(bin.item_code) || 0) + bin.actual_qty);
+            }
+        } catch (e) {
+            console.error("Failed to fetch bins for products route", e);
+        }
+
+        return result.map(item => {
+            const transformed = transformProduct(item, customMap.get(item.item_code));
+            transformed.currentStock = stockMap.get(item.item_code) || 0;
+            return transformed;
+        });
     } catch (error) {
         console.error("Get items error:", error)
         return []
@@ -276,7 +309,7 @@ export async function createCategory(name: string) {
             return { success: false, error: "Failed to create category." }
         }
 
-        revalidatePath("/items")
+        revalidatePath('/', 'layout')
         return {
             success: true,
             category: {
@@ -296,5 +329,30 @@ export async function seedDefaultCategories() {
     return { success: true }
 }
 
-export async function updateCategory(id: string, data: any): Promise<{success: boolean; error?: string}> { return { success: true }; }
-export async function deleteCategory(id: string): Promise<{success: boolean; error?: string}> { return { success: true }; }
+export async function updateCategory(id: string, name: string): Promise<{success: boolean; error?: string}> {
+    try {
+        const client = await getTenantClient();
+        const result = await client.updateDoc<ERPNextItemGroup>('Item Group', id, { item_group_name: name });
+        if (!result) return { success: false, error: "Failed to update category" };
+        revalidatePath('/', 'layout');
+        return { success: true };
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        console.error("[SYNC_ERROR]", { action: 'updateCategory', error: error.message });
+        return { success: false, error: "Error updating category" };
+    }
+}
+
+export async function deleteCategory(id: string): Promise<{success: boolean; error?: string}> {
+    try {
+        const client = await getTenantClient();
+        const result = await client.deleteDoc('Item Group', id);
+        if (!result) return { success: false, error: "Failed to delete category" };
+        revalidatePath('/', 'layout');
+        return { success: true };
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        console.error("[SYNC_ERROR]", { action: 'deleteCategory', error: error.message });
+        return { success: false, error: "Error deleting category" };
+    }
+}

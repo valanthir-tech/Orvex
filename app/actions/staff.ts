@@ -171,12 +171,13 @@ export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
             }
         }
 
-        revalidatePath('/settings')
+        revalidatePath('/', 'layout')
         return { success: true }
 
-    } catch (err: any) {
-        console.error('[Staff] Invite error:', err)
-        return { success: false, error: err.message || "Failed to invite staff member" }
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        console.error('[Staff] Invite error:', error)
+        return { success: false, error: error.message || "Failed to invite staff member" }
     }
 }
 
@@ -222,9 +223,10 @@ export async function listStaff(): Promise<{ success: boolean; staff?: StaffMemb
 
         return { success: true, staff: staffWithAuth }
 
-    } catch (err: any) {
-        console.error('[Staff] List error:', err)
-        return { success: false, error: err.message || "Failed to load staff" }
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        console.error('[Staff] List error:', error)
+        return { success: false, error: error.message || "Failed to load staff" }
     }
 }
 
@@ -266,11 +268,12 @@ export async function updateStaffRole(staffId: string, newRole: 'manager' | 'cas
             return { success: false, error: "Failed to update role" }
         }
 
-        revalidatePath('/settings')
+        revalidatePath('/', 'layout')
         return { success: true }
 
-    } catch (err: any) {
-        return { success: false, error: err.message || "Failed to update role" }
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        return { success: false, error: error.message || "Failed to update role" }
     }
 }
 
@@ -326,10 +329,11 @@ export async function removeStaff(staffId: string) {
             await serviceClient.auth.admin.deleteUser(staffId)
         }
 
-        revalidatePath('/settings')
+        revalidatePath('/', 'layout')
         return { success: true }
 
-    } catch (err: any) {
-        return { success: false, error: err.message || "Failed to remove staff member" }
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        return { success: false, error: error.message || "Failed to remove staff member" }
     }
 }

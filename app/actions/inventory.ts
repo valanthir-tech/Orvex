@@ -1,6 +1,6 @@
 "use server"
 
-import { getTenantClient } from "@/lib/tenant"
+import { getTenantClient, getTenantContext } from "@/lib/tenant"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,8 @@ export interface StockLedgerEntry {
 
 export async function getInventory(): Promise<InventoryItem[]> {
     try {
-        const client = await getTenantClient()
+        const ctx = await getTenantContext()
+        const client = ctx.client
 
         // Get all items
         const items = await client.getList<{
@@ -89,7 +90,7 @@ export async function getInventory(): Promise<InventoryItem[]> {
                 price: item.standard_rate || 0,
                 uom: item.stock_uom,
                 group: item.item_group,
-                warehouse: stock?.warehouse || "Default",
+                warehouse: stock?.warehouse || ctx.warehouseName,
             }
         })
     } catch (error) {
@@ -173,9 +174,7 @@ export async function createInventoryAdjustment(input: {
         if (!result) return { error: "Failed to create stock entry" }
 
         // Try to submit the stock entry
-        await client.post(`/api/method/frappe.client.submit`, {
-            doc: { doctype: "Stock Entry", name: (result as any).name },
-        })
+        await client.updateDoc("Stock Entry", (result as any).name, { docstatus: 1 })
 
         return { success: true, name: (result as any).name }
     } catch (error) {

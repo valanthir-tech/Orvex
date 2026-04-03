@@ -76,6 +76,7 @@ export interface SyncLog {
 export class ValanthirPOSDB extends Dexie {
   products!: Table<Product>;
   orders!: Table<Order>;
+  failedOrders!: Table<Order>;
   sessions!: Table<PosSession>;
   syncLogs!: Table<SyncLog>;
 
@@ -85,6 +86,14 @@ export class ValanthirPOSDB extends Dexie {
     this.version(1).stores({
       products: '&id, name, sku, category, barcode, isActive',
       orders: '++id, &uuid, status, createdAt, paymentMode',
+      sessions: '++id, status, openedBy',
+      syncLogs: '++id, orderUuid, action, timestamp',
+    });
+    
+    this.version(2).stores({
+      products: '&id, name, sku, category, barcode, isActive',
+      orders: '++id, &uuid, status, createdAt, paymentMode',
+      failedOrders: '++id, &uuid, status, createdAt, paymentMode',
       sessions: '++id, status, openedBy',
       syncLogs: '++id, orderUuid, action, timestamp',
     });

@@ -271,7 +271,7 @@ export function buildOrderSlip(data: OrderSlipData): Uint8Array {
     if (data.receiptFooter) {
         r.line(data.receiptFooter)
     }
-    r.line("Powered by Valanthir IMS")
+    r.line("Powered by Orvex by valanthir tech")
     r.feed(5)
     r.cut()
 

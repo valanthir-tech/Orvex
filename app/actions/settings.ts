@@ -142,7 +142,7 @@ export async function updateSettings(updates: Partial<Omit<TenantSettings, "id" 
 
         if (error) throw error
 
-        revalidatePath("/settings")
+        revalidatePath('/', 'layout')
         return { success: true, data }
     } catch (error) {
         console.error("Failed to update settings:", error)

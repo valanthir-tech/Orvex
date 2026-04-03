@@ -82,6 +82,14 @@ export default function SignupPage() {
             return
         }
 
+        // Supabase returns an empty identities array if the email already exists
+        // (when email privacy/confirmations are enabled) to prevent enumeration.
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            accountForm.setError("email", { message: "This email is already registered. Please log in instead." })
+            setIsLoading(false)
+            return
+        }
+
         setAccountData(values)
         setUserId(data.user?.id ?? null)
         setIsLoading(false)

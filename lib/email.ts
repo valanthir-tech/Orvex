@@ -9,7 +9,9 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Provide a dummy fallback key to prevent Next.js build-time prerendering failures
+// It will use the actual process.env variable at runtime.
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_fallback_key')
 
 const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'Valanthir <noreply@valanthir.com>'
 
@@ -22,7 +24,7 @@ interface SendEmailOptions {
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
     if (!process.env.RESEND_API_KEY) {
         console.warn('[Email] RESEND_API_KEY not set — skipping email send')
-        console.log(`[Email] Would send to ${to}: ${subject}`)
+
         return { success: false, error: 'Email service not configured' }
     }
 

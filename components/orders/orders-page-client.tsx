@@ -87,10 +87,6 @@ export default function OrdersPageClient() {
         }
     }
 
-    if (isLoading) {
-        return <div className="flex h-48 items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
-    }
-
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -186,7 +182,13 @@ export default function OrdersPageClient() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredOrders.length === 0 ? (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto opacity-50" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredOrders.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                                         No orders found.

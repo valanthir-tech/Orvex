@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
     DialogFooter, DialogDescription,
@@ -24,6 +25,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { db, Order } from "@/lib/db"
 import { usePosStore } from "@/stores/pos-store"
+import { useBarcodeScanner } from "@/hooks/use-barcode-scanner"
+import { printer } from "@/lib/thermal-printer"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { syncPendingOrders } from "@/lib/sync-engine"
 import { getPOSItems } from "@/app/actions/pos"
@@ -146,6 +149,22 @@ export default function POSInterface() {
         setNumpadValue("")
     }, [addToCart])
 
+    // Auto-add product via hardware barcode scanner
+    useBarcodeScanner({
+        onScan: useCallback((code: string) => {
+            if (!products) return;
+            const matched = products.find(
+                (p) => p.barcode === code || p.sku.toLowerCase() === code.toLowerCase() || p.id === code
+            );
+            if (matched) {
+                handleAddToCart(matched);
+            } else {
+                setSearch(code);
+                toast.error(`Barcode not found: ${code}`);
+            }
+        }, [products, handleAddToCart])
+    });
+
     // Numpad handling
     const handleNumpadClick = useCallback((value: string) => {
         if (!selectedItemId) {
@@ -200,6 +219,31 @@ export default function POSInterface() {
             setReceiptOrder(order)
             setReceiptOpen(true)
             toast.success("Sale completed!", { description: `Order #${order.uuid.slice(0, 8)}` })
+
+            // Auto-print receipt if printer is connected
+            if (printer.isConnected()) {
+                const slipData = {
+                    storeName: "Main Store",
+                    orderNumber: order.uuid.split('-')[0].toUpperCase(),
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString(),
+                    products: order.products.map(i => ({
+                        name: i.name,
+                        qty: i.quantity,
+                        rate: i.price,
+                        amount: i.price * i.quantity
+                    })),
+                    subtotal: order.subTotal,
+                    discount: order.discountTotal,
+                    amountPaid: paid,
+                    paymentMode: paymentMode,
+                    change: Math.max(0, paid - order.grandTotal)
+                };
+                printer.printOrderSlip(slipData).catch(err => {
+                    console.error("Auto print failed", err);
+                    toast.error("Auto print failed. Check printer connection.");
+                });
+            }
         } catch (err) {
             toast.error("Checkout failed", { description: err instanceof Error ? err.message : "Unknown error" })
         }
@@ -293,15 +337,15 @@ export default function POSInterface() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm truncate">
-                                    {customerName || "Walk-in Customer"}
+                                    {customerName || POS_DEFAULT_CUSTOMER}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    {customerName && customerName !== "Walk-in Customer"
+                                    {customerName && customerName !== POS_DEFAULT_CUSTOMER
                                         ? "Tap to change"
                                         : "Tap to select customer"}
                                 </p>
                             </div>
-                            {customerName && customerName !== "Walk-in Customer" && (
+                            {customerName && customerName !== POS_DEFAULT_CUSTOMER && (
                                 <button
                                     className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0"
                                     onClick={(e) => { e.stopPropagation(); setCustomer("", "") }}
@@ -857,6 +901,7 @@ export default function POSInterface() {
             {/* ─── RECEIPT DIALOG ─── */}
             <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
                 <DialogContent className="sm:max-w-[400px] rounded-2xl border-0 p-0 overflow-hidden">
+                    <DialogTitle className="sr-only">Receipt</DialogTitle>
                     <div className="p-6 print-receipt" id="receipt-content">
                         {receiptOrder && (
                             <>

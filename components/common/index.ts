@@ -6,8 +6,3 @@ export {
     QuickActions,
     EmptyState
 } from "./page-layouts"
-export {
-    LoadingSpinner,
-    LoadingPage,
-    LoadingCard,
-} from "./loading"

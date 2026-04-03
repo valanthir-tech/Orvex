@@ -28,9 +28,8 @@ const pageTitles: Record<string, string> = {
     "/pos": "Point of Sale",
     "/orders": "Orders",
     "/products": "Products",
-    "/inventory": "Inventory",
+    "/stock/inventory": "Inventory",
     "/customers": "Customers",
-    "/warehouses": "Warehouses",
     "/stock/entries": "Stock Entries",
     "/reports": "Reports",
     "/settings": "Settings",
@@ -70,13 +69,13 @@ export default function DashboardLayoutClient({
     }
 
     return (
-        <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
+        <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange} className="bg-zinc-100 dark:bg-zinc-950 p-2 md:p-3 overflow-hidden">
             <AppSidebar userProfile={userProfile ? {
                 name: [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ') || userProfile.email?.split('@')[0] || 'Admin',
                 email: userProfile.email,
                 avatar: "/avatars/shadcn.jpg"
             } : undefined} features={features} />
-            <SidebarInset>
+            <SidebarInset className="bg-background rounded-[1.5rem] border border-border/50 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex-1 m-0 md:ml-2 relative min-h-[calc(100vh-1.5rem)]">
                 <header className="flex h-16 shrink-0 items-center gap-2 px-4">
                     <SidebarTrigger className="-ml-1" />
                     <Separator

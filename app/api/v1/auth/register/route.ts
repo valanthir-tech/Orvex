@@ -31,7 +31,7 @@ function getServiceClient() {
 export const POST = withApiAuth(async (req, ctx) => {
     // Rate limit: 5 registrations per IP per hour
     const ip = getClientIp(req)
-    const rl = rateLimit(`register:${ip}:${ctx.tenantId}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
+    const rl = await rateLimit(`register:${ip}:${ctx.tenantId}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
     if (!rl.success) {
         return NextResponse.json(
             { error: 'Too many registration attempts. Please try again later.' },

@@ -121,7 +121,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
 
         if (impersonating) {
             targetTenantId = impersonating;
-            console.log(`[Superadmin] Impersonating tenant: ${targetTenantId}`);
+
         } else {
             // Superadmin has no "default" tenant. They must select one or be in the admin dashboard.
             // If this is called, it means code is trying to access ERPNext data without context.

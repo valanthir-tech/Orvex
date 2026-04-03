@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        console.log(`[Tenant API] Provisioning: ${companyName} (${abbr}) for ${ownerEmail}`);
+
 
         // Provision ERPNext (Company + Warehouse + User + API Keys)
         const result = await provisionTenant({
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
             warehouse_name: result.warehouse || `${companyName} - Main`,
             price_list: result.priceList || `${companyName} Selling`,
             pos_profile: result.posProfile || `${companyName} POS`,
-            erpnext_url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'http://localhost:8080',
+            erpnext_url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'https://erp.valanthir.com',
             erpnext_api_key: encrypted?.encryptedApiKey || '',
             erpnext_api_secret: encrypted?.encryptedApiSecret || '',
         };
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
                     .from('profiles')
                     .update({ tenant_id: tenant.id, role: 'admin' })
                     .eq('id', existingUser.id);
-                console.log(`[Tenant API] Linked existing user ${ownerEmail} to tenant ${tenant.id}`);
+
             } else {
                 // No account yet — send invite email
                 const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
                 if (inviteError) {
                     console.error('[Tenant API] Owner invite failed:', inviteError.message);
                 } else {
-                    console.log(`[Tenant API] Owner invite sent to: ${ownerEmail}`);
+
                 }
             }
 
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         } catch (linkErr) {
             console.error('[Tenant API] Owner link/invite error:', linkErr);
         }
-        console.log(`[Tenant API] ✅ Tenant provisioned: ${companyName}`);
+
 
         return NextResponse.json({ success: true, tenant }, { status: 201 });
 

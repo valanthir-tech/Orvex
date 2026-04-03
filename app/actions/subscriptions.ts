@@ -344,8 +344,8 @@ export async function submitPayment(data: {
 
     if (subError) throw new Error(subError.message)
 
-    revalidatePath("/payment")
-    revalidatePath("/settings/subscription")
+    revalidatePath('/', 'layout')
+    revalidatePath('/', 'layout')
 
     return { submissionId: submission.id }
 }

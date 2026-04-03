@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { getCustomers, createCustomer } from "@/app/actions/customers"
 import type { Customer } from "@/app/actions/customers"
+import { POS_DEFAULT_CUSTOMER } from '@/lib/constants'
 
 interface CustomerPickerDialogProps {
     open: boolean
@@ -75,7 +76,7 @@ export function CustomerPickerDialog({
     }
 
     function handleWalkIn() {
-        onSelect("Walk-in Customer", "")
+        onSelect(POS_DEFAULT_CUSTOMER, "")
         onOpenChange(false)
     }
 
@@ -85,7 +86,7 @@ export function CustomerPickerDialog({
         try {
             const result = await createCustomer({
                 name: quickName.trim(),
-                phone: quickPhone.trim() || undefined,
+                phone: quickPhone.trim() || "",
             })
             if (result.error || !result.data) {
                 toast.error("Failed to add customer")
@@ -135,7 +136,7 @@ export function CustomerPickerDialog({
                     <button
                         onClick={handleWalkIn}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-colors ${
-                            !currentName || currentName === "Walk-in Customer"
+                            !currentName || currentName === POS_DEFAULT_CUSTOMER
                                 ? "border-primary bg-primary/5"
                                 : "border-border hover:border-primary/50"
                         }`}
@@ -144,7 +145,7 @@ export function CustomerPickerDialog({
                             <User className="h-4 w-4" />
                         </div>
                         <div className="text-left">
-                            <p className="font-medium text-sm">Walk-in Customer</p>
+                            <p className="font-medium text-sm">{POS_DEFAULT_CUSTOMER}</p>
                             <p className="text-xs text-muted-foreground">No account required</p>
                         </div>
                     </button>
@@ -183,12 +184,12 @@ export function CustomerPickerDialog({
                                             {c.phone || "No phone"}{c.pan_number ? ` · PAN: ${c.pan_number}` : ""}
                                         </p>
                                     </div>
-                                    {c.outstanding_balance > 0 && (
+                                    {c.current_balance > 0 && (
                                         <Badge
                                             variant="secondary"
                                             className="text-[10px] bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300 flex-shrink-0"
                                         >
-                                            Rs. {c.outstanding_balance.toLocaleString()} due
+                                            Rs. {c.current_balance.toLocaleString()} due
                                         </Badge>
                                     )}
                                 </button>

@@ -71,7 +71,6 @@ export class ERPNextClient {
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error(`ERPNext Error [${response.status}]:`, errorText);
                     
                     // For write operations, throw with the actual ERPNext error so callers can surface it
                     if (options.method && ['POST', 'PUT', 'DELETE'].includes(options.method)) {
@@ -80,8 +79,9 @@ export class ERPNextClient {
                             const parsed = JSON.parse(errorText);
                             if (parsed._server_messages) {
                                 const msgs = JSON.parse(parsed._server_messages);
-                                const first = typeof msgs[0] === 'string' ? JSON.parse(msgs[0]) : msgs[0];
-                                message = first.message || message;
+                                const parsedMsgs = msgs.map((m: any) => typeof m === 'string' ? JSON.parse(m) : m);
+                                const errorMsg = parsedMsgs.find((m: any) => m.raise_exception === 1 || m.indicator === 'red') || parsedMsgs[parsedMsgs.length - 1];
+                                message = errorMsg.message || message;
                             } else if (parsed.exception) {
                                 message = parsed.exception.split(':').pop()?.trim() || message;
                             }
@@ -216,7 +216,7 @@ export class ERPNextClient {
      * Create a Sales Invoice
      * IDEMPOTENCY: Pass a UUID field (custom_pos_uuid) to check for duplicates
      */
-    async createSalesInvoice(invoice: Partial<ERPNextSalesInvoice>, posUuid?: string) {
+    async createSalesInvoice(invoice: Partial<ERPNextSalesInvoice>, posUuid?: string): Promise<{name: string; status?: string} | null> {
         // 1. Check for Idempotency if UUID provided
         if (posUuid) {
             // Check if Invoice exists with this matching UUID
@@ -227,18 +227,20 @@ export class ERPNextClient {
             });
 
             if (existing && existing.length > 0) {
-                console.log(`[Idempotency] Invoice for POS UUID ${posUuid} already exists: ${existing[0].name}`);
+
                 return { name: existing[0].name, status: 'already_synced' };
             }
         }
 
         // 2. Create if not exists
-        return this.createDoc<ERPNextSalesInvoice>('Sales Invoice', {
+        const result = await this.createDoc<ERPNextSalesInvoice>('Sales Invoice', {
             ...invoice,
             custom_pos_uuid: posUuid, // Ensure we save this for future checks
             is_pos: 1,
             update_stock: 1,
-        });
+            docstatus: 1, // Instantly submit to trigger stock deductions
+        } as Partial<ERPNextSalesInvoice> & { docstatus?: number });
+        return result?.name ? { name: result.name } : null;
     }
 }
 
@@ -272,6 +274,9 @@ export interface ERPNextSalesInvoiceItem {
 
 export interface ERPNextSalesInvoice {
     name?: string;
+    company: string;
+    set_warehouse: string;
+    selling_price_list: string;
     customer: string;
     posting_date: string;
     is_pos: number;
@@ -286,4 +291,14 @@ export interface ERPNextSalesInvoice {
     paid_amount?: number;
     change_amount?: number;
     custom_pos_uuid?: string; // Critical for idempotency
+}
+
+export interface ERPNextCustomer {
+    name: string;
+    customer_name: string;
+    customer_group: string;
+    customer_type: string;
+    territory: string;
+    company?: string;
+    default_price_list?: string;
 }

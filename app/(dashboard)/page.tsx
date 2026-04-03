@@ -64,7 +64,7 @@ export default async function DashboardPage() {
             <div className="mx-auto flex min-h-[60vh] max-w-xl items-center">
                 <Card className="w-full rounded-2xl border-0 shadow-lg">
                     <CardHeader>
-                        <CardTitle>Welcome to Valanthir IMS</CardTitle>
+                        <CardTitle>Welcome to Orvex</CardTitle>
                         <CardDescription>
                             Your account is ready! A tenant workspace hasn&apos;t been linked yet. Please contact your administrator or complete the setup process.
                         </CardDescription>

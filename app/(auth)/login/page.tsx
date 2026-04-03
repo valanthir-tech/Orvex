@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -33,6 +33,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Box, Loader2 } from "lucide-react"
+import { Logo } from "@/components/ui/logo"
 
 const loginSchema = z.object({
     email: z
@@ -46,7 +47,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -80,10 +81,10 @@ export default function LoginPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Box className="h-6 w-6" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                    <Logo className="h-8 w-8 text-primary-foreground" />
                 </div>
-                <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
+                <h1 className="text-2xl font-bold font-heading tracking-tight mt-2">Orvex</h1>
                 <p className="text-balance text-sm text-muted-foreground">
                     Login to your Inventory & POS system
                 </p>
@@ -186,7 +187,7 @@ export default function LoginPage() {
             </Card>
 
             <p className="text-[10px] text-muted-foreground/60 text-center max-w-sm mx-auto leading-relaxed">
-                Valanthir IMS is an inventory management and order recording system.
+                Orvex is a modern inventory management and order recording system.
                 Order slips generated are for internal record-keeping only and do not
                 constitute tax invoices. By signing in you agree to our{" "}
                 <Link href="/legal/terms" className="underline hover:text-muted-foreground">
@@ -198,5 +199,13 @@ export default function LoginPage() {
                 </Link>.
             </p>
         </div >
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="flex w-full h-full items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <LoginForm />
+        </Suspense>
     )
 }

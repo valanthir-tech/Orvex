@@ -21,11 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Valanthir IMS",
-    template: "%s | Valanthir IMS",
+    default: "Orvex | Orvex by valanthir tech",
+    template: "%s | Orvex by valanthir tech",
   },
-  description: "Valanthir IMS is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
-  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "valanthir"],
+  description: "Orvex is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
+  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "orvex", "valanthir tech"],
 }
 
 export default function RootLayout({

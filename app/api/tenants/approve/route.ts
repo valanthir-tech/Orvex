@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log(`[Approve] Approving: ${signup.company_name} (${signup.owner_email})`);
+
 
         // 3. Update status to 'provisioning'
         await supabase

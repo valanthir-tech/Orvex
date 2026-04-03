@@ -28,7 +28,7 @@ function getServiceClient() {
 export const POST = withApiAuth(async (req, ctx) => {
     // Rate limit: 10 login attempts per IP per 15 minutes
     const ip = getClientIp(req)
-    const rl = rateLimit(`login:${ip}:${ctx.tenantId}`, { limit: 10, windowSecs: 900, prefix: 'auth' })
+    const rl = await rateLimit(`login:${ip}:${ctx.tenantId}`, { limit: 10, windowSecs: 900, prefix: 'auth' })
     if (!rl.success) {
         return NextResponse.json(
             { error: 'Too many login attempts. Please try again later.' },

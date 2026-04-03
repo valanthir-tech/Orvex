@@ -60,7 +60,7 @@ export function AddCustomerDialog() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
             setIsLoading(true)
-            const result = await createCustomer(values)
+            const result = await createCustomer({ ...values, phone: values.phone || "" })
 
             if (result.error) {
                 toast.error(result.error)

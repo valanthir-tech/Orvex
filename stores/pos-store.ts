@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { db, CartItem, Order } from '@/lib/db';
 import { v7 as uuidv7 } from 'uuid';
+import { POS_DEFAULT_CUSTOMER } from '@/lib/constants';
 
 // ----------------------------------------------------------------------
 // TYPES
@@ -122,7 +123,7 @@ export const usePosStore = create<PosState>((set, get) => ({
         const order: Order = {
             uuid: orderUuid,
             status: 'completed',
-            customerName: state.customerName || 'Walk-in Customer',
+            customerName: state.customerName || POS_DEFAULT_CUSTOMER,
             customerPan: state.customerPan,
             subTotal: totals.subTotal,
             taxRate: totals.taxRate,

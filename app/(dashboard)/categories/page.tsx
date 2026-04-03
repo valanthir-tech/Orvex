@@ -1,7 +1,7 @@
 import CategoriesPageClient from "@/components/categories/categories-page-client"
 
 export const metadata = {
-    title: "Categories | Valanthir IMS",
+    title: "Categories | Orvex",
 }
 
 export const dynamic = "force-dynamic"

@@ -38,7 +38,7 @@ function hashToken(token: string): string {
 export const POST = withApiAuth(async (req, ctx) => {
     // Rate limit: 5 password reset requests per IP per hour
     const ip = getClientIp(req)
-    const rl = rateLimit(`forgot:${ip}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
+    const rl = await rateLimit(`forgot:${ip}`, { limit: 5, windowSecs: 3600, prefix: 'auth' })
     if (!rl.success) {
         return NextResponse.json(
             { message: 'If an account with that email exists, a password reset link has been sent.' },

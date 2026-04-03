@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Box, Clock } from "lucide-react"
 
 export const metadata = {
-    title: "Complete Payment – Valanthir IMS",
+    title: "Complete Payment – Orvex",
 }
 
 export default async function PaymentPage() {
@@ -58,7 +58,7 @@ export default async function PaymentPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                     <Box className="h-6 w-6" />
                 </div>
-                <h1 className="text-2xl font-bold font-heading">Valanthir IMS</h1>
+                <h1 className="text-2xl font-bold font-heading">Orvex</h1>
                 <p className="text-sm text-muted-foreground">
                     {tenant?.company_name
                         ? `Welcome, ${tenant.company_name}!`
