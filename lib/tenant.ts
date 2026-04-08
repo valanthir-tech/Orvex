@@ -38,20 +38,23 @@ export async function createSupabaseServerClient() {
 // This is the "Brain" logic that decides WHO is logged in and WHAT credentials to use.
 // 
 
-import { ERPNextClient, ERPNextConfig } from './erpnext'
+import { CoreEngineClient, CoreEngineConfig } from './core'
 import { decryptCredentials } from './encryption'
 import { createClient } from '@supabase/supabase-js'
+import { redirect } from 'next/navigation'
 
-// Tenant context: ERPNext client + company name for data isolation
+// Tenant context: Core client + company name for data isolation
 export interface TenantContext {
-    client: ERPNextClient
+    client: CoreEngineClient
     tenantId: string
     companyName: string
     warehouseName: string
     priceList: string | null
 }
 
-// Security Helper: standardizes the filter needed to ensure strict data isolation
+// Security Helper: Although not strictly needed for isolation in a 1-to-1 site,
+// Frappe still requires these fields for standard operations.
+// We strictly scope this to the tenant's own isolated environment.
 export function tenantFilter(warehouseName: string): [string, string, unknown][] {
     return [["warehouse", "=", warehouseName]];
 }
@@ -63,7 +66,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     // 1. Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-        throw new Error("Unauthorized: No user session found.");
+        redirect("/login");
     }
 
     // 2. Get Profile to find Role & Tenant (use service-role to bypass RLS)
@@ -124,7 +127,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
 
         } else {
             // Superadmin has no "default" tenant. They must select one or be in the admin dashboard.
-            // If this is called, it means code is trying to access ERPNext data without context.
+            // If this is called, it means code is trying to access Core data without context.
             throw new Error("Superadmin Context: No tenant selected for impersonation.");
         }
     }
@@ -133,11 +136,11 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         throw new Error("Configuration Error: User has no linked tenant.");
     }
 
-    // 4. Fetch Decrypted Credentials for this Tenant
+    // 4. Fetch Isolated Tenant Keys (1 Client = 1 Isolated Frappe Site)
     // Use service-role client to bypass RLS — auth is already verified above.
     const { data: tenant, error: tenantError } = await adminClient
         .from('tenants')
-        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status, company_name, warehouse_name, price_list')
+        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status, company_name, warehouse_name, price_list, trial_ends_at')
         .eq('id', targetTenantId)
         .single();
 
@@ -150,7 +153,17 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         throw new Error(`Tenant Suspended: Status is ${tenant.status}`);
     }
 
-    // 6. Decrypt Credentials
+    // Trial Expiration Check
+    if (tenant.status === 'trial' && tenant.trial_ends_at) {
+        const now = new Date();
+        const trialEnd = new Date(tenant.trial_ends_at);
+        
+        if (now > trialEnd) {
+            throw new Error("TRIAL_EXPIRED: Your 15-day free trial has ended. Please upgrade to continue using the system.");
+        }
+    }
+
+    // 6. Decrypt Isolated Credentials
     let decryptedApiKey = tenant.erpnext_api_key;
     let decryptedApiSecret = tenant.erpnext_api_secret;
 
@@ -166,21 +179,21 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
         throw new Error("Misconfigured Tenant: Unable to access credentials");
     }
 
-    // 7. Return Configured Client + Company Name & Warehouse
+    // 7. Return Configured Client mapped specifically to this single site
     return {
-        client: new ERPNextClient({
-            url: tenant.erpnext_url,
+        client: new CoreEngineClient({
+            url: tenant.erpnext_url, // Unique isolated Frappe instance (e.g. client1.valanthir.com)
             apiKey: decryptedApiKey,
             apiSecret: decryptedApiSecret
         }),
         tenantId: targetTenantId,
-        companyName: tenant.company_name,
-        warehouseName: tenant.warehouse_name || `${tenant.company_name} - Main`,
+        companyName: tenant.company_name, // Frappe still requires 'company' field for records
+        warehouseName: tenant.warehouse_name || 'Stores - ' + (tenant.company_name.split(' ')[0] || 'COMP'), 
         priceList: tenant.price_list || 'Standard Selling'
     };
 });
 
-// Backward-compatible helper: returns just the ERPNext client
+// Backward-compatible helper: returns just the Core client
 export const getTenantClient = cache(async () => {
     const ctx = await getTenantContext();
     return ctx.client;

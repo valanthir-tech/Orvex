@@ -716,23 +716,6 @@ export default function SettingsPageClient() {
             </Card>
             )}
 
-            <Card className="card-float border-0 rounded-2xl">
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <Key className="h-4 w-4 text-muted-foreground" />
-                        Admin Portal
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                        API keys, tenant approvals, and system controls have been moved into the separate superadmin portal.
-                    </p>
-                    <div className="rounded-xl border border-dashed border-border/80 bg-muted/30 p-4 text-xs text-muted-foreground">
-                        Set <code>NEXT_PUBLIC_ADMIN_PORTAL_URL</code> to give superadmins a direct handoff from this app.
-                    </div>
-                </CardContent>
-            </Card>
-
             </div>{/* end row 4 */}
 
             {/* Action Buttons */}

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
-import { ERPNextSalesInvoice } from "@/lib/erpnext"
+import { CoreEngineSalesInvoice, CoreEngineClient, CoreEngineConfig } from "@/lib/core"
 import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
 
 // 
@@ -24,15 +24,15 @@ const invoiceSchema = z.object({
     paidAmount: z.coerce.number().min(0)
 })
 
-// Map our payment modes to ERPNext Mode of Payment
+// Map our payment modes to CoreEngine Mode of Payment
 const PAYMENT_MODE_MAP: Record<string, string> = {
     'CASH': 'Cash',
     'CARD': 'Credit Card',
-    'QR': 'Cash',
-    'CREDIT': 'Cash', // Changed from 'Credit' to 'Cash' to avoid Missing Mode of Payment
-    'QR_ESEWA': 'Cash', // Will need to create custom modes in ERPNext
-    'QR_KHALTI': 'Cash',
-    'QR_FONEPAY': 'Cash',
+    'QR': 'eSewa',
+    'CREDIT': 'Credit',
+    'QR_ESEWA': 'eSewa',
+    'QR_KHALTI': 'Khalti',
+    'QR_FONEPAY': 'FonePay',
     'BANK_TRANSFER': 'Bank Draft',
 }
 
@@ -62,10 +62,21 @@ export async function createPOSInvoice(formData: FormData) {
         let totalDiscount = 0
         const invoiceItems: any[] = []
 
+        const companyDoc = await client.getDoc<any>('Company', companyName);
+        const cashAccount = companyDoc?.default_cash_account;
+        const incomeAccount = companyDoc?.default_income_account;
+        const expenseAccount = companyDoc?.default_expense_account;
+        const receivableAccount = companyDoc?.default_receivable_account;
+
+        // 2. Fetch the Exact Payment Account from Mode of Payment to prevent Frappe API Mandatory Errors
+        const mappedPaymentMode = PAYMENT_MODE_MAP[paymentMode] || 'Cash';
+        const mopDoc = await client.getDoc<any>('Mode of Payment', mappedPaymentMode);
+        const exactPaymentAccount = mopDoc?.accounts?.find((a: any) => a.company === companyName)?.default_account;
+
         for (const cartItem of cartItems) {
             // VALIDATION: Never trust client-provided rate. Fetch from source of truth.
-            const erpItem = await client.getDoc<{ standard_rate: number }>('Item', cartItem.itemId)
-            if (!erpItem) throw new Error(`Item ${cartItem.itemId} not found in ERPNext.`)
+            const CoreEngineItem = await client.getDoc<{ standard_rate: number, income_account: string, expense_account: string }>('Item', cartItem.itemId)
+            if (!CoreEngineItem) throw new Error(`Item ${cartItem.itemId} not found in CoreEngine.`)
 
             // Check if tenant has a custom price override
             const { data: tenantItem } = await supabase
@@ -75,7 +86,7 @@ export async function createPOSInvoice(formData: FormData) {
                 .eq('item_code', cartItem.itemId)
                 .single()
 
-            const validatedRate = tenantItem?.price || erpItem.standard_rate || 0
+            const validatedRate = tenantItem?.price || CoreEngineItem.standard_rate || 0
 
             // If mismatch is too high, overwrite with server rate
             if (Math.abs(cartItem.rate - validatedRate) > validatedRate * 0.05) {
@@ -93,24 +104,28 @@ export async function createPOSInvoice(formData: FormData) {
                 rate: cartItem.rate,
                 discount_amount: cartItem.discount || 0,
                 warehouse: warehouseName,
+                income_account: CoreEngineItem.income_account || incomeAccount,
+                expense_account: CoreEngineItem.expense_account || expenseAccount,
             })
         }
 
         const grandTotal = netTotal - totalDiscount
 
-        // Create Sales Invoice in ERPNext
+        // Create Sales Invoice in CoreEngine
         // For POS, we use Sales Invoice with is_pos = 1 and update_stock = 1
-        const invoiceData: Partial<ERPNextSalesInvoice> & Record<string, any> = {
+        const invoiceData: Partial<CoreEngineSalesInvoice> & Record<string, any> = {
             company: companyName,
             set_warehouse: warehouseName,
             selling_price_list: priceList || undefined,
-            customer: POS_DEFAULT_CUSTOMER, // ERPNext needs a customer - create this in ERPNext
+            customer: POS_DEFAULT_CUSTOMER, // CoreEngine needs a customer - create this in CoreEngine
+            debit_to: receivableAccount, // Force receivable account
             posting_date: new Date().toISOString().split('T')[0],
             is_pos: 1,
             update_stock: 1,
             items: invoiceItems,
             payments: paidAmount > 0 ? [{
-                mode_of_payment: PAYMENT_MODE_MAP[paymentMode] || 'Cash',
+                mode_of_payment: mappedPaymentMode,
+                account: exactPaymentAccount || cashAccount, // Explicitly pass the account 
                 amount: paidAmount,
             }] : [],
             paid_amount: paidAmount,
@@ -120,7 +135,7 @@ export async function createPOSInvoice(formData: FormData) {
         const result = await client.createSalesInvoice(invoiceData, posUuid);
 
         if (!result || !result.name) {
-            return { error: "Failed to create invoice in ERPNext" }
+            return { error: "Failed to create invoice in CoreEngine" }
         }
 
         if (result.status === 'already_synced') {
@@ -153,24 +168,27 @@ export async function getTodayInvoices() {
             posting_time: string
             status: string
         }>('Sales Invoice', {
+            fields: ['name', 'customer', 'grand_total', 'paid_amount', 'posting_date', 'posting_time', 'status'],
             filters: [
                 ['posting_date', '=', today],
                 ['is_pos', '=', 1],
             ],
-            // fields: ['name', 'customer', 'grand_total', 'paid_amount', 'posting_date', 'posting_time', 'status'], // getList handles fields diff
             orderBy: 'creation desc',
             limit: 50
         })
 
-        return result.map(inv => ({
-            id: inv.name,
-            name: inv.name,
-            customer: inv.customer,
-            grandTotal: inv.grand_total,
-            paidAmount: inv.paid_amount,
-            createdAt: new Date(`${inv.posting_date}T${inv.posting_time}`),
-            status: inv.status,
-        }))
+        return result.map((inv: any) => {
+            const timeStr = inv.posting_time || "00:00:00.000000";
+            return {
+                id: inv.name,
+                name: inv.name,
+                customer: inv.customer,
+                grandTotal: inv.grand_total,
+                paidAmount: inv.paid_amount,
+                createdAt: new Date(`${inv.posting_date}T${timeStr}`),
+                status: inv.status,
+            }
+        })
     } catch (error) {
         console.error('Get invoices error:', error instanceof Error ? error.message : String(error))
         return []
@@ -194,14 +212,14 @@ export async function getInvoice(id: string) {
             changeAmount: result.change_amount,
             createdAt: new Date(`${result.posting_date}T${result.posting_time}`),
             status: result.status,
-            items: result.items.map((item: any) => ({
+            items: (result.items || []).map((item: any) => ({
                 itemCode: item.item_code,
                 itemName: item.item_name,
                 qty: item.qty,
                 rate: item.rate,
                 amount: item.amount,
             })),
-            payments: result.payments.map((p: any) => ({
+            payments: (result.payments || []).map((p: any) => ({
                 mode: p.mode_of_payment,
                 amount: p.amount,
             })),
@@ -209,6 +227,46 @@ export async function getInvoice(id: string) {
     } catch (error) {
         console.error('Get invoice error:', error instanceof Error ? error.message : String(error))
         return null
+    }
+}
+
+export async function deleteInvoice(id: string) {
+    try {
+        const client = await getTenantClient();
+
+        // 0. Get the document first to check its status
+        const invoice = await client.getDoc<any>('Sales Invoice', id);
+        if (!invoice) throw new Error("Invoice not found.");
+
+        // In a true multi-tenant BFF architecture, the `client` derived from getTenantContext() 
+        // ALREADY holds the tenant's specific API Key and Secret, which should have the 
+        // "System Manager" role for their isolated Frappe site.
+        // We use this exact same client to cancel and delete.
+        const adminClient = client;
+
+        // 1. Frappe requires you to Cancel (docstatus = 2) before deleting a submitted document
+        if (invoice.docstatus === 1) {
+            await adminClient.post('/api/method/frappe.client.cancel', {
+                doctype: 'Sales Invoice',
+                name: id
+            });
+        }
+
+        // 2. Safely delete it from the CoreEngine database
+        try {
+            await adminClient.deleteDoc('Sales Invoice', id);
+        } catch (deleteError: any) {
+            // CoreEngine enforces strict compliance laws in regions like Nepal/India 
+            // that completely ban the hard-deletion of accounting documents to prevent tax fraud.
+            // If the document is cancelled above, it is effectively voided and the ledgers are reversed.
+            console.warn('Could not hard-delete document (likely regional compliance):', deleteError.message);
+        }
+
+        revalidatePath('/', 'layout');
+        return { success: true };
+    } catch (e: unknown) {
+        console.error('Delete invoice error:', e instanceof Error ? e.message : String(e));
+        throw new Error(e instanceof Error ? e.message : "Failed to delete the invoice.");
     }
 }
 

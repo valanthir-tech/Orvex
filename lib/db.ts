@@ -63,7 +63,7 @@ export interface PosSession {
 export interface SyncLog {
   id?: number;
   orderUuid: string;
-  action: 'sync_attempt' | 'sync_success' | 'sync_failed';
+  action: 'sync_attempt' | 'sync_success' | 'sync_failed' | 'sale_canceled' | 'item_removed';
   errorMessage?: string;
   timestamp: Date;
   responseData?: string;
@@ -73,7 +73,7 @@ export interface SyncLog {
 // DATABASE CLASS
 // ----------------------------------------------------------------------
 
-export class ValanthirPOSDB extends Dexie {
+export class OrvexPOSDB extends Dexie {
   products!: Table<Product>;
   orders!: Table<Order>;
   failedOrders!: Table<Order>;
@@ -81,7 +81,7 @@ export class ValanthirPOSDB extends Dexie {
   syncLogs!: Table<SyncLog>;
 
   constructor() {
-    super('ValanthirPOSDB');
+    super('OrvexPOSDB');
 
     this.version(1).stores({
       products: '&id, name, sku, category, barcode, isActive',
@@ -100,4 +100,4 @@ export class ValanthirPOSDB extends Dexie {
   }
 }
 
-export const db = new ValanthirPOSDB();
+export const db = new OrvexPOSDB();

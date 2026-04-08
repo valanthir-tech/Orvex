@@ -37,14 +37,14 @@ async function getContext() {
     return { supabase, tenantId: profile.tenant_id, role: profile.role, userId: user.id }
 }
 
-// ─── Get All Orders (ERPNext Sales Invoices + Storefront Orders) ──────────────
+// ─── Get All Orders (CoreEngine Sales Invoices + Storefront Orders) ──────────────
 
 export async function getOrders(): Promise<OrderRecord[]> {
     try {
         const { supabase, tenantId } = await getContext()
 
-        // 1. Fetch ERPNext Sales Invoices (POS orders)
-        let erpOrders: OrderRecord[] = []
+        // 1. Fetch CoreEngine Sales Invoices (POS orders)
+        let CoreEngineOrders: OrderRecord[] = []
         try {
             const client = await getTenantClient()
             const invoices = await client.getList<{
@@ -59,11 +59,12 @@ export async function getOrders(): Promise<OrderRecord[]> {
                 custom_pos_uuid?: string
             }>("Sales Invoice", {
                 filters: [["docstatus", "=", 1]],
+                fields: ["name", "customer", "grand_total", "outstanding_amount", "posting_date", "posting_time", "status", "is_pos"],
                 orderBy: "creation desc",
                 limit: 100,
             })
 
-            erpOrders = invoices.map(inv => ({
+            CoreEngineOrders = invoices.map(inv => ({
                 id: inv.name,
                 name: inv.name,
                 customer: inv.customer,
@@ -78,7 +79,7 @@ export async function getOrders(): Promise<OrderRecord[]> {
                 custom_pos_uuid: inv.custom_pos_uuid,
             }))
         } catch (e) {
-            console.error("Failed to fetch ERPNext invoices:", e)
+            console.error("Failed to fetch CoreEngine invoices:", e)
         }
 
         // 2. Fetch Storefront Orders (web orders from custom frontend)
@@ -112,7 +113,7 @@ export async function getOrders(): Promise<OrderRecord[]> {
         }
 
         // 3. Merge and sort by date (newest first)
-        const allOrders = [...erpOrders, ...webOrders]
+        const allOrders = [...CoreEngineOrders, ...webOrders]
         allOrders.sort((a, b) => {
             const dateA = new Date(`${a.posting_date}T${a.posting_time}`)
             const dateB = new Date(`${b.posting_date}T${b.posting_time}`)

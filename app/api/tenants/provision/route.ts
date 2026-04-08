@@ -3,12 +3,12 @@
  * 
  * Admin-initiated: Creates a fully provisioned tenant.
  * - Creates tenant record in Supabase (status: 'provisioning')
- * - Provisions ERPNext Company + User + Warehouse + API Keys
- * - Updates tenant record with ERPNext credentials (status: 'active')
+ * - Provisions Core Engine Company + User + Warehouse + API Keys
+ * - Updates tenant record with Core Engine credentials (status: 'active')
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { provisionTenant } from '@/lib/erpnext-provisioning';
+import { provisionTenant } from '@/lib/provisioning';
 import { encryptCredentials } from '@/lib/encryption';
 import { isInternalAdminRequest } from '@/lib/internal-admin-auth';
 import { createClient } from '@supabase/supabase-js';
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Abbreviation validation (ERPNext requires uppercase, max 5 chars)
+        // Abbreviation validation (Core Engine requires uppercase, max 5 chars)
         const abbr = companyAbbr.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
         if (abbr.length < 2) {
             return NextResponse.json(
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
 
 
-        // Provision ERPNext (Company + Warehouse + User + API Keys)
+        // Provision Core Engine (Company + Warehouse + User + API Keys)
         const result = await provisionTenant({
             companyName,
             companyAbbr: abbr,
@@ -106,6 +106,10 @@ export async function POST(req: NextRequest) {
             ? encryptCredentials({ apiKey: result.apiKey, apiSecret: result.apiSecret })
             : null;
 
+        // 15 days from now
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 15);
+
         // Save to Supabase tenants table (with encrypted credentials)
         const tenantData = {
             company_name: companyName,
@@ -114,19 +118,21 @@ export async function POST(req: NextRequest) {
             owner_first_name: ownerFirstName,
             owner_last_name: ownerLastName || '',
             owner_phone: ownerPhone || null,
-            status: 'active',
-            plan: 'starter',
+            status: 'trial',              // Give them 15-day trial instantly
+            plan: 'Retail Starter',       // Actual database plan name
+            trial_ends_at: trialEndsAt.toISOString(),
             warehouse_name: result.warehouse || `${companyName} - Main`,
             price_list: result.priceList || `${companyName} Selling`,
             pos_profile: result.posProfile || `${companyName} POS`,
-            erpnext_url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'https://erp.valanthir.com',
+            erpnext_url: result.url, // We now get the URL from the Warm Pool
             erpnext_api_key: encrypted?.encryptedApiKey || '',
             erpnext_api_secret: encrypted?.encryptedApiSecret || '',
         };
 
         const { data: tenant, error: dbError } = await supabase
             .from('tenants')
-            .insert([tenantData])
+            .update(tenantData)
+            .eq('id', result.siteRecordId!)
             .select('*')
             .single();
 

@@ -33,7 +33,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Box, Loader2 } from "lucide-react"
-import { Logo } from "@/components/ui/logo"
+import Image from "next/image"
 
 const loginSchema = z.object({
     email: z
@@ -81,11 +81,10 @@ function LoginForm() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                    <Logo className="h-8 w-8 text-primary-foreground" />
+                <div className="flex h-20 items-center justify-center mb-2">
+                    <Image src="/orvex-horizontal.png" alt="Orvex" width={280} height={80} className="h-14 w-auto" />
                 </div>
-                <h1 className="text-2xl font-bold font-heading tracking-tight mt-2">Orvex</h1>
-                <p className="text-balance text-sm text-muted-foreground">
+                <p className="text-balance text-sm text-muted-foreground mt-2">
                     Login to your Inventory & POS system
                 </p>
             </div>

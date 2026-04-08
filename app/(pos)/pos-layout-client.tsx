@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft, Wifi, WifiOff, Clock, Store, Keyboard } from "lucide-react"
+import { ArrowLeft, Wifi, WifiOff, Clock, Store, Keyboard, LayoutList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { useSyncWorker } from "@/hooks/use-sync-worker"
@@ -75,6 +75,12 @@ export default function POSLayoutClient({
                             </>
                         )}
                     </div>
+                    <Button variant="outline" size="sm" className="h-7 rounded-full text-xs ml-1" asChild>
+                        <Link href="/history">
+                            <LayoutList className="h-3 w-3 mr-1" />
+                            Activity Log
+                        </Link>
+                    </Button>
                 </div>
             </header>
 

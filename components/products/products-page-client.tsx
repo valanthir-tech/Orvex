@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
@@ -16,8 +16,12 @@ import {
     AlertTriangle,
     XCircle,
     RefreshCw,
+    Upload,
+    ImageIcon,
 } from "lucide-react"
+import Image from "next/image"
 import { toast } from "sonner"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,6 +85,11 @@ interface Product {
     hasBatchNo: boolean
     image?: string | null
     barcodes: string[]
+    storefrontStatus: "hidden" | "visible" | "sold_out_visible" | "requires_quote"
+    metafields: { key: string; value: string }[]
+    mediaUrls: string[]
+    taxOverride?: number | null
+    shippingOverride?: number | null
     createdAt: Date
     updatedAt: Date
 }
@@ -99,6 +108,9 @@ const productSchema = z.object({
     cost: z.coerce.number().min(0, "Cost cannot be negative"),
     category: z.string().min(1, "Category is required"),
     description: z.string().optional(),
+    image: z.string().optional(),
+    storefrontStatus: z.enum(['hidden', 'visible', 'sold_out_visible', 'requires_quote']).default('visible'),
+    metafields: z.array(z.object({ key: z.string(), value: z.string() })).default([]),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
@@ -106,6 +118,7 @@ type ProductFormValues = z.infer<typeof productSchema>
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ProductsPageClient() {
+    const supabase = createSupabaseBrowserClient()
     const [products, setProducts] = useState<Product[]>([])
     const [categories, setCategories] = useState<Category[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -113,6 +126,41 @@ export default function ProductsPageClient() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isUploadingImage, setIsUploadingImage] = useState(false)
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Image must be less than 5MB");
+            return;
+        }
+
+        setIsUploadingImage(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { data, error: uploadError } = await supabase.storage
+                .from('tenant_product_images')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('tenant_product_images')
+                .getPublicUrl(filePath);
+
+            form.setValue('image', publicUrl);
+            toast.success("Image uploaded successfully");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to upload image");
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
 
     const loadData = useCallback(async () => {
         try {
@@ -176,7 +224,15 @@ export default function ProductsPageClient() {
             cost: 0,
             category: "",
             description: "",
+            image: "",
+            storefrontStatus: "visible",
+            metafields: [],
         },
+    })
+
+    const { fields: metafieldsFields, append: appendMetafield, remove: removeMetafield } = useFieldArray({
+        control: form.control,
+        name: "metafields",
     })
 
     function openAddModal() {
@@ -188,6 +244,9 @@ export default function ProductsPageClient() {
             cost: 0,
             category: "",
             description: "",
+            image: "",
+            storefrontStatus: "visible",
+            metafields: [],
         })
         setIsModalOpen(true)
     }
@@ -199,8 +258,11 @@ export default function ProductsPageClient() {
             productCode: product.productCode,
             price: product.standardRate,
             cost: product.valuationRate,
-            category: product.productGroupId,
+            category: product.productGroupId || "",
             description: product.description,
+            image: product.image || "",
+            storefrontStatus: product.storefrontStatus || "visible",
+            metafields: product.metafields || [],
         })
         setIsModalOpen(true)
     }
@@ -216,6 +278,9 @@ export default function ProductsPageClient() {
                 standardRate: values.price,
                 valuationRate: values.cost,
                 description: values.description,
+                image: values.image,
+                storefrontStatus: values.storefrontStatus as any,
+                metafields: values.metafields,
             })
             if (result.success) {
                 toast.success("Product updated successfully")
@@ -232,11 +297,14 @@ export default function ProductsPageClient() {
                 standardRate: values.price,
                 valuationRate: values.cost,
                 description: values.description,
+                image: values.image,
                 stockUom: "Nos",
                 isStockProduct: true,
                 currentStock: 0,
                 minStockLevel: 0,
                 hasBatchNo: false,
+                storefrontStatus: values.storefrontStatus as any,
+                metafields: values.metafields,
             })
             if (result.success) {
                 toast.success("Product created successfully")
@@ -454,10 +522,18 @@ export default function ProductsPageClient() {
                                             className="hover:bg-muted/30"
                                         >
                                             <TableCell>
-                                                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                                                    <span className="text-sm font-bold text-muted-foreground/30">
-                                                        {product.name.charAt(0)}
-                                                    </span>
+                                                <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
+                                                    {product.image ? (
+                                                        <img
+                                                            src={product.image}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-sm font-bold text-muted-foreground/30">
+                                                            {product.name.charAt(0)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-medium">
@@ -592,6 +668,63 @@ export default function ProductsPageClient() {
                         >
                             <FormField
                                 control={form.control}
+                                name="image"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Product Image</FormLabel>
+                                        <div className="flex items-center space-x-4 mt-2">
+                                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
+                                                {isUploadingImage ? (
+                                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                                ) : field.value ? (
+                                                    <img
+                                                        src={field.value}
+                                                        alt="Preview"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 space-y-1">
+                                                <div className="flex">
+                                                    <label
+                                                        htmlFor="file-upload"
+                                                        className={`cursor-pointer inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 ${
+                                                            isUploadingImage ? "opacity-50 cursor-not-allowed" : ""
+                                                        }`}
+                                                    >
+                                                        {isUploadingImage ? (
+                                                            <>
+                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                Uploading...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Upload className="mr-2 h-4 w-4" />
+                                                                {field.value ? "Change Image" : "Upload Image"}
+                                                            </>
+                                                        )}
+                                                    </label>
+                                                    <Input
+                                                        id="file-upload"
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                                                        className="hidden"
+                                                        onChange={handleImageUpload}
+                                                        disabled={isUploadingImage}
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    JPG, PNG, WebP up to 5MB.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
@@ -712,7 +845,100 @@ export default function ProductsPageClient() {
                                     </FormItem>
                                 )}
                             />
-                            <DialogFooter className="pt-4">
+
+                            {/* Storefront & Metafields Section */}
+                            <div className="border-t border-border/50 pt-4 mt-6">
+                                <h3 className="text-sm font-semibold mb-4 text-foreground/80">Storefront & Metadata</h3>
+                                
+                                <FormField
+                                    control={form.control}
+                                    name="storefrontStatus"
+                                    render={({ field }) => (
+                                        <FormItem className="mb-4">
+                                            <FormLabel>Storefront Display Status</FormLabel>
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger className="h-11">
+                                                        <SelectValue placeholder="Select visibility" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="hidden">Hidden</SelectItem>
+                                                    <SelectItem value="visible">Visible</SelectItem>
+                                                    <SelectItem value="sold_out_visible">Visible (Even out of stock)</SelectItem>
+                                                    <SelectItem value="requires_quote">Requires Quote</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel>Dynamic Metafields</FormLabel>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            onClick={() => appendMetafield({ key: "", value: "" })}
+                                        >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Add Attribute
+                                        </Button>
+                                    </div>
+                                    
+                                    {metafieldsFields.length === 0 ? (
+                                        <div className="text-sm text-muted-foreground/60 italic py-2">
+                                            No additional attributes added. Add custom details like "Material", "Size", "Brand", etc.
+                                        </div>
+                                    ) : (
+                                        metafieldsFields.map((item, index) => (
+                                            <div key={item.id} className="flex items-start gap-2">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`metafields.${index}.key`}
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex-1">
+                                                            <FormControl>
+                                                                <Input placeholder="Key (e.g. Material)" className="h-9 text-sm" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`metafields.${index}.value`}
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex-1">
+                                                            <FormControl>
+                                                                <Input placeholder="Value (e.g. Cotton)" className="h-9 text-sm" {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                                                    onClick={() => removeMetafield(index)}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            <DialogFooter className="pt-4 mt-6 border-t border-border/50">
                                 <Button
                                     type="button"
                                     variant="outline"

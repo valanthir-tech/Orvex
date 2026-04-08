@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                         <Box className="h-6 w-6" />
                     </div>
-                    <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
+                    <h1 className="text-2xl font-bold font-heading">Orvex POS</h1>
                 </div>
                 <Card className="border-0 shadow-lg rounded-2xl">
                     <CardHeader className="text-center">
@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                     <Box className="h-6 w-6" />
                 </div>
-                <h1 className="text-2xl font-bold font-heading">Valanthir POS</h1>
+                <h1 className="text-2xl font-bold font-heading">Orvex POS</h1>
                 <p className="text-balance text-sm text-muted-foreground">
                     Reset your password
                 </p>

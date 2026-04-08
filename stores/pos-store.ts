@@ -66,9 +66,19 @@ export const usePosStore = create<PosState>((set, get) => ({
         };
     }),
 
-    removeFromCart: (productId) => set((state) => ({
-        cart: state.cart.filter((i) => i.productId !== productId),
-    })),
+    removeFromCart: (productId) => set((state) => {
+        const item = state.cart.find(i => i.productId === productId);
+        if (item) {
+            // Log removal completely offline
+            db.syncLogs.add({
+                orderUuid: `item-removed-${Date.now()}`,
+                action: 'item_removed',
+                errorMessage: `Removed: ${item.name} (Qty: ${item.quantity})`,
+                timestamp: new Date(),
+            }).catch(() => {});
+        }
+        return { cart: state.cart.filter((i) => i.productId !== productId) };
+    }),
 
     updateQuantity: (productId, newQty) => set((state) => {
         if (newQty <= 0) {
@@ -93,7 +103,17 @@ export const usePosStore = create<PosState>((set, get) => ({
         ),
     })),
 
-    clearCart: () => set({ cart: [], customerName: '', customerPan: '' }),
+    clearCart: () => set((state) => {
+        if (state.cart.length > 0) {
+            db.syncLogs.add({
+                orderUuid: `cart-cleared-${Date.now()}`,
+                action: 'sale_canceled',
+                errorMessage: `Canceled sale with ${state.cart.length} item(s)`,
+                timestamp: new Date(),
+            }).catch(() => {});
+        }
+        return { cart: [], customerName: '', customerPan: '' };
+    }),
 
     setCustomer: (name, pan) => set({ customerName: name, customerPan: pan }),
 

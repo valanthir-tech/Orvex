@@ -4,7 +4,7 @@ import { db, Order, SyncLog } from './db';
 // SYNC ENGINE
 // 
 // Reads completed orders from Dexie, attempts to POST to backend
-// (mock or real ERPNext), marks as synced or failed with retry logic.
+// (mock or real CoreEngine), marks as synced or failed with retry logic.
 // ----------------------------------------------------------------------
 
 interface SyncResult {
@@ -51,7 +51,7 @@ export async function syncPendingOrders(): Promise<SyncResult> {
         try {
             await logSync(order.uuid, 'sync_attempt');
 
-            // Call the real API endpoint which uses ERPNext
+            // Call the real API endpoint which uses the Core Engine
             const response = await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -12,6 +13,7 @@ import {
     RefreshCw, Printer, WifiOff, Wifi, CloudOff,
     ArrowLeft, Clock
 } from "lucide-react"
+import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
@@ -44,33 +46,32 @@ function safeDate(d: Date | string | number): Date {
 
 export default function POSInterface() {
     const isOnline = useOnlineStatus()
-    const [isLoadingItems, setIsLoadingItems] = useState(false)
 
-    // Sync items from ERPNext into Dexie on mount & when coming online
-    const refreshItems = useCallback(async () => {
-        setIsLoadingItems(true)
-        try {
+    // Smart sync items from the core backend into Dexie combining React Query + Local DB
+    const { isFetching: isLoadingItems, refetch: refreshItems } = useQuery({
+        queryKey: ['pos-items'],
+        queryFn: async () => {
             const items = await getPOSItems()
             if (items.length > 0) {
-                await db.products.clear()
-                await db.products.bulkAdd(items)
+                // Upsert securely without destroying cache, leading to 0-latency UX 
+                await db.transaction('rw', db.products, async () => {
+                    const existingIds = new Set((await db.products.toArray()).map(p => p.id));
+                    const newIds = new Set(items.map(p => p.id));
+                    
+                    const toDelete = [...existingIds].filter(id => !newIds.has(id));
+                    if (toDelete.length > 0) await db.products.bulkDelete(toDelete);
+                    
+                    await db.products.bulkPut(items);
+                });
             }
-        } catch (err) {
-            console.error('Failed to sync items from ERPNext:', err)
-        }
-        setIsLoadingItems(false)
-    }, [])
+            return items
+        },
+        refetchInterval: 5 * 60 * 1000, // Background updates every 5 mins automatically
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+    })
 
-    useEffect(() => {
-        refreshItems()
-    }, [refreshItems])
-
-    // Re-sync when coming back online
-    useEffect(() => {
-        if (isOnline) refreshItems()
-    }, [isOnline, refreshItems])
-
-    // Read products from Dexie (reactive)
+    // Read products from Dexie (reactive) for instant offline usage
     const products = useLiveQuery(
         () => db.products.toArray(),
         [],
@@ -197,6 +198,45 @@ export default function POSInterface() {
         setNumpadValue(prev => prev + value)
     }, [selectedItemId, numpadMode, numpadValue, updateQuantity, applyDiscount, overridePrice])
 
+    // Numpad Renderer
+    const renderNumpad = () => (
+        <div className="border-t bg-muted/20 p-3 pt-2">
+            <div className="grid grid-cols-4 gap-1 mb-2">
+                <button onClick={() => setNumpadMode("qty")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "qty" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
+                    <Hash className="h-3.5 w-3.5 mx-auto" />
+                </button>
+                <button onClick={() => setNumpadMode("discount")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "discount" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
+                    <Percent className="h-3.5 w-3.5 mx-auto" />
+                </button>
+                <button onClick={() => setNumpadMode("price")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "price" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
+                    Price
+                </button>
+                <button onClick={() => handleNumpadClick("DEL")} className="h-9 rounded-lg bg-muted hover:bg-muted/70 text-destructive">
+                    <Delete className="h-4 w-4 mx-auto" />
+                </button>
+            </div>
+            <div className="h-10 rounded-lg bg-background border mb-2 flex items-center justify-between px-3">
+                <span className="text-xs text-muted-foreground uppercase">{numpadMode}</span>
+                <span className="font-mono text-lg font-bold">{numpadValue || "0"}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+                {["7", "8", "9", "C", "4", "5", "6", "", "1", "2", "3", "", ".", "0", "00", "ENTER"].map((key, i) => (
+                    <button
+                        key={key || `empty-${i}`}
+                        onClick={() => key && handleNumpadClick(key)}
+                        className={`h-10 rounded-lg font-medium transition-colors ${!key ? 'invisible' :
+                            key === "C" ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                key === "ENTER" ? 'bg-primary text-primary-foreground text-xs' :
+                                    'bg-background border hover:bg-muted'
+                            }`}
+                    >
+                        {key === "ENTER" ? "✓" : key}
+                    </button>
+                ))}
+            </div>
+        </div>
+    )
+
     // Checkout
     const handleCheckout = () => {
         if (cart.length === 0) return
@@ -255,7 +295,7 @@ export default function POSInterface() {
         if (isSyncing) return
         setIsSyncing(true)
         try {
-            // Refresh product catalog from ERPNext
+            // Refresh product catalog from the backend
             await refreshItems()
             // Then sync pending orders
             const result = await syncPendingOrders()
@@ -322,7 +362,7 @@ export default function POSInterface() {
     return (
         <>
             {/* ─── MAIN LAYOUT ─── */}
-            <div className="flex h-[calc(100vh-3.5rem)] bg-muted/30">
+            <div className="flex h-[calc(100svh-3.5rem)] bg-muted/30">
 
                 {/* ─── LEFT: CART PANEL (desktop) ─── */}
                 <div className="hidden lg:flex w-[380px] flex-col h-full bg-background border-r shadow-lg">
@@ -450,43 +490,7 @@ export default function POSInterface() {
                     </div>
 
                     {/* Numpad */}
-                    {cart.length > 0 && (
-                        <div className="border-t bg-muted/20 p-3">
-                            <div className="grid grid-cols-4 gap-1 mb-2">
-                                <button onClick={() => setNumpadMode("qty")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "qty" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
-                                    <Hash className="h-3.5 w-3.5 mx-auto" />
-                                </button>
-                                <button onClick={() => setNumpadMode("discount")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "discount" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
-                                    <Percent className="h-3.5 w-3.5 mx-auto" />
-                                </button>
-                                <button onClick={() => setNumpadMode("price")} className={`h-9 rounded-lg text-xs font-medium transition-colors ${numpadMode === "price" ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'}`}>
-                                    Price
-                                </button>
-                                <button onClick={() => handleNumpadClick("DEL")} className="h-9 rounded-lg bg-muted hover:bg-muted/70 text-destructive">
-                                    <Delete className="h-4 w-4 mx-auto" />
-                                </button>
-                            </div>
-                            <div className="h-10 rounded-lg bg-background border mb-2 flex items-center justify-between px-3">
-                                <span className="text-xs text-muted-foreground uppercase">{numpadMode}</span>
-                                <span className="font-mono text-lg font-bold">{numpadValue || "0"}</span>
-                            </div>
-                            <div className="grid grid-cols-4 gap-1">
-                                {["7", "8", "9", "C", "4", "5", "6", "", "1", "2", "3", "", ".", "0", "00", "ENTER"].map((key, i) => (
-                                    <button
-                                        key={key || `empty-${i}`}
-                                        onClick={() => key && handleNumpadClick(key)}
-                                        className={`h-10 rounded-lg font-medium transition-colors ${!key ? 'invisible' :
-                                            key === "C" ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                key === "ENTER" ? 'bg-primary text-primary-foreground text-xs' :
-                                                    'bg-muted hover:bg-muted/70'
-                                            }`}
-                                    >
-                                        {key === "ENTER" ? "✓" : key}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    {cart.length > 0 && renderNumpad()}
 
                     {/* Totals & Checkout */}
                     <div className="border-t bg-background p-4 space-y-3">
@@ -610,7 +614,7 @@ export default function POSInterface() {
                     </div>
 
                     {/* Products Grid */}
-                    <ScrollArea className="flex-1 p-4">
+                    <ScrollArea className="flex-1 p-4 pb-24 lg:pb-4">
                         {!products || products.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-20">
                                 <div className="h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
@@ -744,6 +748,32 @@ export default function POSInterface() {
                                 Clear
                             </Button>
                         </div>
+                        {/* Customer inside Mobile Cart */}
+                        <div
+                            className="flex items-center justify-between p-2 mt-3 rounded-xl bg-muted/30 border border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors"
+                            onClick={() => { setMobileCartOpen(false); setCustomerPickerOpen(true); }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <User className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="min-w-0 text-left">
+                                    <p className="font-medium text-sm truncate">
+                                        {customerName || POS_DEFAULT_CUSTOMER}
+                                    </p>
+                                </div>
+                            </div>
+                            {customerName && customerName !== POS_DEFAULT_CUSTOMER ? (
+                                <button
+                                    className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0"
+                                    onClick={(e) => { e.stopPropagation(); setCustomer("", "") }}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            ) : (
+                                <span className="text-xs text-primary font-medium px-2">Change</span>
+                            )}
+                        </div>
                     </SheetHeader>
                     <ScrollArea className="flex-1 px-4 py-2">
                         {cart.length === 0 ? (
@@ -779,12 +809,25 @@ export default function POSInterface() {
                             </div>
                         )}
                     </ScrollArea>
-                    <div className="border-t bg-background p-4 space-y-3">
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Subtotal</span>
-                                <span>Rs. {totals.subTotal.toLocaleString()}</span>
+                    {selectedItemId && cart.some(c => c.productId === selectedItemId) ? (
+                        <div className="border-t bg-muted/20">
+                            <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+                                <span className="text-xs font-semibold text-muted-foreground">
+                                    Editing: {cart.find(c => c.productId === selectedItemId)?.name}
+                                </span>
+                                <button className="h-6 w-6 rounded bg-muted hover:bg-muted/70 flex items-center justify-center" onClick={() => setSelectedItemId(null)}>
+                                    <X className="h-3 w-3" />
+                                </button>
                             </div>
+                            {renderNumpad()}
+                        </div>
+                    ) : (
+                        <div className="border-t bg-background p-4 space-y-3 pb-safe shrink-0">
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Subtotal</span>
+                                    <span>Rs. {totals.subTotal.toLocaleString()}</span>
+                                </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">VAT (13%)</span>
                                 <span>Rs. {totals.tax.toLocaleString()}</span>
@@ -804,21 +847,23 @@ export default function POSInterface() {
                             <CreditCard className="h-5 w-5" />
                             Pay
                         </Button>
-                    </div>
+                        </div>
+                    )}
                 </SheetContent>
             </Sheet>
 
             {/* ─── CHECKOUT DIALOG ─── */}
             <Dialog open={isCheckoutOpen} onOpenChange={setCheckoutOpen}>
-                <DialogContent className="sm:max-w-[480px] rounded-2xl border-0 p-0 overflow-hidden">
-                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+                <DialogContent className="sm:max-w-[480px] w-[95vw] rounded-2xl border-0 p-0 overflow-hidden max-h-[90svh] flex flex-col">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 shrink-0">
                         <DialogTitle className="text-xl">Complete Payment</DialogTitle>
                         <DialogDescription>
                             Total: <span className="font-bold text-foreground">Rs. {totals.total.toLocaleString()}</span>
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="px-6 py-6 space-y-6">
-                        {/* Payment Methods */}
+                    <ScrollArea className="flex-1">
+                        <div className="px-6 py-6 space-y-6">
+                            {/* Payment Methods */}
                         <div className="grid grid-cols-2 gap-4">
                             {([
                                 { key: 'CASH' as const, icon: Banknote, label: 'Cash' },
@@ -881,7 +926,8 @@ export default function POSInterface() {
                             </div>
                         )}
                     </div>
-                    <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/30">
+                    </ScrollArea>
+                    <DialogFooter className="px-6 py-4 border-t border-border/50 bg-muted/30 shrink-0">
                         <Button variant="outline" onClick={() => setCheckoutOpen(false)} className="rounded-xl">Cancel</Button>
                         <Button
                             className="flex-1 h-12 text-lg font-bold rounded-xl gap-2"
@@ -907,7 +953,7 @@ export default function POSInterface() {
                             <>
                                 {/* Receipt Header */}
                                 <div className="text-center mb-4">
-                                    <h2 className="text-lg font-bold">Valanthir POS</h2>
+                                    <h2 className="text-lg font-bold">Orvex POS</h2>
                                     <p className="text-xs text-muted-foreground">Order Slip</p>
                                     <div className="h-px bg-border my-3" />
                                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -973,7 +1019,7 @@ export default function POSInterface() {
                                 <div className="text-center text-xs text-muted-foreground mt-4 pt-3 border-t border-dashed">
                                     <p>Thank you for your purchase!</p>
                                     <p className="mt-1 text-[10px] text-muted-foreground/70">Tax filing is the sole responsibility of the business owner.</p>
-                                    <p className="mt-1">Powered by Valanthir</p>
+                                    <p className="mt-1">Powered by Orvex</p>
                                 </div>
                             </>
                         )}
@@ -1052,6 +1098,14 @@ export default function POSInterface() {
                             )}
                         </div>
                     </ScrollArea>
+                    <div className="p-4 border-t bg-muted/20 shrink-0">
+                        <Button variant="outline" className="w-full rounded-xl gap-2" asChild>
+                            <Link href="/history">
+                                <History className="h-4 w-4" />
+                                View Full Activity Log
+                            </Link>
+                        </Button>
+                    </div>
                 </SheetContent>
             </Sheet>
 

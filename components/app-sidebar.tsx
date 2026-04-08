@@ -15,10 +15,15 @@ import {
     ShoppingCart,
     Tag,
     Users,
+    History,
     Warehouse,
+    Store,
+    Inbox,
 } from "lucide-react"
 
-import { Logo } from "@/components/ui/logo"
+import Image from "next/image"
+
+import { usePathname } from "next/navigation"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
@@ -41,12 +46,16 @@ const navigationBlocks = {
             title: "Home",
             url: "/",
             icon: Home,
-            isActive: true,
         },
         {
             title: "Point of Sale",
             url: "/pos",
             icon: ShoppingCart,
+        },
+        {
+            title: "Activity Log",
+            url: "/history",
+            icon: History,
         },
         {
             title: "Orders",
@@ -57,6 +66,16 @@ const navigationBlocks = {
             title: "Products",
             url: "/products",
             icon: Package,
+        },
+        {
+            title: "Storefront",
+            url: "/storefront",
+            icon: Store,
+        },
+        {
+            title: "Inbox",
+            url: "/inbox",
+            icon: Inbox,
         },
         {
             title: "Customers",
@@ -106,7 +125,7 @@ const navigationBlocks = {
     navSecondary: [
         {
             title: "Support",
-            url: "mailto:support@valanthir.com",
+            url: "mailto:orvex@valanthir.com",
             icon: LifeBuoy,
         },
         {
@@ -121,10 +140,14 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
     userProfile?: { name: string, email: string, avatar: string }, 
     features?: any 
 }) {
+    const pathname = usePathname()
     const [feedbackOpen, setFeedbackOpen] = useState(false)
 
     // Filter main navigation based on features
-    const filteredNavMain = navigationBlocks.navMain
+    const filteredNavMain = navigationBlocks.navMain.map(item => ({
+        ...item,
+        isActive: pathname === item.url || !!(item.items && item.items.some(subItem => pathname && pathname.startsWith(subItem.url)))
+    }))
 
     const navSecondaryWithHandlers = navigationBlocks.navSecondary.map((item) =>
         item.title === "Feedback"
@@ -139,12 +162,8 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <a href="/">
-                                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                                    <Logo className="size-5" />
-                                </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium text-base tracking-tight">Orvex</span>
-                                    <span className="truncate text-xs text-muted-foreground/70">by valanthir tech</span>
+                                <div className="flex h-12 items-center justify-center p-1">
+                                    <Image src="/orvex-horizontal.png" alt="Orvex" width={140} height={40} className="h-9 w-auto mix-blend-multiply" />
                                 </div>
                             </a>
                         </SidebarMenuButton>

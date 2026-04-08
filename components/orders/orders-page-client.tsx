@@ -62,7 +62,7 @@ export default function OrdersPageClient() {
             total: orders.length,
             web: orders.filter(o => o.source === 'web').length,
             pos: orders.filter(o => o.source === 'pos').length,
-            revenue: orders.reduce((sum, o) => sum + o.grand_total, 0)
+            revenue: orders.reduce((sum, o) => sum + (Number(o.grand_total) || 0), 0)
         }
     }, [orders])
 
@@ -108,7 +108,7 @@ export default function OrdersPageClient() {
                         </div>
                     </CardHeader>
                     <CardContent className="relative">
-                        <div className="text-2xl font-bold font-heading">Rs. {stats.revenue.toLocaleString()}</div>
+                        <div className="text-2xl font-bold font-heading">Rs. {(Number(stats.revenue) || 0).toLocaleString()}</div>
                     </CardContent>
                 </Card>
                 <Card className={cardStyles.sky.card}>
@@ -205,7 +205,7 @@ export default function OrdersPageClient() {
                                         <TableCell className="font-mono text-sm font-medium">{order.name}</TableCell>
                                         <TableCell>{order.customer}</TableCell>
                                         <TableCell className="text-muted-foreground text-sm">{order.posting_date}</TableCell>
-                                        <TableCell className="text-right font-semibold">Rs. {order.grand_total.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right font-semibold">Rs. {(Number(order.grand_total) || 0).toLocaleString()}</TableCell>
                                         <TableCell>{getStatusBadge(order.payment_status)}</TableCell>
                                         <TableCell>{getStatusBadge(order.delivery_status)}</TableCell>
                                         <TableCell className="text-right">

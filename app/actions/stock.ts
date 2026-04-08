@@ -2,7 +2,7 @@
 
 import { getTenantClient } from '@/lib/tenant'
 
-// Get warehouses from ERPNext
+// Get warehouses from CoreEngine
 export async function getWarehouses() {
     try {
         const client = await getTenantClient()
@@ -49,7 +49,7 @@ export type StockMovement = {
     warehouseId?: string
 }
 
-// Create a Stock Entry in ERPNext
+// Create a Stock Entry in CoreEngine
 export async function createStockEntry(
     purpose: 'Material Receipt' | 'Material Issue' | 'Material Transfer',
     items: Array<{
@@ -97,7 +97,7 @@ export async function getStockBalance(
         if (warehouse) params.warehouse = warehouse
 
         const result = await client.get<number>(
-            '/api/method/erpnext.stock.utils.get_stock_balance',
+            '/api/method/CoreEngine.stock.utils.get_stock_balance',
             params
         )
 

@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service | Valanthir Inventory POS',
-    description: 'Terms and conditions for using the Valanthir Inventory POS platform.',
+    title: 'Terms of Service | Orvex Inventory POS',
+    description: 'Terms and conditions for using the Orvex Inventory POS platform.',
 };
 
 export default function TermsOfServicePage() {
@@ -14,12 +14,12 @@ export default function TermsOfServicePage() {
             <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6">
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">1. Acceptance of Terms</h2>
-                    <p>By accessing or using the Valanthir Inventory POS platform (&quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+                    <p>By accessing or using the Orvex Inventory POS platform (&quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
                 </section>
 
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">2. Service Description</h2>
-                    <p>Valanthir Inventory POS is a multi-tenant point-of-sale and inventory management platform that provides:</p>
+                    <p>Orvex Inventory POS is a multi-tenant point-of-sale and inventory management platform that provides:</p>
                     <ul className="list-disc pl-6 space-y-1 mt-2">
                         <li>Offline-first point-of-sale terminal</li>
                         <li>Inventory tracking and management</li>

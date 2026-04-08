@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy | Valanthir Inventory POS',
-    description: 'How we collect, use, and protect your data on the Valanthir Inventory POS platform.',
+    title: 'Privacy Policy | Orvex Inventory POS',
+    description: 'How we collect, use, and protect your data on the Orvex Inventory POS platform.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -155,7 +155,7 @@ export default function PrivacyPolicyPage() {
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">11. Contact</h2>
                     <p>For privacy concerns, contact us at: <a href="mailto:privacy@valanthir.com" className="underline">privacy@valanthir.com</a></p>
-                    <p className="mt-1">Data Protection Officer: Valanthir Tech Pvt. Ltd., Kathmandu, Nepal</p>
+                    <p className="mt-1">Data Protection Officer: Orvex Tech Pvt. Ltd., Kathmandu, Nepal</p>
                 </section>
             </div>
         </main>

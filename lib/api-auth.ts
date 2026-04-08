@@ -67,15 +67,15 @@ function getJwtSecret(): Uint8Array {
 
 export function generateApiKey(): { key: string; prefix: string } {
     const raw = randomBytes(32).toString('hex') // 64 hex chars
-    const key = `vims_${raw}`
-    const prefix = `vims_${raw.slice(0, 8)}****`
+    const key = `orvex_${raw}`
+    const prefix = `orvex_${raw.slice(0, 8)}****`
     return { key, prefix }
 }
 
 // ─── API Key Validation ───────────────────────────────────────────────────────
 
 export async function validateApiKey(apiKey: string): Promise<ApiTenantContext | null> {
-    if (!apiKey || !apiKey.startsWith('vims_')) return null
+    if (!apiKey || !apiKey.startsWith('orvex_')) return null
 
     const supabase = getServiceClient()
 

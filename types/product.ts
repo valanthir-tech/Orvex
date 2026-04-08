@@ -14,16 +14,24 @@ export const createProductSchema = z.object({
     currentStock: z.coerce.number().int().default(0),
     minStockLevel: z.coerce.number().int().min(0).default(0),
     barcode: z.string().optional(),
+    image: z.string().optional(),
     isStockProduct: z.boolean().default(true),
     hasBatchNo: z.boolean().default(false),
+    
+    // Storefront/Tenant Specific Fields
+    storefrontStatus: z.enum(['hidden', 'visible', 'sold_out_visible', 'requires_quote']).default('visible'),
+    metafields: z.array(z.object({ key: z.string(), value: z.string() })).default([]),
+    mediaUrls: z.array(z.string()).default([]),
+    taxOverride: z.coerce.number().nullable().optional(),
+    shippingOverride: z.coerce.number().nullable().optional(),
 })
 
 export const updateProductSchema = createProductSchema.partial().extend({
     id: z.string(),
 })
 
-export type CreateProductInput = z.infer<typeof createProductSchema>
-export type UpdateProductInput = z.infer<typeof updateProductSchema>
+export type CreateProductInput = z.input<typeof createProductSchema>
+export type UpdateProductInput = z.input<typeof updateProductSchema>
 
 // Unit of Measure options
 export const UOM_OPTIONS = [

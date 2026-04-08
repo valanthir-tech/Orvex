@@ -8,7 +8,7 @@ import { rateLimit } from '@/lib/rate-limit';
  * POST /api/sync
  *
  * Receives offline POS orders from the SyncWorker and forwards them to
- * ERPNext via the createPOSInvoice server action. Each order's UUID is
+ * CoreEngine via the createPOSInvoice server action. Each order's UUID is
  * passed as the idempotency key to prevent duplicate invoice creation.
  */
 export async function POST(req: NextRequest) {
@@ -41,6 +41,10 @@ export async function POST(req: NextRequest) {
         const syncedIds: string[] = [];
         const errors: { id: string; error: string }[] = [];
 
+        // Get tenantId from user
+        const { data: tenantKey } = await supabase.from('tenant_api_keys').select('tenant_id').eq('supabase_user_id', user.id).single();
+        const tenantId = tenantKey?.tenant_id || user.id;
+
         for (const order of body.orders) {
             if (!order.uuid) {
                 errors.push({ id: 'unknown', error: 'Order missing uuid' });
@@ -48,6 +52,19 @@ export async function POST(req: NextRequest) {
             }
 
             try {
+                // Idempotency key check
+                const idempotencyKey = `${tenantId}-${order.uuid}-${order.created_at || Date.now()}`;
+                const { data: existing } = await supabase
+                    .from('sync_logs')
+                    .select('*')
+                    .eq('idempotency_key', idempotencyKey)
+                    .single();
+
+                if (existing?.status === 'success') {
+                    syncedIds.push(order.uuid);
+                    continue; // Already processed
+                }
+
                 const formData = new FormData();
                 // Avoid zod validation errors when frontend passes "QR"
                 let mappedPayment = order.paymentMode || 'CASH';
@@ -70,6 +87,13 @@ export async function POST(req: NextRequest) {
 
                 if (result.success) {
                     syncedIds.push(order.uuid);
+                    // Save with idempotency key
+                    await supabase.from('sync_logs').insert({
+                        tenant_id: tenantId,
+                        idempotency_key: idempotencyKey,
+                        status: 'success',
+                        invoice_id: result.invoiceId
+                    });
                 } else {
                     errors.push({ id: order.uuid, error: result.error || 'Unknown server error' });
                 }

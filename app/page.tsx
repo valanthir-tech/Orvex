@@ -1,0 +1,419 @@
+"use client"
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowRight, Plus } from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { PricingSection } from '@/components/landing/pricing-section';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const projects = [
+  {
+    title: "Digital Storefronts",
+    category: "ONLINE CHANNELS",
+    image: "/browsing-fashion.png",
+    description: "Beautiful, dynamic e-commerce websites seamlessly integrated with your back-office. Engineered specifically for speed, conversion, and presenting your products in a premium shopping experience while matching in-store inventory instantaneously."
+  },
+  {
+    title: "Resilient Offline POS",
+    category: "PHYSICAL LOCATIONS",
+    image: "/cashier-boutique.png",
+    description: "A lightning-fast point-of-sale system that continues to work flawlessly even when the internet drops. Complete idempotency ensures that you never miss a sale due to hardware chaos, network drops, or erratic power."
+  },
+  {
+    title: "Unified Inventory API",
+    category: "SOURCE OF TRUTH",
+    image: "/stylish-shopper.png",
+    description: "A single, centralized brain for your stock. Sell an item in your physical boutique and watch it instantly update online, eliminating double-billing and out-of-stock nightmares across all your channels."
+  },
+];
+
+const capabilities = [
+  {
+    title: "Idempotent Sync",
+    desc: "Every offline sale secures a local UUID. Upon reconnection, deduplication ensures zero double-billing.",
+    tags: ["Reliability", "Offline First", "Deduplication"]
+  },
+  {
+    title: "Dynamic Tenant Routing",
+    desc: "Data isolation enforced at the edge. Single engine, infinite tailored storefronts seamlessly managed.",
+    tags: ["Architecture", "SaaS Layer", "Isolation"]
+  },
+  {
+    title: "Dedicated Business Logic Server",
+    desc: "Centralized stock valuation, strictly governed via server-side validations. No client-side compromises anywhere.",
+    tags: ["Source of Truth", "Backend", "Governance"]
+  },
+  {
+    title: "Kinetic Storefronts",
+    desc: "Modern dynamic storefronts operating fluidly under heavy physical offline-sync constraints.",
+    tags: ["BFF Pattern", "React Design", "Next.js"]
+  }
+];
+
+export default function MarketingPage() {
+  const [activeItem, setActiveItem] = useState<number | null>(0);
+  const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null);
+
+  return (
+    <div className="relative min-h-screen bg-[#fcfbf9] text-[#171717] selection:bg-[#3255f1] selection:text-[#fcfbf9] overflow-x-hidden font-sans antialiased">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+          
+          .font-sans { font-family: 'Inter', sans-serif; }
+          .ease-premium { transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+          .mix-blend-difference { mix-blend-mode: difference; }
+        `
+      }} />
+
+      {/* Header */}
+      <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 bg-white/20 backdrop-blur-xl flex items-center justify-between px-6 md:px-8 py-2 md:py-3 border border-white/50 shadow-lg shadow-black/5 rounded-full text-[#171717]">
+        <Link href="/">
+          <Image src="/orvex-horizontal.png" alt="Orvex Logo" width={264} height={66} className="h-11 md:h-[53px] w-auto mix-blend-multiply" />
+        </Link>
+        
+        <nav className="hidden md:flex items-center gap-12">
+          {['Capabilities', 'Work', 'About', 'Contact'].map((item) => (
+            <a
+              key={item}
+              href={`#${item.toLowerCase()}`}
+              className="relative group font-sans text-sm tracking-wide uppercase text-[#171717]/60 hover:text-[#3255f1] transition-colors"
+            >
+              {item}
+              <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-[#3255f1] transition-all duration-500 group-hover:w-full" />
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-4">
+          <Link href="/login" className="hidden md:block font-sans text-sm tracking-wide uppercase text-[#171717]/60 hover:text-[#3255f1] transition-colors font-bold px-4 py-2">
+            Login
+          </Link>
+          <Link href="/login" className="flex items-center justify-center px-6 py-2.5 bg-[#3255f1] text-white rounded-full font-sans text-sm tracking-wide uppercase font-bold hover:bg-[#3255f1]/90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-[#3255f1]/20">
+            Get Started
+          </Link>
+        </div>
+      </header>
+
+      <main>
+        {/* Hero */}
+        <section className="relative min-h-[100vh] w-full flex flex-col items-center justify-center overflow-hidden bg-[#fcfbf9]">
+          {/* Mesh Gradient Background */}
+          <div className="absolute inset-0 z-0">
+            <motion.div
+              animate={{
+                rotate: [0, 360],
+                scale: [1, 1.2, 1],
+              }}
+              transition={{
+                duration: 30,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] opacity-30"
+              style={{
+                background: `radial-gradient(circle at 30% 30%, #3255f1 0%, transparent 40%),
+                             radial-gradient(circle at 70% 70%, #a855f7 0%, transparent 40%),
+                             radial-gradient(circle at 50% 50%, #e0e7ff 0%, transparent 60%)`,
+                filter: 'blur(100px)',
+              }}
+            />
+          </div>
+
+          {/* Hero Text */}
+          <div className="relative z-10 text-center px-4 max-w-7xl mx-auto pb-[20vh] mt-20">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-6"
+            >
+              <span className="font-sans text-base tracking-wide uppercase text-[#3255f1] block mb-8">
+                The Commerce OS for Nepal
+              </span>
+              <h1 className="font-sans text-[11vw] md:text-[12vw] leading-[0.85] font-bold tracking-tighter text-[#171717]">
+                Retail, <br />
+                <span className="italic font-normal">Evolved</span>
+              </h1>
+              <p className="mt-12 font-sans text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                An editorial-tech hybrid commerce OS bridging fluid online experiences with robust physical store capabilities.
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Wave Transition */}
+          <div className="absolute bottom-0 left-0 w-full overflow-hidden z-20 pointer-events-none text-white">
+            <svg 
+              viewBox="0 0 1440 320" 
+              className="w-full h-auto drop-shadow-[0_-5px_15px_rgba(50,85,241,0.1)] fill-white pointer-events-auto"
+              preserveAspectRatio="none"
+            >
+              <path d="M0,320 L1440,320 L1440,160 C1100,280 340,280 0,160 Z"></path>
+            </svg>
+          </div>
+        </section>
+
+        {/* Services (Capabilities) replacing ImageGen Section */}
+        <section id="capabilities" className="py-32 px-8 md:px-16 bg-white">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24">
+            <div className="lg:sticky lg:top-32 h-fit space-y-12">
+              <div className="space-y-6">
+                <span className="font-sans text-base tracking-wide uppercase text-gray-400">Our Expertise</span>
+                <h2 className="font-sans text-6xl md:text-8xl font-bold tracking-tighter leading-none">
+                  Core <br />
+                  <span className="italic font-normal">Advantages</span>
+                </h2>
+              </div>
+              
+              <p className="font-sans text-xl text-gray-500 max-w-md leading-relaxed">
+                Operating strictly where digital agility meets uncompromising physical retail robustness.
+              </p>
+
+              <a href="/login" className="inline-flex items-center gap-4 group">
+                <span className="font-sans text-base tracking-wide uppercase font-bold border-b border-[#171717] pb-1">Initialize Setup</span>
+                <ArrowRight className="w-5 h-5 transition-transform duration-500 group-hover:translate-x-2" />
+              </a>
+            </div>
+
+            <div className="space-y-0">
+              {capabilities.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="group border-b border-gray-200 py-12 cursor-pointer"
+                  onMouseEnter={() => setActiveItem(index)}
+                >
+                  <div className="flex justify-between items-center">
+                    <h3 className={cn(
+                      "font-sans text-4xl md:text-5xl font-bold transition-colors duration-500",
+                      activeItem === index ? "text-[#171717]" : "text-gray-300"
+                    )}>
+                      {item.title}
+                    </h3>
+                    <motion.div
+                      animate={{ rotate: activeItem === index ? 45 : 0 }}
+                      className="text-gray-300 group-hover:text-[#171717] transition-colors"
+                    >
+                      <Plus className="w-8 h-8" />
+                    </motion.div>
+                  </div>
+
+                  <AnimatePresence>
+                    {activeItem === index && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-8 space-y-8">
+                          <p className="font-sans text-lg text-gray-500 max-w-lg leading-relaxed">
+                            {item.desc}
+                          </p>
+                          <div className="flex flex-wrap gap-3">
+                            {item.tags.map(tag => (
+                              <span key={tag} className="font-sans text-sm tracking-wide uppercase px-4 py-2 bg-[#3255f1]/5 text-[#3255f1] rounded-full border border-[#3255f1]/20">
+                                [{tag}]
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Portfolio (Works) */}
+        <section id="work" className="py-32 px-8 md:px-16 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+              <div className="space-y-4">
+                <span className="font-sans text-base tracking-wide uppercase text-gray-400">Retail Ecosystem</span>
+                <h2 className="font-sans text-6xl md:text-8xl font-bold tracking-tighter">
+                  The <span className="italic font-normal">Platform</span>
+                </h2>
+              </div>
+              <p className="font-sans text-lg text-gray-500 max-w-md">
+                A comprehensive suite spanning beautifully crafted ecommerce platforms to ruthlessly robust offline point-of-sale systems.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24">
+              {projects.map((project, index) => (
+                <motion.div
+                  key={project.title}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn(
+                    "group relative",
+                    index % 2 !== 0 ? "md:mt-32" : ""
+                  )}
+                >
+                  <div className="relative aspect-[4/3] rounded-[2rem] overflow-hidden transition-all duration-700 ease-premium group-hover:-translate-y-4 group-hover:shadow-2xl group-hover:shadow-[#3255f1]/10">
+                    <div 
+                      className="absolute inset-0 transition-transform duration-700 ease-premium group-hover:scale-105"
+                    >
+                      <Image
+                        src={project.image}
+                        alt={project.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+                    
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-700" />
+                    
+                    <div className="absolute bottom-8 right-8 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-premium">
+                      <button 
+                        onClick={() => setSelectedProject(project)}
+                        className="px-6 py-3 bg-white text-[#171717] rounded-full font-sans text-sm tracking-wide uppercase font-bold shadow-xl hover:bg-gray-100 transition-colors"
+                      >
+                        View Focus
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 space-y-4">
+                    <div className="h-[1px] w-full bg-gray-200 relative overflow-hidden">
+                      <motion.div
+                        initial={{ x: "-100%" }}
+                        whileInView={{ x: "0%" }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-0 bg-[#171717]"
+                      />
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-sans text-3xl font-bold">{project.title}</h3>
+                      <span className="font-sans text-sm tracking-wide uppercase text-gray-400">{project.category}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Pricing Section */}
+      <PricingSection />
+
+      {/* Footer */}
+      <footer className="relative bg-[#171717] text-[#fcfbf9] pt-32 pb-12 px-8 md:px-16 rounded-t-[5rem] overflow-hidden">
+        {/* Radial Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_top,#3255f1_0%,transparent_50%)] opacity-20 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="mb-32">
+            <motion.h2 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              className="font-sans text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-tight max-w-4xl"
+            >
+              "Intelligence is the <span className="italic font-normal text-[#3255f1]">organic</span> evolution of data into intuition."
+            </motion.h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-32 border-t border-white/10 pt-16">
+            <div className="space-y-6">
+              <span className="font-sans text-sm tracking-wide uppercase text-white/40">Location</span>
+              <p className="font-sans text-xl">Orvex Tech<br />Kathmandu, Nepal</p>
+            </div>
+            <div className="space-y-6">
+              <span className="font-sans text-sm tracking-wide uppercase text-white/40">Contact</span>
+                <p className="font-sans text-xl">
+                  <a href="tel:+9779813957139" className="hover:text-[#3255f1] transition-colors">+977 9813957139</a><br />
+                  <a href="mailto:orvex@valanthir.com" className="hover:text-[#3255f1] transition-colors">orvex@valanthir.com</a>
+                </p>
+            </div>
+            <div className="space-y-6">
+              <span className="font-sans text-sm tracking-wide uppercase text-white/40">Social</span>
+              <div className="flex flex-col gap-2">
+                {['Instagram', 'Twitter', 'LinkedIn', 'GitHub'].map(social => (
+                  <a key={social} href="#" className="font-sans text-xl hover:text-[#3255f1] transition-colors w-fit">{social}</a>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-white/5">
+            <span className="font-sans text-sm tracking-wide uppercase text-white/20">
+              © {new Date().getFullYear()} VALANTHIR TECH. ALL RIGHTS RESERVED.
+            </span>
+            <div className="flex gap-8">
+              <a href="#" className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Terms</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Project Modal Overlay */}
+      <AnimatePresence>
+        {selectedProject && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-md"
+            onClick={() => setSelectedProject(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="relative w-full max-w-2xl overflow-hidden bg-white rounded-3xl shadow-2xl text-[#171717]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full h-64 md:h-80">
+                <Image
+                  src={selectedProject.image}
+                  alt={selectedProject.title}
+                  fill
+                  className="object-cover"
+                />
+                <button
+                  onClick={() => setSelectedProject(null)}
+                  className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white text-black rounded-full backdrop-blur-sm transition-all"
+                >
+                  <Plus className="w-6 h-6 rotate-45" />
+                </button>
+              </div>
+              <div className="p-8 md:p-12 space-y-4">
+                <span className="font-sans text-sm tracking-wide uppercase text-[#3255f1] font-semibold">
+                  {selectedProject.category}
+                </span>
+                <h2 className="font-sans text-3xl md:text-5xl font-bold tracking-tight">
+                  {selectedProject.title}
+                </h2>
+                <div className="h-[1px] w-full bg-gray-200 my-6" />
+                <p className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed">
+                  {selectedProject.description}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+

@@ -83,7 +83,8 @@ export async function middleware(request: NextRequest) {
     const isResetPasswordPage = url.pathname === '/reset-password'
     const isAuthCallback = url.pathname === '/auth/callback'
     const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/auth') || url.pathname.startsWith('/signup') || url.pathname.startsWith('/forgot-password')
-    const isProtectedPage = url.pathname === '/' ||
+    const isMarketingPage = url.pathname === '/'
+    const isProtectedPage = url.pathname.startsWith('/dashboard') ||
         url.pathname.startsWith('/pos') ||
         url.pathname.startsWith('/products') ||
         url.pathname.startsWith('/orders') ||
@@ -95,7 +96,15 @@ export async function middleware(request: NextRequest) {
         url.pathname.startsWith('/settings') ||
         url.pathname.startsWith('/admin') ||
         url.pathname.startsWith('/payment') ||
-        url.pathname.startsWith('/blocked')
+        url.pathname.startsWith('/pending') ||
+        url.pathname.startsWith('/blocked') ||
+        url.pathname.startsWith('/categories') ||
+        url.pathname.startsWith('/history') ||
+        url.pathname.startsWith('/inbox') ||
+        url.pathname.startsWith('/notifications') ||
+        url.pathname.startsWith('/sales') ||
+        url.pathname.startsWith('/services') ||
+        url.pathname.startsWith('/storefront')
 
     // Redirect unauthenticated users
     if (isProtectedPage && !user) {
@@ -134,7 +143,8 @@ export async function middleware(request: NextRequest) {
             const isPaymentRoute = url.pathname.startsWith('/payment')
             const isBlockedRoute = url.pathname.startsWith('/blocked')
             const isLogoutRoute = url.pathname.startsWith('/logout')
-            const isExempt = isPaymentRoute || isBlockedRoute || isLogoutRoute
+            const isPendingRoute = url.pathname.startsWith('/pending')
+            const isExempt = isPaymentRoute || isBlockedRoute || isLogoutRoute || isPendingRoute
 
             // Hard block: account fully suspended
             if (isBlocked && !isExempt) {
@@ -150,20 +160,34 @@ export async function middleware(request: NextRequest) {
                 return NextResponse.redirect(url)
             }
 
+            // Waiting approval: redirect to pending page
+            if (subscriptionStatus === 'waiting_approval' && !isExempt) {
+                if (!isPendingRoute) {
+                    url.pathname = '/pending'
+                    url.search = ''
+                    return NextResponse.redirect(url)
+                }
+            } else if (subscriptionStatus !== 'waiting_approval' && isPendingRoute) {
+                // Not waiting approval, but trying to hit pending route
+                url.pathname = '/dashboard'
+                url.search = ''
+                return NextResponse.redirect(url)
+            }
+
             // Past due on payment route: redirect to dashboard (they have grace period)
             if (isPaymentRoute && subscriptionStatus === 'active') {
-                url.pathname = '/'
+                url.pathname = '/dashboard'
                 url.search = ''
                 return NextResponse.redirect(url)
             }
         }
     }
 
-    // Redirect authenticated users away from login
+    // Redirect authenticated users away from login or marketing page
     // But allow reset-password page (user has a session from the email link)
     // and auth callback (exchange code for session)
-    if (isAuthPage && user && !isResetPasswordPage && !isAuthCallback) {
-        url.pathname = '/'
+    if ((isAuthPage || isMarketingPage) && user && !isResetPasswordPage && !isAuthCallback) {
+        url.pathname = '/dashboard'
         return NextResponse.redirect(url)
     }
 

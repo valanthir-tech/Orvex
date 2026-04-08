@@ -344,6 +344,12 @@ export async function submitPayment(data: {
 
     if (subError) throw new Error(subError.message)
 
+    // Update tenant status to waiting_approval
+    await adminClient
+        .from("tenants")
+        .update({ subscription_status: "waiting_approval" })
+        .eq("id", tenantId)
+
     revalidatePath('/', 'layout')
     revalidatePath('/', 'layout')
 

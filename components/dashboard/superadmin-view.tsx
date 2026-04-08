@@ -137,7 +137,7 @@ async function PendingSignupsTable() {
                                 <TableRow key={signup.id} className={signup.status === 'failed' ? 'bg-rose-500/5 hover:bg-rose-500/10' : 'hover:bg-muted/50'}>
                                     <TableCell className="font-medium">
                                         {signup.company_name}
-                                        <div className="text-xs font-mono text-muted-foreground">Code: {signup.company_abbr}</div>
+                                        
                                     </TableCell>
                                     <TableCell>
                                         {signup.owner_first_name} {signup.owner_last_name}
@@ -208,7 +208,7 @@ async function ActiveTenantsTable() {
                             {tenants?.map((tenant) => (
                                 <TableRow key={tenant.id} className="hover:bg-muted/50">
                                     <TableCell className="font-mono text-xs uppercase text-muted-foreground">
-                                        {tenant.company_abbr}
+                                        
                                     </TableCell>
                                     <TableCell className="font-medium">
                                         {tenant.company_name}

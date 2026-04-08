@@ -319,12 +319,12 @@ export async function removeStaff(staffId: string) {
         // Optionally: Delete the auth user entirely via service role
         // Only if they don't have profiles in other tenants
         const serviceClient = getServiceClient()
-        const { data: otherProfiles } = await serviceClient
+        const { data: othCoreEnginerofiles } = await serviceClient
             .from('profiles')
             .select('id')
             .eq('id', staffId)
 
-        if (!otherProfiles || otherProfiles.length === 0) {
+        if (!othCoreEnginerofiles || othCoreEnginerofiles.length === 0) {
             // No other profiles — safe to delete auth user
             await serviceClient.auth.admin.deleteUser(staffId)
         }

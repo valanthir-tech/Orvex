@@ -3,11 +3,11 @@ import { createClient } from "@supabase/supabase-js"
 import { createSupabaseServerClient } from "@/lib/tenant"
 import { getSubscriptionPlans, getPaymentQrCodes } from "@/app/actions/subscriptions"
 import { PaymentForm } from "@/components/payment/payment-form"
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Box, Clock } from "lucide-react"
+import { Clock } from "lucide-react"
+import Image from "next/image"
 
 export const metadata = {
-    title: "Complete Payment – Orvex",
+    title: "Complete Payment | Orvex",
 }
 
 export default async function PaymentPage() {
@@ -39,12 +39,9 @@ export default async function PaymentPage() {
         redirect("/")
     }
 
-    const { data: pendingSubmission } = await adminClient
-        .from("payment_submissions")
-        .select("id, status, submitted_at")
-        .eq("tenant_id", profile.tenant_id)
-        .eq("status", "pending")
-        .maybeSingle()
+    if (tenant?.subscription_status === "waiting_approval") {
+        redirect("/pending")
+    }
 
     const [plans, qrCodes] = await Promise.all([
         getSubscriptionPlans(),
@@ -52,14 +49,11 @@ export default async function PaymentPage() {
     ])
 
     return (
-        <div className="min-h-screen bg-muted/50 flex flex-col items-center justify-center p-4 gap-6">
+        <div className="min-h-screen bg-[#fcfbf9] flex flex-col items-center py-20 px-4 font-sans text-[#171717]">
             {/* Header */}
-            <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Box className="h-6 w-6" />
-                </div>
-                <h1 className="text-2xl font-bold font-heading">Orvex</h1>
-                <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-4 text-center mb-12">
+                <Image src="/orvex-horizontal.png" alt="Orvex" width={220} height={60} className="h-12 w-auto mix-blend-multiply" />
+                <p className="text-base tracking-wide text-[#171717]/60">
                     {tenant?.company_name
                         ? `Welcome, ${tenant.company_name}!`
                         : "Activate your subscription to get started."}
@@ -67,28 +61,8 @@ export default async function PaymentPage() {
             </div>
 
             {/* Content */}
-            <div className="w-full max-w-2xl">
-                {pendingSubmission ? (
-                    <Card className="border-0 shadow-lg rounded-2xl">
-                        <CardHeader className="text-center py-10">
-                            <div className="flex justify-center mb-4">
-                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                    <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-                                </div>
-                            </div>
-                            <CardTitle className="text-xl font-heading">Payment Under Review</CardTitle>
-                            <CardDescription className="mt-2 max-w-sm mx-auto">
-                                Your payment was submitted on{" "}
-                                {new Date(pendingSubmission.submitted_at).toLocaleDateString("en-NP", {
-                                    dateStyle: "long",
-                                })}
-                                . Our team will verify it within 24 hours and activate your account.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                ) : (
-                    <PaymentForm plans={plans} qrCodes={qrCodes} tenantId={profile.tenant_id} />
-                )}
+            <div className="w-full max-w-4xl">
+                <PaymentForm plans={plans} qrCodes={qrCodes} tenantId={profile.tenant_id} />
             </div>
         </div>
     )

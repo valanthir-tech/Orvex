@@ -1,207 +1,164 @@
 "use client"
 
 import { useState } from "react"
-import { CreditCard, History } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { badgeStyles } from "@/lib/theme"
+import { format, formatDistanceToNow } from "date-fns"
+import { Check, Clock, AlertCircle, CreditCard, ChevronRight } from "lucide-react"
+import { type TenantSubscription, type PaymentSubmission, type SubscriptionPlan, type PaymentQrCode } from "@/app/actions/subscriptions"
 import { PaymentForm } from "./payment-form"
-import type { TenantSubscription, PaymentSubmission, SubscriptionPlan, PaymentQrCode } from "@/app/actions/subscriptions"
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs))
+}
 
 interface Props {
     subscription: TenantSubscription | null
     submissions: PaymentSubmission[]
     plans: SubscriptionPlan[]
     qrCodes: PaymentQrCode[]
+    tenantId: string
 }
 
-function formatDate(d: string | null) {
-    if (!d) return "—"
-    return new Date(d).toLocaleDateString("en-NP", { dateStyle: "medium" })
-}
+export function SubscriptionSettingsClient({ subscription, submissions, plans, qrCodes, tenantId }: Props) {
+    const [showPaymentForm, setShowPaymentForm] = useState(false)
 
-function formatNPR(amount: number) {
-    return `Rs. ${amount.toLocaleString("en-NP")}`
-}
+    const isPastDue = subscription?.status === "past_due"
+    const pendingSubmission = submissions.find(s => s.status === "pending")
+    const activePlan = subscription?.plan
 
-function statusBadgeClass(status: string): string {
-    const map: Record<string, string> = {
-        active: badgeStyles.success,
-        approved: badgeStyles.success,
-        pending: badgeStyles.warning,
-        pending_payment: badgeStyles.warning,
-        past_due: badgeStyles.warning,
-        blocked: badgeStyles.danger,
-        rejected: badgeStyles.danger,
-        cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    if (!tenantId) return null
+
+    if (showPaymentForm) {
+        return (
+            <div className="font-sans space-y-8 text-[#171717]">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight">Upgrade or Renew</h1>
+                    <p className="text-[#171717]/60 tracking-wide mt-2">Select a plan and complete your payment to continue using Orvex.</p>
+                </div>
+                <div className="bg-[#fcfbf9] border border-[#171717]/10 p-2 md:p-8 rounded-3xl">
+                    <button 
+                        onClick={() => setShowPaymentForm(false)}
+                        className="mb-8 text-sm font-medium tracking-wide text-[#171717]/60 hover:text-[#171717] flex items-center gap-2 transition-colors ml-4 md:ml-0"
+                    >
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                        Back to Subscription Details
+                    </button>
+                    <PaymentForm plans={plans} qrCodes={qrCodes} tenantId={tenantId} />
+                </div>
+            </div>
+        )
     }
-    return map[status] ?? "bg-slate-100 text-slate-600"
-}
-
-function StatusBadge({ status }: { status: string }) {
-    return (
-        <Badge className={`text-xs ${statusBadgeClass(status)}`}>
-            {status.replace(/_/g, " ")}
-        </Badge>
-    )
-}
-
-export function SubscriptionSettingsClient({ subscription, submissions, plans, qrCodes }: Props) {
-    const [showPaymentModal, setShowPaymentModal] = useState(false)
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-
-    const plan = subscription?.plan
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-2xl font-bold font-heading tracking-tight">Subscription</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                    Manage your subscription plan and billing.
-                </p>
+        <div className="font-sans space-y-12 text-[#171717]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-semibold tracking-tight">Subscription</h1>
+                    <p className="text-[#171717]/60 tracking-wide mt-2">Manage your current plan and payment status.</p>
+                </div>
+                {!pendingSubmission && (
+                    <button
+                        onClick={() => setShowPaymentForm(true)}
+                        className="bg-[#171717] hover:bg-[#3255f1] text-[#fcfbf9] px-6 py-3 rounded-xl font-medium tracking-wide transition-all shadow-lg shadow-black/10"
+                    >
+                        {activePlan ? "Change Plan" : "Subscribe Now"}
+                    </button>
+                )}
             </div>
 
-            {/* Current Plan Card */}
-            <Card className="card-float border-0 rounded-2xl">
-                <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <CreditCard className="h-4 w-4 text-muted-foreground" />
-                                {plan?.name ?? "No active plan"}
-                            </CardTitle>
-                            <CardDescription className="mt-1">
-                                {plan ? `${formatNPR(plan.price_npr)} / month` : "Subscribe to unlock all features"}
-                            </CardDescription>
-                        </div>
-                        {subscription?.status && <StatusBadge status={subscription.status} />}
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {subscription?.status === "active" && (
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                            <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Current Period</p>
-                                <p className="text-sm font-medium">
-                                    {formatDate(subscription.current_period_start)} — {formatDate(subscription.current_period_end)}
-                                </p>
+            {/* Current Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-[#171717]/10 rounded-3xl p-8 relative overflow-hidden">
+                    <h2 className="text-sm tracking-widest font-semibold uppercase text-[#171717]/40 mb-6">Current Plan</h2>
+                    
+                    {activePlan ? (
+                        <>
+                            <div className="flex items-baseline gap-2 mb-2">
+                                <h3 className="text-3xl font-bold tracking-tight">{activePlan.name}</h3>
+                                <span className={cn(
+                                    "px-2.5 py-1 rounded-full text-xs font-medium tracking-wide",
+                                    subscription?.status === "active" ? "bg-green-100 text-green-700" :
+                                    isPastDue ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                                )}>
+                                    {subscription?.status === "active" ? "Active" : 
+                                     isPastDue ? "Past Due" : "Pending"}
+                                </span>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Next Billing</p>
-                                <p className="text-sm font-medium">{formatDate(subscription.next_billing_date)}</p>
-                            </div>
-                            {plan && (
-                                <div className="space-y-1">
-                                    <p className="text-xs text-muted-foreground">Stores / Staff</p>
-                                    <p className="text-sm font-medium">
-                                        {plan.max_stores >= 999 ? "Unlimited" : plan.max_stores} /{" "}
-                                        {plan.max_staff >= 999 ? "Unlimited" : plan.max_staff}
-                                    </p>
+                            <p className="text-[#171717]/60 tracking-wide mb-8">NPR {activePlan.price_npr.toLocaleString()}/{activePlan.billing_period}</p>
+                            
+                            {subscription?.current_period_end && (
+                                <div className="bg-[#fcfbf9] p-4 rounded-xl border border-[#171717]/5 flex items-center justify-between">
+                                    <span className="text-sm font-medium tracking-wide text-[#171717]/60">Next Billing Date</span>
+                                    <span className="font-semibold tracking-wide font-mono">
+                                        {format(new Date(subscription.current_period_end), "MMM dd, yyyy")}
+                                    </span>
                                 </div>
                             )}
+                        </>
+                    ) : (
+                        <div className="text-center py-8">
+                            <p className="text-lg font-medium text-[#171717]/80">No Active Plan</p>
+                            <p className="text-sm text-[#171717]/40 mt-2">You are currently on a trial or pending activation.</p>
                         </div>
                     )}
+                </div>
 
-                    <Separator />
-
-                    <div className="flex gap-3">
-                        <Button onClick={() => setShowPaymentModal(true)} size="sm">
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            {subscription?.status === "active" ? "Change / Renew Plan" : "Submit Payment"}
-                        </Button>
+                {pendingSubmission && (
+                    <div className="bg-[#3255f1]/5 border border-[#3255f1]/20 rounded-3xl p-8 flex flex-col justify-center items-center text-center">
+                        <div className="w-16 h-16 bg-[#3255f1]/10 rounded-full flex items-center justify-center mb-6">
+                            <Clock className="w-8 h-8 text-[#3255f1]" />
+                        </div>
+                        <h3 className="text-xl font-semibold tracking-tight text-[#171717] mb-2">Payment Processing</h3>
+                        <p className="text-[#171717]/60 tracking-wide max-w-xs">
+                            Your payment submitted {formatDistanceToNow(new Date(pendingSubmission.submitted_at))} ago is currently being verified.
+                        </p>
                     </div>
-                </CardContent>
-            </Card>
+                )}
+            </div>
 
-            {/* Payment History */}
-            <Card className="card-float border-0 rounded-2xl">
-                <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <History className="h-4 w-4 text-muted-foreground" />
-                        Payment History
-                    </CardTitle>
-                    <CardDescription>All payment submissions and their verification status.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Plan</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Method</TableHead>
-                                <TableHead>Reference</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Proof</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {submissions.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                                        No payment submissions yet.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                submissions.map(sub => (
-                                    <TableRow key={sub.id}>
-                                        <TableCell className="text-sm">{formatDate(sub.submitted_at)}</TableCell>
-                                        <TableCell className="text-sm">{(sub as any).plan?.name ?? "—"}</TableCell>
-                                        <TableCell className="text-sm">{formatNPR(sub.amount_npr)}</TableCell>
-                                        <TableCell className="text-sm capitalize">{sub.payment_method.replace("_", " ")}</TableCell>
-                                        <TableCell className="text-sm font-mono text-xs">{sub.transaction_reference ?? "—"}</TableCell>
-                                        <TableCell><StatusBadge status={sub.status} /></TableCell>
-                                        <TableCell>
-                                            {sub.payment_proof_url ? (
-                                                <button
-                                                    onClick={() => setPreviewUrl(sub.payment_proof_url)}
-                                                    className="text-xs text-primary underline underline-offset-2 hover:no-underline"
-                                                >
-                                                    View
-                                                </button>
-                                            ) : "—"}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            {/* Payment Modal */}
-            <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-                <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-[1000px] max-h-[95vh] overflow-y-auto w-[95vw] p-4 sm:p-6">
-                    <DialogHeader>
-                        <DialogTitle>Submit Payment</DialogTitle>
-                    </DialogHeader>
-                    <PaymentForm
-                        plans={plans}
-                        qrCodes={qrCodes}
-                        tenantId=""
-                    />
-                </DialogContent>
-            </Dialog>
-
-            {/* Proof Preview Modal */}
-            <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
-                <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle>Payment Proof</DialogTitle>
-                    </DialogHeader>
-                    {previewUrl && (
-                        <img
-                            src={previewUrl}
-                            alt="Payment proof"
-                            className="w-full rounded-lg border object-contain max-h-[60vh]"
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
+            {/* Past Submissions */}
+            {submissions.length > 0 && (
+                <div className="bg-white border border-[#171717]/10 rounded-3xl p-8">
+                    <h2 className="text-xl font-semibold tracking-tight text-[#171717] mb-6">Payment History</h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-[#171717]/10">
+                                    <th className="pb-4 font-medium tracking-wide text-[#171717]/40 text-sm">Date</th>
+                                    <th className="pb-4 font-medium tracking-wide text-[#171717]/40 text-sm">Amount</th>
+                                    <th className="pb-4 font-medium tracking-wide text-[#171717]/40 text-sm">Method</th>
+                                    <th className="pb-4 font-medium tracking-wide text-[#171717]/40 text-sm">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {submissions.map((sub) => (
+                                    <tr key={sub.id} className="border-b border-[#171717]/5 last:border-0 hover:bg-[#fcfbf9]/50 transition-colors">
+                                        <td className="py-4 text-sm font-medium tracking-wide">
+                                            {format(new Date(sub.submitted_at), "MMM dd, yyyy")}
+                                        </td>
+                                        <td className="py-4 font-mono text-sm tracking-wide">
+                                            NPR {sub.amount_npr.toLocaleString()}
+                                        </td>
+                                        <td className="py-4 text-sm tracking-wide capitalize">
+                                            {sub.payment_method.replace(/_/g, " ")}
+                                        </td>
+                                        <td className="py-4">
+                                            <span className={cn(
+                                                "px-2.5 py-1 rounded-full text-xs font-medium tracking-wide",
+                                                sub.status === "approved" ? "bg-green-100 text-green-700" :
+                                                sub.status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                                            )}>
+                                                {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

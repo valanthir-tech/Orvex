@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { getDefaultWarehouse } from "./stock"
 import { getTenantClient } from "@/lib/tenant"
 
-// Map our types to ERPNext Stock Entry types
+// Map our types to CoreEngine Stock Entry types
 const STOCK_ENTRY_TYPE_MAP: Record<string, string> = {
     'MATERIAL_RECEIPT': 'Material Receipt',
     'MATERIAL_ISSUE': 'Material Issue',
@@ -39,7 +39,7 @@ export async function createStockEntry(formData: FormData) {
         // Get default warehouse
         const defaultWarehouse = await getDefaultWarehouse()
         if (!defaultWarehouse) {
-            return { error: "No warehouse found. Please create a warehouse in ERPNext first." }
+            return { error: "No warehouse found. Please create a warehouse in CoreEngine first." }
         }
 
         const stockEntryPurpose = STOCK_ENTRY_TYPE_MAP[type]
@@ -58,7 +58,7 @@ export async function createStockEntry(formData: FormData) {
         } as any)
 
         if (!result) {
-            return { error: "Failed to create stock entry in ERPNext" }
+            return { error: "Failed to create stock entry in CoreEngine" }
         }
 
         // Submit the stock entry
@@ -76,7 +76,7 @@ export async function createStockEntry(formData: FormData) {
     redirect("/stock/entries")
 }
 
-// Get stock entries from ERPNext
+// Get stock entries from CoreEngine
 export async function getStockEntries(filters: {
     type?: string
     fromDate?: string

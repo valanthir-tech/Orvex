@@ -39,6 +39,7 @@ export default async function SubscriptionSettingsPage() {
             submissions={submissions}
             plans={plans}
             qrCodes={qrCodes}
+            tenantId={profile.tenant_id}
         />
     )
 }

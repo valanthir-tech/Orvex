@@ -25,14 +25,15 @@ import { ErrorBoundary } from "@/components/error-boundary"
 // FORMATTER HELPERS
 // ----------------------------------------------------------------------
 function formatCurrency(amount: number) {
-    return new Intl.NumberFormat("en-NP", {
+    return new Intl.NumberFormat("en-IN", {
         style: "currency",
-        currency: "NPR",
+        currency: "INR",
         minimumFractionDigits: 0,
-    }).format(amount || 0)
+    }).format(amount || 0).replace("₹", "Rs. ")
 }
 
 function formatTime(dateObj: Date) {
+    if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) return "Invalid Date";
     // Show hours relative if today, else date
     const now = new Date()
     const diffMs = now.getTime() - dateObj.getTime()
@@ -134,9 +135,8 @@ async function LowStockStatCard() {
 
 async function RecentSalesTable() {
     const recentSales = await getTodayInvoices()
-    const top10 = recentSales.slice(0, 10)
 
-    if (top10.length === 0) {
+    if (recentSales.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl m-6">
                 <ShoppingCart className="h-8 w-8 mb-4 text-muted-foreground/50" />
@@ -147,23 +147,23 @@ async function RecentSalesTable() {
     }
 
     return (
-        <div className="divide-y divide-border/50">
-            {top10.map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors cursor-pointer">
+        <div className="divide-y divide-border/50 max-h-[320px] overflow-y-auto">
+            {recentSales.map((sale) => (
+                <Link href={`/sales/${sale.id}`} key={sale.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors cursor-pointer group">
                     <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
-                            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            <ShoppingCart className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                         <div>
-                            <p className="font-medium">{sale.name}</p>
+                            <p className="font-medium">{sale.name.replace(/ACC-SINV-\d+-/, '#')}</p>
                             <p className="text-sm text-muted-foreground">{sale.customer}</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="font-semibold font-heading">{formatCurrency(sale.grandTotal)}</p>
-                        <p className="text-xs text-muted-foreground">{formatTime(sale.createdAt)}</p>
+                        <p className="font-semibold font-heading text-foreground">{formatCurrency(sale.grandTotal)}</p>
+                        <p className="text-xs text-muted-foreground">{formatTime(new Date(sale.createdAt))}</p>
                     </div>
-                </div>
+                </Link>
             ))}
         </div>
     )

@@ -9,8 +9,8 @@ import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@
 // All actions now use getTenantClient() to resolve headers dynamically
 // 
 
-// Type for ERPNext Item
-interface ERPNextItem {
+// Type for CoreEngine Item
+interface CoreEngineItem {
     name: string
     item_name: string
     item_code: string
@@ -26,35 +26,40 @@ interface ERPNextItem {
     barcodes?: { barcode: string }[]
 }
 
-// Type for ERPNext Item Group
-interface ERPNextItemGroup {
+// Type for CoreEngine Item Group
+interface CoreEngineItemGroup {
     name: string
     item_group_name?: string
     parent_item_group?: string
     is_group: 0 | 1
 }
 
-// Transform ERPNext Item to our app format
-function transformProduct(erpItem: ERPNextItem, custom?: any) {
+// Transform CoreEngine Item to our app format
+function transformProduct(CoreEngineItem: CoreEngineItem, custom?: any) {
     return {
-        id: erpItem.name,
-        name: custom?.display_name || erpItem.item_name || erpItem.name,
-        productCode: erpItem.item_code,
-        description: erpItem.description || '',
-        productGroupId: erpItem.item_group,
-        productGroup: { id: erpItem.item_group, name: erpItem.item_group },
-        stockUom: erpItem.stock_uom,
-        standardRate: custom?.price || erpItem.standard_rate,
-        valuationRate: erpItem.valuation_rate || 0,
+        id: CoreEngineItem.name,
+        name: custom?.display_name || CoreEngineItem.item_name || CoreEngineItem.name,
+        productCode: CoreEngineItem.item_code,
+        description: CoreEngineItem.description || '',
+        productGroupId: CoreEngineItem.item_group,
+        productGroup: { id: CoreEngineItem.item_group, name: CoreEngineItem.item_group },
+        stockUom: CoreEngineItem.stock_uom,
+        standardRate: custom?.price || CoreEngineItem.standard_rate,
+        valuationRate: CoreEngineItem.valuation_rate || 0,
         currentStock: 0, // Will be fetched separately from Stock Ledger
         minStockLevel: 0,
-        isStockProduct: erpItem.is_stock_item === 1,
-        hasBatchNo: erpItem.has_batch_no === 1,
-        image: custom?.image || erpItem.image,
+        isStockProduct: CoreEngineItem.is_stock_item === 1,
+        hasBatchNo: CoreEngineItem.has_batch_no === 1,
+        image: custom?.image || CoreEngineItem.image,
         barcodes: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        active: custom?.active !== false
+        active: custom?.active !== false,
+        storefrontStatus: custom?.storefront_status || 'visible',
+        metafields: custom?.metafields || [],
+        mediaUrls: custom?.media_urls || [],
+        taxOverride: custom?.tax_override,
+        shippingOverride: custom?.shipping_override,
     }
 }
 
@@ -70,7 +75,7 @@ export async function createProduct(data: CreateProductInput) {
         }
     }
 
-    const {
+        const {
         name,
         productCode,
         description,
@@ -81,13 +86,19 @@ export async function createProduct(data: CreateProductInput) {
         barcode,
         isStockProduct,
         hasBatchNo,
+        image,
+        storefrontStatus,
+        metafields,
+        mediaUrls,
+        taxOverride,
+        shippingOverride,
     } = validatedFields.data
 
     try {
         const { client, tenantId } = await getTenantContext();
         const supabase = await createSupabaseServerClient();
 
-        const erpItem = await client.createDoc<ERPNextItem>('Item', {
+        const CoreEngineItem = await client.createDoc<CoreEngineItem>('Item', {
             item_code: productCode,
             item_name: name,
             item_group: productGroupId || 'All Item Groups',
@@ -95,13 +106,14 @@ export async function createProduct(data: CreateProductInput) {
             standard_rate: standardRate,
             valuation_rate: valuationRate || standardRate,
             description: description,
+            image: image,
             is_stock_item: isStockProduct ? 1 : 0,
             has_batch_no: hasBatchNo ? 1 : 0,
             barcodes: barcode ? [{ barcode: barcode }] : [],
         })
 
-        if (!erpItem) {
-            return { success: false, error: "Failed to create item in ERPNext." }
+        if (!CoreEngineItem) {
+            return { success: false, error: "Failed to create item in CoreEngine." }
         }
 
         const { error: insertError } = await supabase
@@ -110,8 +122,14 @@ export async function createProduct(data: CreateProductInput) {
                 tenant_id: tenantId,
                 item_code: productCode,
                 display_name: name,
+                image: image,
                 price: standardRate,
-                active: true
+                active: true,
+                storefront_status: storefrontStatus,
+                metafields: metafields,
+                media_urls: mediaUrls,
+                tax_override: taxOverride,
+                shipping_override: shippingOverride,
             });
 
         if (insertError) {
@@ -122,7 +140,7 @@ export async function createProduct(data: CreateProductInput) {
         revalidatePath('/', 'layout')
         revalidatePath('/', 'layout')
         revalidatePath('/', 'layout')
-        return { success: true, item: transformProduct(erpItem) }
+        return { success: true, item: transformProduct(CoreEngineItem) }
     } catch (error) {
         console.error("Create item error:", error)
         return { success: false, error: "Failed to create item." }
@@ -144,26 +162,45 @@ export async function updateProduct(data: UpdateProductInput) {
     const { id, ...updateData } = validatedFields.data
 
     try {
-        const client = await getTenantClient();
+        const { client, tenantId } = await getTenantContext();
+        const supabase = await createSupabaseServerClient();
 
-        const erpItem = await client.updateDoc<ERPNextItem>('Item', id, {
+        const CoreEngineItem = await client.updateDoc<CoreEngineItem>('Item', id, {
             item_name: updateData.name,
             item_group: updateData.productGroupId || undefined,
             stock_uom: updateData.stockUom,
             standard_rate: updateData.standardRate,
             valuation_rate: updateData.valuationRate,
             description: updateData.description,
+            image: updateData.image,
             is_stock_item: updateData.isStockProduct ? 1 : 0,
             has_batch_no: updateData.hasBatchNo ? 1 : 0,
         });
 
-        if (!erpItem) {
-            return { success: false, error: "Failed to update item in ERPNext." }
+        if (!CoreEngineItem) {
+            return { success: false, error: "Failed to update item in CoreEngine." }
         }
+
+        // Sync tenant items
+        await supabase
+            .from('tenant_items')
+            .upsert({
+                tenant_id: tenantId,
+                item_code: id,
+                display_name: updateData.name,
+                image: updateData.image,
+                price: updateData.standardRate,
+                active: true,
+                storefront_status: updateData.storefrontStatus,
+                metafields: updateData.metafields,
+                media_urls: updateData.mediaUrls,
+                tax_override: updateData.taxOverride,
+                shipping_override: updateData.shippingOverride,
+            }, { onConflict: 'tenant_id, item_code' });
 
         revalidatePath('/', 'layout')
         revalidatePath('/', 'layout')
-        return { success: true, item: transformProduct(erpItem) }
+        return { success: true, item: transformProduct(CoreEngineItem) }
     } catch (error) {
         console.error("Update item error:", error)
         return { success: false, error: "Failed to update item." }
@@ -175,7 +212,7 @@ export async function deleteProduct(id: string) {
     try {
         const client = await getTenantClient();
 
-        // ERPNext doesn't delete items, it disables them
+        // CoreEngine doesn't delete items, it disables them
         const result = await client.updateDoc('Item', id, { disabled: 1 });
 
         revalidatePath('/', 'layout')
@@ -190,7 +227,7 @@ export async function deleteProduct(id: string) {
 export async function getProduct(id: string) {
     try {
         const client = await getTenantClient();
-        const result = await client.getDoc<ERPNextItem>('Item', id);
+        const result = await client.getDoc<CoreEngineItem>('Item', id);
 
         if (!result) return null
         return transformProduct(result)
@@ -205,6 +242,7 @@ export async function getProducts(options?: {
     search?: string
     categoryId?: string
     status?: "all" | "in-stock" | "low-stock" | "out-of-stock"
+    isStockItem?: boolean
 }) {
     try {
         const { client, tenantId } = await getTenantContext();
@@ -213,7 +251,7 @@ export async function getProducts(options?: {
         // 1. Fetch tenant allowed/customized items (optional metadata)
         const { data: tenantItems, error: tbError } = await supabase
             .from('tenant_items')
-            .select('item_code, display_name, price, image, active')
+            .select('item_code, display_name, price, image, active, matrix_pricing')
             .eq('tenant_id', tenantId)
             .eq('active', true);
 
@@ -223,6 +261,10 @@ export async function getProducts(options?: {
         const filters: [string, string, unknown][] = [
             ['disabled', '=', 0]
         ]
+        
+        if (options?.isStockItem !== undefined) {
+            filters.push(['is_stock_item', '=', options.isStockItem ? 1 : 0])
+        }
 
         if (options?.search) {
             filters.push(['item_name', 'like', `%${options.search}%`])
@@ -234,7 +276,7 @@ export async function getProducts(options?: {
 
         // We use the raw client.getList here for advanced filtering
         // But our wrapper simplifies this.
-        const result = await client.getList<ERPNextItem>('Item', {
+        const result = await client.getList<CoreEngineItem>('Item', {
             filters,
             fields: [
                 'name', 'item_name', 'item_code', 'item_group',
@@ -277,7 +319,7 @@ export async function getCategories() {
     try {
         const client = await getTenantClient();
 
-        const result = await client.getList<ERPNextItemGroup>('Item Group', {
+        const result = await client.getList<CoreEngineItemGroup>('Item Group', {
             fields: ['name', 'parent_item_group', 'is_group'],
             limit: 0
         });
@@ -299,8 +341,8 @@ export async function createCategory(name: string) {
     try {
         const client = await getTenantClient();
 
-        const result = await client.createDoc<ERPNextItemGroup>('Item Group', {
-            item_group_name: name, // ERPNext expects this field name for ID generation sometimes, but name works too
+        const result = await client.createDoc<CoreEngineItemGroup>('Item Group', {
+            item_group_name: name, // CoreEngine expects this field name for ID generation sometimes, but name works too
             parent_item_group: 'All Item Groups',
             is_group: 0
         });
@@ -323,16 +365,16 @@ export async function createCategory(name: string) {
     }
 }
 
-// Seed default categories - not needed for ERPNext as it has built-in item groups
+// Seed default categories - not needed for CoreEngine as it has built-in item groups
 export async function seedDefaultCategories() {
-    // ERPNext already has default item groups
+    // CoreEngine already has default item groups
     return { success: true }
 }
 
 export async function updateCategory(id: string, name: string): Promise<{success: boolean; error?: string}> {
     try {
         const client = await getTenantClient();
-        const result = await client.updateDoc<ERPNextItemGroup>('Item Group', id, { item_group_name: name });
+        const result = await client.updateDoc<CoreEngineItemGroup>('Item Group', id, { item_group_name: name });
         if (!result) return { success: false, error: "Failed to update category" };
         revalidatePath('/', 'layout');
         return { success: true };

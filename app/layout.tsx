@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 
+import { RealtimePosProvider } from "@/components/providers/realtime-pos-provider"
+import { QueryProvider } from "@/components/providers/query-provider"
 import { CookieConsent } from "@/components/legal/cookie-consent"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import SyncWorker from "@/components/sync/SyncWorker"
@@ -19,13 +21,18 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 })
 
-export const metadata: Metadata = {
+  export const metadata: Metadata = {
   title: {
     default: "Orvex | Orvex by valanthir tech",
     template: "%s | Orvex by valanthir tech",
   },
   description: "Orvex is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
   keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "orvex", "valanthir tech"],
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 }
 
 export default function RootLayout({
@@ -42,10 +49,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SyncWorker />
-          {children}
-          <Toaster />
-          <CookieConsent />
+          <QueryProvider>
+            <RealtimePosProvider>
+              <SyncWorker />
+              {children}
+              <Toaster />
+              <CookieConsent />
+            </RealtimePosProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

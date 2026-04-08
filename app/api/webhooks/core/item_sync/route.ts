@@ -1,7 +1,7 @@
 /**
- * POST /api/webhooks/erpnext/item_sync
+ * POST /api/webhooks/core/item_sync
  * 
- * Invoked by ERPNext Document events (Item, Item Price, Bin).
+ * Invoked by Core Backend Document events (Item, Item Price, Bin).
  * Keeps the Supabase `storefront_products_cache` in perfect real-time sync
  * without Polling, ensuring millisecond response times for custom e-commerce storefronts.
  */
@@ -11,11 +11,11 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
     try {
-        // ERPNext usually doesn't send good headers, but we can configure the webhook with custom headers.
-        // We require the Tenant's Api Key header `x-erpnext-api-key` in the generic webhook URL.
-        const apiKey = req.headers.get("x-erpnext-api-key");
+        // The core backend usually doesn't send good headers, but we can configure the webhook with custom headers.
+        // We require the Tenant's Api Key header `x-core-api-key` in the generic webhook URL.
+        const apiKey = req.headers.get("x-core-api-key");
         if (!apiKey) {
-            return NextResponse.json({ success: false, error: "Missing x-erpnext-api-key header" }, { status: 401 });
+            return NextResponse.json({ success: false, error: "Missing x-core-api-key header" }, { status: 401 });
         }
 
         const body = await req.json();
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         // Security: Find which tenant owns this API key
         // In real system, the API keys are encrypted, so searching by them directly is tough.
         // We'd either decrypt all (slow) or use a static webhook secret per tenant.
-        // A better pattern: The webhook URL contains the Tenant ID: /api/webhooks/erpnext/item_sync?tenant_id=XYZ
+        // A better pattern: The webhook URL contains the Tenant ID: /api/webhooks/core/item_sync?tenant_id=XYZ
         
         const tenantId = new URL(req.url).searchParams.get('tenant_id');
         if (!tenantId) {
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
         // The webhook payload can be dynamic depending on if it's an Item, Price List, or Bin change.
         // Here we upsert the storefront_products_cache with whatever fields were provided.
-        // Example ERPNext data: `{"item_code": "SKU-001", "item_name": "T-Shirt", "stock": 50}`
+        // Example Core data: `{"item_code": "SKU-001", "item_name": "T-Shirt", "stock": 50}`
 
         const updatePayload: any = {
             tenant_id: tenantId,
@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
             console.error("[Webhook Error] Upserting product cache:", upsertError);
             throw new Error(upsertError.message);
         }
-
 
         return NextResponse.json({ success: true });
 

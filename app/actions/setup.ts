@@ -21,11 +21,11 @@ export async function completeSetup(formData: FormData) {
         return { error: "Validation failed." }
     }
 
-    // Company setup is done in ERPNext's setup wizard
+    // Company setup is done in CoreEngine's setup wizard
     redirect("/")
 }
 
-// Check if setup is complete (company exists in ERPNext)
+// Check if setup is complete (company exists in CoreEngine)
 export async function isSetupComplete(): Promise<boolean> {
     try {
         const client = await getTenantClient()
@@ -39,7 +39,7 @@ export async function isSetupComplete(): Promise<boolean> {
     }
 }
 
-// Get the default company from ERPNext
+// Get the default company from CoreEngine
 export async function getDefaultCompany(): Promise<string | null> {
     try {
         const client = await getTenantClient()

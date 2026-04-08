@@ -127,7 +127,7 @@ export async function getStockLedger(limit = 50): Promise<StockLedgerEntry[]> {
         return entries.map((e) => ({
             id: e.name,
             itemCode: e.item_code,
-            itemName: e.item_code, // ERPNext SLE doesn't always have item_name
+            itemName: e.item_code, // CoreEngine SLE doesn't always have item_name
             warehouse: e.warehouse,
             date: `${e.posting_date} ${e.posting_time || ""}`.trim(),
             qtyChange: e.actual_qty,
