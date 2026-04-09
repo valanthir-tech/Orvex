@@ -112,7 +112,7 @@ export function PaymentForm({ plans, qrCodes, tenantId }: { plans: SubscriptionP
             {/* Plans Selection */}
             <div>
                 <h2 className="text-xl font-semibold tracking-tight text-[#171717] mb-6">Choose your tier</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {plans.filter(p => p.is_active).map((plan) => {
                         const isSelected = selectedPlanId === plan.id;
                         return (

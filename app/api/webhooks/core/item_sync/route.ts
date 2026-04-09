@@ -8,17 +8,27 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
     try {
-        // The core backend usually doesn't send good headers, but we can configure the webhook with custom headers.
-        // We require the Tenant's Api Key header `x-core-api-key` in the generic webhook URL.
-        const apiKey = req.headers.get("x-core-api-key");
-        if (!apiKey) {
-            return NextResponse.json({ success: false, error: "Missing x-core-api-key header" }, { status: 401 });
+        const bodyContent = await req.text();
+        const signatureHeader = req.headers.get("x-webhook-signature");
+        
+        if (!signatureHeader || !process.env.WEBHOOK_SECRET) {
+            return NextResponse.json({ success: false, error: "Missing webhook signature or secret" }, { status: 401 });
         }
 
-        const body = await req.json();
+        // HMAC Signature Verification
+        const hmac = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET);
+        hmac.update(bodyContent);
+        const expectedSignature = hmac.digest('hex');
+
+        if (signatureHeader !== expectedSignature) {
+            return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 401 });
+        }
+
+        const body = JSON.parse(bodyContent);
         if (!body || !body.item_code) {
             return NextResponse.json({ success: false, error: "Invalid payload: requires item_code" }, { status: 400 });
         }

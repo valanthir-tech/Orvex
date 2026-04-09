@@ -74,12 +74,18 @@ export const GET = withApiAuth(async (req, ctx) => {
             return items.map(item => ({
                 id: item.name,
                 name: item.item_name,
+                title: item.item_name, // Added for rich UI support
                 itemCode: item.item_code,
                 category: item.item_group,
                 price: item.standard_rate,
                 description: item.description || '',
                 image: item.image || null,
+                images: item.image ? [item.image] : [], // Added for Media Gallery array support
                 unit: item.stock_uom,
+                status: 'available', // Hardcoded for MVP (until Webhook Phase)
+                featured: true, // Hardcoded for MVP Merchandising
+                tags: item.item_group ? [item.item_group.toLowerCase()] : [], // Extrapolated from item group
+                metadata: {} // Extensible JSON field for dimensions/medium
             }))
         },
         5 * 60 * 1000 // 5 min TTL

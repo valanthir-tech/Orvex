@@ -65,6 +65,7 @@ export class CoreEngineClient {
 
                 const headers: HeadersInit = {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'Authorization': `token ${this.config.apiKey}:${this.config.apiSecret}`
                 };
 

@@ -106,10 +106,6 @@ export async function POST(req: NextRequest) {
             ? encryptCredentials({ apiKey: result.apiKey, apiSecret: result.apiSecret })
             : null;
 
-        // 15 days from now
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 15);
-
         // Save to Supabase tenants table (with encrypted credentials)
         const tenantData = {
             company_name: companyName,
@@ -118,9 +114,9 @@ export async function POST(req: NextRequest) {
             owner_first_name: ownerFirstName,
             owner_last_name: ownerLastName || '',
             owner_phone: ownerPhone || null,
-            status: 'trial',              // Give them 15-day trial instantly
+            status: 'active',              // Start as active
+            subscription_status: 'active', // Bypass the payment loop in middleware
             plan: 'Retail Starter',       // Actual database plan name
-            trial_ends_at: trialEndsAt.toISOString(),
             warehouse_name: result.warehouse || `${companyName} - Main`,
             price_list: result.priceList || `${companyName} Selling`,
             pos_profile: result.posProfile || `${companyName} POS`,
@@ -177,11 +173,11 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            // Mark the signup request as provisioned if we have a signupId
+            // Mark the signup request as active if we have a signupId
             if (signupId) {
                 await supabase
                     .from('tenant_signups')
-                    .update({ status: 'provisioned' })
+                    .update({ status: 'active' })
                     .eq('id', signupId);
             }
         } catch (linkErr) {

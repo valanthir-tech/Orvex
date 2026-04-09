@@ -141,9 +141,9 @@ export async function createProduct(data: CreateProductInput) {
         revalidatePath('/', 'layout')
         revalidatePath('/', 'layout')
         return { success: true, item: transformProduct(CoreEngineItem) }
-    } catch (error) {
-        console.error("Create item error:", error)
-        return { success: false, error: "Failed to create item." }
+    } catch (error: any) {
+        console.error("Create item error:", error?.message, error?.response?.data || error)
+        return { success: false, error: "Failed to create item: " + (error?.response?.data?.exc_type || error?.message) }
     }
 }
 
@@ -343,8 +343,8 @@ export async function createCategory(name: string) {
 
         const result = await client.createDoc<CoreEngineItemGroup>('Item Group', {
             item_group_name: name, // CoreEngine expects this field name for ID generation sometimes, but name works too
-            parent_item_group: 'All Item Groups',
-            is_group: 0
+            is_group: 0,
+            parent_item_group: 'All Item Groups' // Parent required for leaf categories
         });
 
         if (!result) {
@@ -359,9 +359,9 @@ export async function createCategory(name: string) {
                 name: result.name,
             }
         }
-    } catch (error) {
-        console.error("Create category error:", error)
-        return { success: false, error: "Failed to create category." }
+    } catch (error: any) {
+        console.error("Create category error:", error?.message, error?.response?.data || error)
+        return { success: false, error: "Failed to create category: " + (error?.response?.data?.exc_type || error?.message) }
     }
 }
 

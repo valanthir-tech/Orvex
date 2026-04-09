@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
             owner_last_name: ownerLastName || '',
             owner_phone: ownerPhone || null,
             country,
-            status: 'pending_approval',
+            status: 'pending_payment', // Require payment step next
             user_id: userId || null,
         };
 

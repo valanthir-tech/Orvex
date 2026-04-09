@@ -49,6 +49,7 @@ export async function getStorefrontConfig() {
         config: config || null,
         defaultCurrency,
         baseStoreName: companyName,
+        tenantId: ctx.tenantId, // Attached for the new BaaS Developer Headless flow
     }
 }
 

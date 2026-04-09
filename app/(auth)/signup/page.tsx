@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/form"
 import { Box, Building2, CheckCircle, Loader2 } from "lucide-react"
 
+import { getSubscriptionPlans, getPaymentQrCodes, type SubscriptionPlan, type PaymentQrCode } from "@/app/actions/subscriptions"
+import { SignupPaymentForm } from "@/components/auth/signup-payment-form"
+
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const accountSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -34,6 +37,8 @@ const accountSchema = z.object({
     password: z.string().min(6, "Password must be at least 6 characters"),
 })
 type AccountValues = z.infer<typeof accountSchema>
+
+
 
 const businessSchema = z.object({
     companyName: z.string().min(2, "Business name is required"),
@@ -44,10 +49,22 @@ type BusinessValues = z.infer<typeof businessSchema>
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function SignupPage() {
-    const [step, setStep] = useState<1 | 2 | 3>(1)
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
+    const [signupId, setSignupId] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [accountData, setAccountData] = useState<AccountValues | null>(null)
     const [userId, setUserId] = useState<string | null>(null)
+    
+    // Payment details from server
+    const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+    const [qrCodes, setQrCodes] = useState<PaymentQrCode[]>([])
+    
+    useEffect(() => {
+        Promise.all([getSubscriptionPlans(), getPaymentQrCodes()]).then(([p, q]) => {
+            setPlans(p)
+            setQrCodes(q)
+        }).catch(console.error)
+    }, [])
 
     const accountForm = useForm<AccountValues>({
         resolver: zodResolver(accountSchema),
@@ -122,12 +139,15 @@ export default function SignupPage() {
             return
         }
 
+        setSignupId(result.signupId)
         setIsLoading(false)
         setStep(3)
     }
 
+    
+
     // ── Success screen ────────────────────────────────────────────────────────
-    if (step === 3) {
+    if (step === 4) {
         return (
             <div className="flex flex-col gap-6">
                 <Card className="border-0 shadow-lg rounded-2xl">
@@ -172,7 +192,7 @@ export default function SignupPage() {
                 <Card className="border-0 shadow-lg rounded-2xl">
                     <CardHeader>
                         <CardTitle>Create Account</CardTitle>
-                        <CardDescription>Step 1 of 2 — Your personal details</CardDescription>
+                        <CardDescription>Step 1 of 3 — Your personal details</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Form {...accountForm}>
@@ -279,7 +299,7 @@ export default function SignupPage() {
                             <Building2 className="h-5 w-5 text-muted-foreground" />
                             <CardTitle>Business Details</CardTitle>
                         </div>
-                        <CardDescription>Step 2 of 2 — Tell us about your business</CardDescription>
+                        <CardDescription>Step 2 of 3 — Tell us about your business</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Form {...businessForm}>
@@ -358,7 +378,7 @@ export default function SignupPage() {
                                     </Button>
                                     <Button type="submit" className="flex-1 h-11" disabled={isLoading}>
                                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                        Submit Application
+                                        Continue to Payment
                                     </Button>
                                 </div>
                             </form>
@@ -366,6 +386,16 @@ export default function SignupPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* ── Step 3: Payment details ─────────────────────────────────── */}
+            {step === 3 && (
+    <SignupPaymentForm
+        plans={plans}
+        qrCodes={qrCodes}
+        signupId={signupId!}
+        onSuccess={() => setStep(4)}
+    />
+)}
         </div>
     )
 }

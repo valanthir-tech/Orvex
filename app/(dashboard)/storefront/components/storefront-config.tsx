@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { PlusCircle, GripVertical, Trash2, Loader2 } from "lucide-react"
 
-export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName }: { initialData: any, defaultCurrency: string, baseStoreName: string }) {
+export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, tenantId }: { initialData: any, defaultCurrency: string, baseStoreName: string, tenantId: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   
@@ -85,9 +85,9 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName }
   return (
     <Tabs defaultValue="general" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="general">General & Policies</TabsTrigger>
-        <TabsTrigger value="cms">Theme & Pages (CMS)</TabsTrigger>
-        <TabsTrigger value="danger">Danger Zone</TabsTrigger>
+        <TabsTrigger value="general">Store Profile</TabsTrigger>
+        <TabsTrigger value="cms">Theme Builder</TabsTrigger>
+        <TabsTrigger value="danger">Store Status</TabsTrigger>
       </TabsList>
 
       {/* GENERAL CONFIG */}
@@ -147,58 +147,85 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName }
         </Card>
       </TabsContent>
 
-      {/* CMS THEME BUILDER */}
+{/* CMS THEME BUILDER */}
       <TabsContent value="cms" className="space-y-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Dynamic Content Blocks</CardTitle>
+              <CardTitle>Theme Layout Builder</CardTitle>
               <CardDescription>
-                Build your About page and homepage sections dynamically. Rendered on the storefront automatically.
+                Customize your storefront's homepage blocks. Drag and drop to reorder.
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <PlusCircle className="h-4 w-4" /> Add Block
+            <Button onClick={handleSaveCMS} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Publish Theme
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {themeBlocks.map((block, idx) => (
-              <div key={block.id} className="border rounded-md p-4 flex gap-4 items-start bg-card shadow-sm">
-                <GripVertical className="h-5 w-5 text-muted-foreground mt-1 cursor-grab" />
+            {themeBlocks.map((block, index) => (
+              <div key={block.id} className="flex gap-4 items-start p-4 border rounded-md bg-slate-50 relative group">
+                <GripVertical className="h-5 w-5 text-slate-400 mt-2 cursor-move" />
                 <div className="flex-1 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-semibold">{block.title} <span className="ml-2 text-xs bg-muted px-2 py-0.5 rounded uppercase">{block.type}</span></h4>
-                    <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive hover:text-white">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">{block.title}</h4>
+                    <span className="text-xs uppercase bg-slate-200 text-slate-700 px-2 py-1 rounded">
+                      {block.type}
+                    </span>
                   </div>
+                  {/* Basic editors based on block type */}
                   {block.type === "hero" && (
                     <div className="grid gap-2">
-                      <Label>Headline</Label>
-                      <Input defaultValue={block.config.headline} />
-                      <Label className="mt-2">Subheadline</Label>
-                      <Input defaultValue={block.config.subheadline} />
+                      <Input 
+                        value={block.config.headline} 
+                        onChange={(e) => {
+                          const newBlocks = [...themeBlocks]
+                          newBlocks[index].config.headline = e.target.value
+                          setThemeBlocks(newBlocks)
+                        }} 
+                        placeholder="Headline" 
+                      />
+                      <Input 
+                        value={block.config.subheadline} 
+                        onChange={(e) => {
+                          const newBlocks = [...themeBlocks]
+                          newBlocks[index].config.subheadline = e.target.value
+                          setThemeBlocks(newBlocks)
+                        }} 
+                        placeholder="Subheadline" 
+                      />
                     </div>
                   )}
                   {block.type === "about-history" && (
-                    <div className="grid gap-2">
-                      <Label>Rich Text</Label>
-                      <Textarea defaultValue={block.config.text} rows={3} />
-                    </div>
+                    <Textarea 
+                      value={block.config.text}
+                      onChange={(e) => {
+                        const newBlocks = [...themeBlocks]
+                        newBlocks[index].config.text = e.target.value
+                        setThemeBlocks(newBlocks)
+                      }}
+                      rows={3}
+                    />
                   )}
                   {block.type === "featured-grid" && (
-                    <div className="grid gap-2">
-                      <Label>Limit Items to Show</Label>
-                      <Input defaultValue={block.config.limit} type="number" className="w-24" />
+                    <div className="flex items-center gap-2">
+                      <Label>Product Limit:</Label>
+                      <Input 
+                        type="number" 
+                        value={block.config.limit}
+                        onChange={(e) => {
+                          const newBlocks = [...themeBlocks]
+                          newBlocks[index].config.limit = Number(e.target.value)
+                          setThemeBlocks(newBlocks)
+                        }}
+                        className="w-24"
+                      />
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </CardContent>
-          <CardFooter>
-            <Button onClick={handleSaveCMS}>Publish Theme</Button>
-          </CardFooter>
         </Card>
       </TabsContent>
 

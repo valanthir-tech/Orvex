@@ -177,8 +177,8 @@ export async function createInventoryAdjustment(input: {
         await client.updateDoc("Stock Entry", (result as any).name, { docstatus: 1 })
 
         return { success: true, name: (result as any).name }
-    } catch (error) {
-        console.error("Failed to create adjustment:", error)
-        return { error: "Failed to create stock adjustment" }
+    } catch (error: any) {
+        console.error("Failed to create adjustment:", error?.message, error?.response?.data || error)
+        return { error: "Failed to create stock adjustment: " + (error?.response?.data?.exc_type || error?.message) }
     }
 }

@@ -140,7 +140,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     // Use service-role client to bypass RLS — auth is already verified above.
     const { data: tenant, error: tenantError } = await adminClient
         .from('tenants')
-        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status, company_name, warehouse_name, price_list, trial_ends_at')
+        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status, company_name, warehouse_name, price_list')
         .eq('id', targetTenantId)
         .single();
 
@@ -149,18 +149,8 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     }
 
     // 5. Check System Status (Kill Switch)
-    if (tenant.status !== 'active' && tenant.status !== 'trial') {
+    if (tenant.status !== 'active') {
         throw new Error(`Tenant Suspended: Status is ${tenant.status}`);
-    }
-
-    // Trial Expiration Check
-    if (tenant.status === 'trial' && tenant.trial_ends_at) {
-        const now = new Date();
-        const trialEnd = new Date(tenant.trial_ends_at);
-        
-        if (now > trialEnd) {
-            throw new Error("TRIAL_EXPIRED: Your 15-day free trial has ended. Please upgrade to continue using the system.");
-        }
     }
 
     // 6. Decrypt Isolated Credentials
