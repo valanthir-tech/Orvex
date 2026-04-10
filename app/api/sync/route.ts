@@ -29,12 +29,30 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+        // Enforce max 2MB payload size defensively before accessing JSON
+        const contentLength = req.headers.get('content-length');
+        if (contentLength && parseInt(contentLength, 10) > 2000000) {
+            return NextResponse.json(
+                { success: false, error: 'Payload too large. Maximum size is 2MB per request.' },
+                { status: 413 }
+            );
+        }
+
         const body = await req.json();
 
         if (!body.orders || !Array.isArray(body.orders) || body.orders.length === 0) {
             return NextResponse.json(
                 { success: false, error: 'Invalid payload: orders array required' },
                 { status: 400 }
+            );
+        }
+
+        // Defensive guard vector: prevent DDOS loops mapping millions of items.
+        // If a sync drops offline for a month, it should batch send max 50 at a time.
+        if (body.orders.length > 50) {
+            return NextResponse.json(
+                { success: false, error: 'Payload exceeded: Maximum 50 offline orders per sync batch. Implement Client sliding window.' },
+                { status: 413 }
             );
         }
 

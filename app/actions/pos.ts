@@ -88,10 +88,12 @@ export async function createPOSInvoice(formData: FormData) {
 
             const validatedRate = tenantItem?.price || CoreEngineItem.standard_rate || 0
 
-            // If mismatch is too high, overwrite with server rate
+            // If mismatch is too high, DO NOT overwrite the rate. 
+            // The physical cash was already collected offline by the cashier.
+            // Overwriting here alters financial records and causes drawer shortages.
             if (Math.abs(cartItem.rate - validatedRate) > validatedRate * 0.05) {
-                console.warn(`[SECURITY] Price mismatch on ${cartItem.itemId}: Client:${cartItem.rate} Server:${validatedRate}`)
-                cartItem.rate = validatedRate // Override with validated rate
+                console.warn(`[AUDIT NEEDED] Offline price (${cartItem.rate}) differs from Server (${validatedRate}) for ${cartItem.itemId}. Accepting offline transaction price to maintain ledger cash accuracy.`)
+                // Note: You should build a manager alert or audit log for these specific events later.
             }
 
             const amount = cartItem.qty * cartItem.rate

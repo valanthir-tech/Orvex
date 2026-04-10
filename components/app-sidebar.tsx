@@ -51,6 +51,7 @@ const navigationBlocks = {
             title: "Point of Sale",
             url: "/pos",
             icon: ShoppingCart,
+            feature: "pos"
         },
         {
             title: "Activity Log",
@@ -61,31 +62,37 @@ const navigationBlocks = {
             title: "Orders",
             url: "/orders",
             icon: Archive,
+            feature: "storefront" // Online orders tied to storefront
         },
         {
             title: "Products",
             url: "/products",
             icon: Package,
+            feature: "inventory"
         },
         {
             title: "Storefront",
             url: "/storefront",
             icon: Store,
+            feature: "storefront"
         },
         {
             title: "Inbox",
             url: "/inbox",
             icon: Inbox,
+            feature: "storefront"
         },
         {
             title: "Customers",
             url: "/customers",
             icon: Users,
+            feature: "khata"
         },
         {
             title: "Stock Management",
             url: "#",
             icon: Box,
+            feature: "inventory",
             items: [
                 {
                     title: "Inventory",
@@ -105,6 +112,7 @@ const navigationBlocks = {
             title: "Analytics",
             url: "/reports",
             icon: BarChart3,
+            feature: "reports"
         },
         {
             title: "Settings",
@@ -144,10 +152,17 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
     const [feedbackOpen, setFeedbackOpen] = useState(false)
 
     // Filter main navigation based on features
-    const filteredNavMain = navigationBlocks.navMain.map(item => ({
-        ...item,
-        isActive: pathname === item.url || !!(item.items && item.items.some(subItem => pathname && pathname.startsWith(subItem.url)))
-    }))
+    const filteredNavMain = navigationBlocks.navMain
+        .filter(item => {
+            const featureKey = (item as any).feature;
+            if (!featureKey) return true; // Show items with no feature restriction
+            if (!features) return false;  // Hide restricted items if features not loaded yet
+            return !!features[featureKey]; // Show if features[key] is true
+        })
+        .map(item => ({
+            ...item,
+            isActive: pathname === item.url || !!(item.items && item.items.some(subItem => pathname && pathname.startsWith(subItem.url)))
+        }))
 
     const navSecondaryWithHandlers = navigationBlocks.navSecondary.map((item) =>
         item.title === "Feedback"
@@ -157,18 +172,13 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
 
     return (
         <Sidebar variant="floating" className="rounded-[1.5rem] !drop-shadow-xl overflow-hidden border-border/10" collapsible="icon" {...props}>
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <a href="/">
-                                <div className="flex h-12 items-center justify-center p-1">
-                                    <Image src="/orvex-horizontal.png" alt="Orvex" width={140} height={40} className="h-9 w-auto mix-blend-multiply" />
-                                </div>
-                            </a>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+            <SidebarHeader className="pt-6 pb-4">
+                <div className="flex items-center justify-center w-full">
+                    <a href="/">
+                        <Image src="/orvex-horizontal.png" alt="Orvex" width={140} height={40} className="h-9 w-auto mix-blend-multiply group-data-[collapsible=icon]:hidden" />
+                        <Image src="/icon.png" alt="Orvex" width={32} height={32} className="h-8 w-auto mix-blend-multiply hidden group-data-[collapsible=icon]:block" />
+                    </a>
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 <NavMain items={filteredNavMain} />

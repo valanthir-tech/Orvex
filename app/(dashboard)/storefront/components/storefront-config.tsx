@@ -94,10 +94,23 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
       <TabsContent value="general" className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Global Store Settings</CardTitle>
-            <CardDescription>
-              Basic information used across your storefront.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Global Store Settings</CardTitle>
+                <CardDescription>
+                  Basic information used across your storefront.
+                </CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <a 
+                  href={`/store/${(storeName || baseStoreName).toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  View Live Store ↗
+                </a>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">

@@ -18,6 +18,7 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { PaymentReminderBanner } from "@/components/payment/payment-reminder-banner"
+import { NepaliDateDisplay } from "@/components/ui/nepali-date-display"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -76,25 +77,31 @@ export default function DashboardLayoutClient({
                 avatar: "/avatars/shadcn.jpg"
             } : undefined} features={features} />
             <SidebarInset className="bg-background rounded-[1.5rem] border border-border/50 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] overflow-hidden flex-1 m-0 md:ml-2 relative min-h-[calc(100vh-1.5rem)]">
-                <header className="flex h-16 shrink-0 items-center gap-2 px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator
-                        orientation="vertical"
-                        className="mr-2 data-[orientation=vertical]:h-4"
-                    />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            <BreadcrumbItem className="hidden md:block">
-                                <BreadcrumbLink href="/">
-                                    Inventory
-                                </BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>{title}</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb>
+                <header className="flex h-16 shrink-0 items-center justify-between gap-2 px-4">
+                    <div className="flex items-center gap-2">
+                        <SidebarTrigger className="-ml-1" />
+                        <Separator
+                            orientation="vertical"
+                            className="mr-2 data-[orientation=vertical]:h-4"
+                        />
+                        <Breadcrumb>
+                            <BreadcrumbList>
+                                <BreadcrumbItem className="hidden md:block">
+                                    <BreadcrumbLink href="/">
+                                        Inventory
+                                    </BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator className="hidden md:block" />
+                                <BreadcrumbItem>
+                                    <BreadcrumbPage>{title}</BreadcrumbPage>
+                                </BreadcrumbItem>
+                            </BreadcrumbList>
+                        </Breadcrumb>
+                    </div>
+                    
+                    <div className="hidden md:flex items-center">
+                        <NepaliDateDisplay />
+                    </div>
                 </header>
                 <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
                     {subscriptionInfo && ["past_due", "pending_payment"].includes(subscriptionInfo.status) && (

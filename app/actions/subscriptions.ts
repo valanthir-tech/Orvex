@@ -139,7 +139,8 @@ export async function getTenantFeatures() {
             pos: true,
             inventory: true,
             reports: "basic" as const,
-            khata: false,
+            khata: true,
+            storefront: false,
             multi_warehouse: false,
             api_access: false
         }
@@ -159,6 +160,7 @@ export async function getTenantFeatures() {
             inventory: false,
             reports: "basic" as const,
             khata: false,
+            storefront: false,
             multi_warehouse: false,
             api_access: false
         }
