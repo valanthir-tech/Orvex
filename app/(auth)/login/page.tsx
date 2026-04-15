@@ -1,12 +1,13 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { db } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -49,7 +50,22 @@ type LoginFormValues = z.infer<typeof loginSchema>
 
 function LoginForm() {
     const searchParams = useSearchParams()
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        async function checkTerminal() {
+            try {
+                const token = await db.configStore.get("device_token")
+                if (token) {
+                    router.replace("/pos/login")
+                }
+            } catch (err) {
+                console.error("Dexie offline config error", err)
+            }
+        }
+        checkTerminal()
+    }, [router])
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),

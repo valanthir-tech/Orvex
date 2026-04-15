@@ -1,0 +1,25 @@
+{
+  "name": "Orvex POS",
+  "short_name": "Orvex POS",
+  "description": "Offline-first Point of Sale system for retail stores",
+  "start_url": "/pos",
+  "display": "standalone",
+  "background_color": "#f4f4f5",
+  "theme_color": "#f4f4f5",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance"]
+}

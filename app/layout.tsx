@@ -27,12 +27,26 @@ const jetbrainsMono = JetBrains_Mono({
     template: "%s | Orvex by valanthir tech",
   },
   description: "Orvex is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Orvex POS",
+  },
   keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "orvex", "valanthir tech"],
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",
     apple: "/icon.png",
   },
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#f4f4f5", // matches bg-zinc-100
 }
 
 export default function RootLayout({

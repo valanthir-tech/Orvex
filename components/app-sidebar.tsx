@@ -74,7 +74,6 @@ const navigationBlocks = {
             title: "Storefront",
             url: "/storefront",
             icon: Store,
-            feature: "storefront"
         },
         {
             title: "Inbox",

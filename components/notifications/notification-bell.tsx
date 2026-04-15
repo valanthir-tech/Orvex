@@ -10,6 +10,10 @@ import {
     CalendarClock,
     Info,
     X,
+    ShoppingBag,
+    ShieldAlert,
+    Printer,
+    ServerCrash,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -33,6 +37,10 @@ function TypeIcon({ type }: { type: AppNotification["type"] }) {
         case "payment_approved":   return <CreditCard className={cls} />
         case "payment_rejected":   return <CreditCard className={cls} />
         case "subscription_expiry": return <CalendarClock className={cls} />
+        case "order":              return <ShoppingBag className={cls} />
+        case "security":           return <ShieldAlert className={cls} />
+        case "hardware":           return <Printer className={cls} />
+        case "system":             return <ServerCrash className={cls} />
         default:                   return <Info className={cls} />
     }
 }
@@ -43,6 +51,10 @@ function typeIconBg(type: AppNotification["type"]): string {
         case "payment_approved":    return "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
         case "payment_rejected":    return "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
         case "subscription_expiry": return "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400"
+        case "order":               return "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+        case "security":            return "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
+        case "hardware":            return "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+        case "system":              return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-400"
         default:                    return "bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"
     }
 }
@@ -208,7 +220,7 @@ export function NotificationBell({ tenantId }: NotificationBellProps) {
                                         "w-full text-left px-4 py-3 flex gap-3 transition-colors hover:bg-muted/40",
                                         !n.is_read && "bg-primary/5 hover:bg-primary/8"
                                     )}
-                                    onClick={() => { if (!n.is_read) handleMarkRead(n.id) }}
+                                    onClick={() => { if (!n.is_read) { handleMarkRead(n.id) }; if (n.action_url) { window.location.href = n.action_url } }}}
                                 >
                                     {/* Icon */}
                                     <div className={cn(
@@ -253,3 +265,5 @@ export function NotificationBell({ tenantId }: NotificationBellProps) {
         </Popover>
     )
 }
+
+

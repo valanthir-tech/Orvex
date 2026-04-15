@@ -97,7 +97,8 @@ export class CoreEngineClient {
                         } catch { /* use default message */ }
                         throw new CoreEngineAPIError(message, response.status);
                     }
-
+                    
+                    console.error(`CoreEngine GET Error for ${url}:`, response.status, errorText);
                     return null;
                 }
 

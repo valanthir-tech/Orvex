@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,6 +8,7 @@ import { ArrowRight, Plus } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { PricingSection } from '@/components/landing/pricing-section';
+import { PolicyModal } from '@/components/landing/policy-modal';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -60,6 +61,14 @@ const capabilities = [
 export default function MarketingPage() {
   const [activeItem, setActiveItem] = useState<number | null>(0);
   const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null);
+  const [activePolicy, setActivePolicy] = useState<'privacy' | 'terms' | 'refund' | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <div className="relative min-h-screen bg-[#fcfbf9] text-[#171717] selection:bg-[#3255f1] selection:text-[#fcfbf9] overflow-x-hidden font-sans antialiased">
@@ -74,29 +83,38 @@ export default function MarketingPage() {
       }} />
 
       {/* Header */}
-      <header className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 bg-white/20 backdrop-blur-xl flex items-center justify-between px-6 md:px-8 py-2 md:py-3 border border-white/50 shadow-lg shadow-black/5 rounded-full text-[#171717]">
+      <header className={cn(
+        "fixed left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 flex items-center justify-between px-6 md:px-8 py-2 md:py-3 text-[#171717] transition-all duration-500 ease-in-out rounded-full",
+        isScrolled 
+          ? "top-6 bg-white/40 backdrop-blur-xl border border-white/50 shadow-lg shadow-black/5" 
+          : "top-6 bg-transparent border-transparent"
+      )}>
         <Link href="/">
           <Image src="/orvex-horizontal.png" alt="Orvex Logo" width={264} height={66} className="h-11 md:h-[53px] w-auto mix-blend-multiply" />
         </Link>
         
         <nav className="hidden md:flex items-center gap-12">
-          {['Capabilities', 'Work', 'About', 'Contact'].map((item) => (
+          {[
+            { label: 'Capabilities', href: '#capabilities' },
+            { label: 'Platform', href: '#work' },
+            { label: 'Pricing', href: '#pricing' }
+          ].map((item) => (
             <a
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              className="relative group font-sans text-sm tracking-wide uppercase text-[#171717]/60 hover:text-[#3255f1] transition-colors"
+              key={item.label}
+              href={item.href}
+              className="relative group font-sans text-sm tracking-wide uppercase text-[#171717]/80 hover:text-[#3255f1] transition-colors font-medium"
             >
-              {item}
+              {item.label}
               <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-[#3255f1] transition-all duration-500 group-hover:w-full" />
             </a>
           ))}
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden md:block font-sans text-sm tracking-wide uppercase text-[#171717]/60 hover:text-[#3255f1] transition-colors font-bold px-4 py-2">
+          <Link href="/login" className="hidden md:block font-sans text-sm tracking-wide uppercase text-[#171717]/80 hover:text-[#3255f1] transition-colors font-bold px-4 py-2">
             Login
           </Link>
-          <Link href="/login" className="flex items-center justify-center px-6 py-2.5 bg-[#3255f1] text-white rounded-full font-sans text-sm tracking-wide uppercase font-bold hover:bg-[#3255f1]/90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-lg shadow-[#3255f1]/20">
+          <Link href="/login" className="flex items-center justify-center px-6 py-2.5 bg-[#3255f1] text-white rounded-full font-sans text-sm tracking-wide uppercase font-bold hover:bg-[#3255f1]/90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-[#3255f1]/20">
             Get Started
           </Link>
         </div>
@@ -330,10 +348,22 @@ export default function MarketingPage() {
             </motion.h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-32 border-t border-white/10 pt-16">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16 mb-32 border-t border-white/10 pt-16">
+            <div className="col-span-1 md:col-span-1 flex flex-col">
+                <Link href="/" className="block -mt-4 -ml-4 -mb-2">
+                  <Image src="/orvex-horizontal-footer.png" alt="Orvex Logo" width={200} height={50} className="w-56 h-auto" priority />
+                </Link>
+                <p className="font-sans text-sm text-white/50 leading-relaxed max-w-sm -mt-4 relative z-10">
+                Orvex is Nepal's first modern retail operating system, bridging intuitive offline point-of-sale with dynamic e-commerce operations.
+              </p>
+            </div>
             <div className="space-y-6">
-              <span className="font-sans text-sm tracking-wide uppercase text-white/40">Location</span>
-              <p className="font-sans text-xl">Orvex Tech<br />Kathmandu, Nepal</p>
+                <span className="font-sans text-sm tracking-wide uppercase text-white/40">Policies</span>
+                <p className="font-sans text-lg space-y-2 flex flex-col items-start">
+                  <button onClick={() => setActivePolicy('privacy')} className="hover:text-[#3255f1] transition-colors text-left">Privacy Policy</button>
+                  <button onClick={() => setActivePolicy('terms')} className="hover:text-[#3255f1] transition-colors text-left">Terms of Service</button>
+                  <button onClick={() => setActivePolicy('refund')} className="hover:text-[#3255f1] transition-colors text-left">Return & Refund Policy</button>
+                </p>
             </div>
             <div className="space-y-6">
               <span className="font-sans text-sm tracking-wide uppercase text-white/40">Contact</span>
@@ -345,20 +375,18 @@ export default function MarketingPage() {
             <div className="space-y-6">
               <span className="font-sans text-sm tracking-wide uppercase text-white/40">Social</span>
               <div className="flex flex-col gap-2">
-                {['Instagram', 'Twitter', 'LinkedIn', 'GitHub'].map(social => (
-                  <a key={social} href="#" className="font-sans text-xl hover:text-[#3255f1] transition-colors w-fit">{social}</a>
-                ))}
+                <a href="https://www.instagram.com/orvex.valanthir" target="_blank" rel="noopener noreferrer" className="font-sans text-xl hover:text-[#3255f1] transition-colors w-fit">Instagram</a>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-white/5">
             <span className="font-sans text-sm tracking-wide uppercase text-white/20">
-              © {new Date().getFullYear()} VALANTHIR TECH. ALL RIGHTS RESERVED.
-            </span>
-            <div className="flex gap-8">
-              <a href="#" className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Terms</a>
+                © {new Date().getFullYear()} VALANTHIR TECH. ALL RIGHTS RESERVED.
+              </span>
+              <div className="flex gap-8">
+                <button onClick={() => setActivePolicy('privacy')} className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Privacy</button>
+                <button onClick={() => setActivePolicy('terms')} className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Terms</button>
             </div>
           </div>
         </div>
@@ -412,6 +440,9 @@ export default function MarketingPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Policy Modal */}
+      <PolicyModal policy={activePolicy} onClose={() => setActivePolicy(null)} />
     </div>
   );
 }

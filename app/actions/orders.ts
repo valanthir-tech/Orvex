@@ -127,9 +127,79 @@ export async function getOrders(): Promise<OrderRecord[]> {
     }
 }
 
-// ─── Update Order Status ──────────────────────────────────────────────────────
+// ─── COD & Online Order Fulfillment Actions ───────────────────────────────────
 
-export async function updateOrderStatus(orderId: string, status: string): Promise<{ error?: string }> {
+export async function approveAndDispatchOrder(salesOrderId: string): Promise<{ success: boolean, error?: string, invoiceId?: string }> {
+    try {
+        const client = await getTenantClient()
+        
+        // 1. Fetch the original Sales Order
+        const salesOrder = await client.getDoc("Sales Order", salesOrderId)
+        if (!salesOrder) throw new Error("Sales Order not found")
+
+        // 2. Create a Sales Invoice from the Sales Order
+        const invoicePayload = {
+            naming_series: 'ACC-SINV-.YYYY.-',
+            customer: salesOrder.customer,
+            company: salesOrder.company,
+            is_pos: 0,
+            update_stock: 1, // Instantly drops stock!
+            set_posting_time: 1,
+            items: salesOrder.items.map((item: any) => ({
+                item_code: item.item_code,
+                qty: item.qty,
+                rate: item.rate,
+                sales_order: salesOrder.name,
+                so_detail: item.name
+            })),
+            remarks: `Auto-generated from ${salesOrder.name} via Orvex Dashboard.`,
+            docstatus: 1 // Submit instantly
+        }
+
+        const invoice = await client.createDoc("Sales Invoice", invoicePayload)
+        
+        return { success: true, invoiceId: (invoice as any).name }
+    } catch (error: any) {
+        console.error("Approve/Dispatch failed:", error.response?.data || error.message)
+        return { success: false, error: "Failed to create invoice or insufficient stock." }
+    }
+}
+
+export async function markOrderPaid(invoiceId: string, amount: number, modeOfPayment: string = "Cash"): Promise<{ success: boolean, error?: string }> {
+    try {
+        const client = await getTenantClient()
+        
+        const invoice = await client.getDoc("Sales Invoice", invoiceId)
+        if (!invoice) throw new Error("Sales Invoice not found")
+
+        // Create Payment Entry to wipe the Udhaaro (Outstanding)
+        const paymentPayload = {
+            payment_type: "Receive",
+            party_type: "Customer",
+            party: invoice.customer,
+            company: invoice.company,
+            mode_of_payment: modeOfPayment,
+            paid_amount: amount,
+            received_amount: amount,
+            target_exchange_rate: 1,
+            references: [{
+                reference_doctype: "Sales Invoice",
+                reference_name: invoiceId,
+                allocated_amount: amount
+            }],
+            docstatus: 1 // Submit
+        }
+
+        await client.createDoc("Payment Entry", paymentPayload)
+        
+        return { success: true }
+    } catch (error: any) {
+        console.error("Mark Paid failed:", error.response?.data || error.message)
+        return { success: false, error: "Failed to register payment." }
+    }
+}
+
+export async function updateOrderStatus(orderId: string, status: string) {
     try {
         const { supabase, tenantId, role } = await getContext()
 

@@ -44,6 +44,7 @@ import { getSettings, updateSettings } from "@/app/actions/settings"
 import { listApiKeys, createApiKey, revokeApiKey, type ApiKeyRecord } from "@/app/actions/api-keys"
 import { ReceiptPreview } from "./receipt-preview"
 import { StaffSettingsCard } from "./staff-settings-card"
+import { TerminalRegistrationCard } from "./terminal-registration-card"
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -253,6 +254,7 @@ export default function SettingsPageClient() {
             {/* Team & Staff Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <StaffSettingsCard />
+                <TerminalRegistrationCard />
             </div>
 
             {/* Row 1: Account + Store Information */}

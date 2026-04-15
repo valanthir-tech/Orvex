@@ -18,14 +18,26 @@ interface Props {
     plans: SubscriptionPlan[]
     qrCodes: PaymentQrCode[]
     tenantId: string
+    tenantCreatedAt?: string
 }
 
-export function SubscriptionSettingsClient({ subscription, submissions, plans, qrCodes, tenantId }: Props) {
+export function SubscriptionSettingsClient({ subscription, submissions, plans, qrCodes, tenantId, tenantCreatedAt }: Props) {
     const [showPaymentForm, setShowPaymentForm] = useState(false)
 
     const isPastDue = subscription?.status === "past_due"
     const pendingSubmission = submissions.find(s => s.status === "pending")
     const activePlan = subscription?.plan
+
+    // Calculate trial days if no active plan
+    let trialDaysRemaining = 0;
+    if (tenantCreatedAt) {
+        const creationDate = new Date(tenantCreatedAt)
+        const trialEndDate = new Date(creationDate)
+        trialEndDate.setDate(trialEndDate.getDate() + 14) // 14 day trial
+        const now = new Date()
+        const diffTime = trialEndDate.getTime() - now.getTime()
+        trialDaysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+    }
 
     if (!tenantId) return null
 
@@ -97,9 +109,23 @@ export function SubscriptionSettingsClient({ subscription, submissions, plans, q
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-8">
-                            <p className="text-lg font-medium text-[#171717]/80">No Active Plan</p>
-                            <p className="text-sm text-[#171717]/40 mt-2">You are currently on a trial or pending activation.</p>
+                        <div className="text-center py-6">
+                            <div className="mx-auto w-12 h-12 bg-amber-100/50 rounded-full flex items-center justify-center mb-4">
+                                <AlertCircle className="h-6 w-6 text-amber-600" />
+                            </div>
+                            <p className="text-2xl font-semibold tracking-tight text-[#171717] mb-2">Free Trial</p>
+                            {trialDaysRemaining > 0 ? (
+                                <p className="text-lg font-medium text-amber-600 mb-6">
+                                    {trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining
+                                </p>
+                            ) : (
+                                <p className="text-lg font-medium text-red-600 mb-6">
+                                    Trial Expired
+                                </p>
+                            )}
+                            <p className="text-sm text-[#171717]/60 tracking-wide max-w-[280px] mx-auto">
+                                Subscribe now to continue using Orvex without interruption. Payment must be made before your trial ends.
+                            </p>
                         </div>
                     )}
                 </div>

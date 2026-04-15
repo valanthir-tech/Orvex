@@ -26,6 +26,12 @@ export default async function SubscriptionSettingsPage() {
 
     if (!profile?.tenant_id) redirect("/pending")
 
+    const { data: tenant } = await adminClient
+        .from("tenants")
+        .select("created_at")
+        .eq("id", profile.tenant_id)
+        .single()
+
     const [subscription, submissions, plans, qrCodes] = await Promise.all([
         getTenantSubscription(),
         getPaymentSubmissions(),
@@ -40,6 +46,7 @@ export default async function SubscriptionSettingsPage() {
             plans={plans}
             qrCodes={qrCodes}
             tenantId={profile.tenant_id}
+            tenantCreatedAt={tenant?.created_at}
         />
     )
 }

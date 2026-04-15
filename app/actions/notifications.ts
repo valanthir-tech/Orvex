@@ -11,6 +11,10 @@ export type NotificationType =
     | "payment_rejected"
     | "subscription_expiry"
     | "general"
+    | "order"         // High priority e-commerce orders for manager
+    | "security"      // New devices attached for admin
+    | "hardware"      // Printer failure for cashier
+    | "system"        // POS generic system failures
 
 export interface AppNotification {
     id: string
@@ -20,6 +24,9 @@ export interface AppNotification {
     message: string
     data: Record<string, unknown>
     is_read: boolean
+    target_role?: string | null
+    target_user_id?: string | null
+    action_url?: string | null
     created_at: string
 }
 
@@ -52,9 +59,9 @@ async function getAuthenticatedTenantId(): Promise<{ userId: string; tenantId: s
 
 export async function getNotifications(): Promise<AppNotification[]> {
     const { tenantId } = await getAuthenticatedTenantId()
-    const adminClient = getAdminClient()
+    const supabase = await createSupabaseServerClient()
 
-    const { data, error } = await adminClient
+    const { data, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -69,9 +76,9 @@ export async function getNotifications(): Promise<AppNotification[]> {
 
 export async function markNotificationRead(id: string): Promise<void> {
     const { tenantId } = await getAuthenticatedTenantId()
-    const adminClient = getAdminClient()
+    const supabase = await createSupabaseServerClient()
 
-    await adminClient
+    await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("id", id)
@@ -82,9 +89,9 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(): Promise<void> {
     const { tenantId } = await getAuthenticatedTenantId()
-    const adminClient = getAdminClient()
+    const supabase = await createSupabaseServerClient()
 
-    await adminClient
+    await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("tenant_id", tenantId)
@@ -206,3 +213,6 @@ export async function reportLowStockItems(
 
     await adminClient.from("notifications").insert(toInsert)
 }
+
+
+

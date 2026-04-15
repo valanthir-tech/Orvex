@@ -44,7 +44,7 @@ function transformProduct(CoreEngineItem: CoreEngineItem, custom?: any) {
         productGroupId: CoreEngineItem.item_group,
         productGroup: { id: CoreEngineItem.item_group, name: CoreEngineItem.item_group },
         stockUom: CoreEngineItem.stock_uom,
-        standardRate: custom?.price || CoreEngineItem.standard_rate,
+        standardRate: custom?.price || CoreEngineItem.valuation_rate || 0,
         valuationRate: CoreEngineItem.valuation_rate || 0,
         currentStock: 0, // Will be fetched separately from Stock Ledger
         minStockLevel: 0,
@@ -103,12 +103,12 @@ export async function createProduct(data: CreateProductInput) {
             item_name: name,
             item_group: productGroupId || 'All Item Groups',
             stock_uom: stockUom || 'Nos',
-            standard_rate: standardRate,
             valuation_rate: valuationRate || standardRate,
             description: description,
             image: image,
             is_stock_item: isStockProduct ? 1 : 0,
             has_batch_no: hasBatchNo ? 1 : 0,
+            disabled: 0,
             barcodes: barcode ? [{ barcode: barcode }] : [],
         })
 
@@ -259,7 +259,7 @@ export async function getProducts(options?: {
 
         // Build filters
         const filters: [string, string, unknown][] = [
-            ['disabled', '=', 0]
+            
         ]
         
         if (options?.isStockItem !== undefined) {
@@ -280,10 +280,10 @@ export async function getProducts(options?: {
             filters,
             fields: [
                 'name', 'item_name', 'item_code', 'item_group',
-                'stock_uom', 'standard_rate', 'valuation_rate',
+                'stock_uom', 'valuation_rate',
                 'description', 'image', 'is_stock_item', 'has_batch_no', 'disabled'
             ],
-            limit: 0
+            limit: 5000
         });
 
         // 2. Fetch stock levels from 'Bin' for the tenant's warehouse
@@ -293,7 +293,7 @@ export async function getProducts(options?: {
         try {
             const bins = await client.getList<{ item_code: string; actual_qty: number }>('Bin', {
                 fields: ['item_code', 'actual_qty'],
-                limit: 0
+                limit: 5000
             });
             for (const bin of bins) {
                 // If you want warehouse-specific filtering, add it to filters or filter here
@@ -321,7 +321,7 @@ export async function getCategories() {
 
         const result = await client.getList<CoreEngineItemGroup>('Item Group', {
             fields: ['name', 'parent_item_group', 'is_group'],
-            limit: 0
+            limit: 5000
         });
 
         return result.map(group => ({

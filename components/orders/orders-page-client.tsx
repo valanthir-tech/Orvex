@@ -25,7 +25,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getOrders, updateOrderStatus, type OrderRecord } from "@/app/actions/orders"
+import { getOrders, updateOrderStatus, approveAndDispatchOrder, markOrderPaid, type OrderRecord } from "@/app/actions/orders"
 import { badgeStyles, cardStyles } from "@/lib/theme"
 
 export default function OrdersPageClient() {
@@ -84,6 +84,36 @@ export default function OrdersPageClient() {
                 return <Badge className={`${badgeStyles.info} text-xs`}>{status}</Badge>
             default:
                 return <Badge variant="outline" className="text-xs">{status}</Badge>
+        }
+    }
+
+    const handleDispatch = async (order: any) => {
+        try {
+            toast.loading(`Dispatching order ${order.name}...`, { id: order.name })
+            const res = await approveAndDispatchOrder(order.name) // name is ERPNext ID if Sales Order
+            if (res.success) {
+                toast.success(`Order Dispatched! Invoice created.`, { id: order.name })
+                loadOrders()
+            } else {
+                toast.error(res.error || "Failed to dispatch.", { id: order.name })
+            }
+        } catch (e) {
+            toast.error("Internal Error", { id: order.name })
+        }
+    }
+
+    const handleMarkPaid = async (order: any) => {
+        try {
+            toast.loading(`Marking payment for ${order.name}...`, { id: order.name })
+            const res = await markOrderPaid(order.name, order.grand_total)
+            if (res.success) {
+                toast.success(`Payment verified and ledger cleared!`, { id: order.name })
+                loadOrders()
+            } else {
+                toast.error(res.error || "Payment failed.", { id: order.name })
+            }
+        } catch (e) {
+            toast.error("Internal Error", { id: order.name })
         }
     }
 
@@ -217,12 +247,24 @@ export default function OrdersPageClient() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="rounded-xl">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem className="cursor-pointer">
+                                                    <DropdownMenuItem className="cursor-pointer border-l-2 border-transparent hover:border-blue-500">
                                                         <ArrowRight className="h-4 w-4 mr-2" /> View Details
                                                     </DropdownMenuItem>
-                                                    {order.source === 'web' && order.delivery_status === 'Processing' && (
-                                                        <DropdownMenuItem className="cursor-pointer font-medium text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50 dark:focus:bg-emerald-950/50">
-                                                            <Truck className="h-4 w-4 mr-2" /> Mark as Dispatched
+                                                    {/* Cash on Delivery Flow Actions */}
+                                                    {order.source === 'web' && order.status === 'Sales Order' && (
+                                                        <DropdownMenuItem 
+                                                            className="cursor-pointer font-medium text-amber-600 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950/50"
+                                                            onClick={() => handleDispatch(order)}
+                                                        >
+                                                            <Package className="h-4 w-4 mr-2" /> Approve & Dispatch
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {order.payment_status === 'Pending' && order.source !== 'pos' && (
+                                                        <DropdownMenuItem 
+                                                            className="cursor-pointer font-medium text-emerald-600 focus:text-emerald-600 focus:bg-emerald-50 dark:focus:bg-emerald-950/50"
+                                                            onClick={() => handleMarkPaid(order)}
+                                                        >
+                                                            <CheckCircle2 className="h-4 w-4 mr-2" /> Verify Payment (Clear Khata)
                                                         </DropdownMenuItem>
                                                     )}
                                                 </DropdownMenuContent>

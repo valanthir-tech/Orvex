@@ -1,6 +1,14 @@
 import { Metadata } from "next"
-import { StorefrontConfig } from "./components/storefront-config"
 import { getStorefrontConfig } from "@/app/actions/storefront"
+import { getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
+import { getPaymentQrCodes } from "@/app/actions/subscriptions"
+
+// Import our new storefront flow components
+import { StorefrontRequest } from "./components/storefront-request"
+import { PaymentUpload } from "./components/payment-upload"
+import { PaymentVerificationPending } from "./components/payment-verification-pending"
+import { WebsiteBuildingStatus } from "./components/website-building-status"
+import { StorefrontManagement } from "./components/storefront-management"
 
 export const metadata: Metadata = {
   title: "Storefront Config | Orvex",
@@ -8,17 +16,62 @@ export const metadata: Metadata = {
 }
 
 export default async function StorefrontPage() {
+  const ctx = await getTenantContext()
+  const supabase = await createSupabaseServerClient()
+
+  // 1. Fetch current Tenant config and storefront status
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('plan, storefront_status, payment_amount, payment_method, payment_reference, storefront_subdomain, storefront_custom_domain')
+    .eq('id', ctx.tenantId)
+    .single()
+
+  const currentPlan = tenant?.plan || 'starter'
+  const status = tenant?.storefront_status || 'not_requested'
+
+  // Add QR codes fetch for payment handling
+  const qrCodes = await getPaymentQrCodes()
+
+  // 2. We only fetch the config if the storefront is live, but for safety we can just fetch it anyway
   const { config, defaultCurrency, baseStoreName, tenantId } = await getStorefrontConfig()
 
   return (
     <div className="flex-col md:flex">
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">API & Storefront Configuration</h2>
-        </div>
-        <div className="space-y-4">
-          <StorefrontConfig initialData={config} defaultCurrency={defaultCurrency} baseStoreName={baseStoreName} tenantId={tenantId} />
-        </div>
+      <div className="flex-1 p-8 pt-6">
+        
+        {/* Render flow conditionally based on the database column constraint */}
+        {status === 'not_requested' && (
+          <StorefrontRequest currentPlan={currentPlan} />
+        )}
+
+        {status === 'payment_pending' && (
+          <PaymentUpload currentPlan={currentPlan} qrCodes={qrCodes} />
+        )}
+
+        {status === 'payment_submitted' && (
+           <PaymentVerificationPending 
+              amount={tenant?.payment_amount || 0} 
+              method={tenant?.payment_method || 'unknown'} 
+              refCode={tenant?.payment_reference || 'N/A'} 
+            />
+        )}
+
+        {/* building, or payment_verified which flows into building */}
+        {(status === 'payment_verified' || status === 'building') && (
+           <WebsiteBuildingStatus currentPlan={currentPlan} />
+        )}
+
+        {status === 'live' && (
+           <StorefrontManagement 
+              subdomain={tenant?.storefront_subdomain}
+              customDomain={tenant?.storefront_custom_domain}
+              config={config}
+              defaultCurrency={defaultCurrency}
+              baseStoreName={baseStoreName}
+              tenantId={tenantId}
+           />
+        )}
+
       </div>
     </div>
   )

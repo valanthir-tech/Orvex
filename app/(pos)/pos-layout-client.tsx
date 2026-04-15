@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { ArrowLeft, Wifi, WifiOff, Clock, Store, Keyboard, LayoutList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { useSyncWorker } from "@/hooks/use-sync-worker"
 import { Loader2 } from "lucide-react"
+import { PrinterConnect } from "@/components/pos/printer-connect"
 
 export default function POSLayoutClient({
     children,
@@ -13,11 +15,15 @@ export default function POSLayoutClient({
     children: React.ReactNode
 }) {
     const isOnline = useOnlineStatus()
+    const pathname = usePathname()
     const { isSyncing } = useSyncWorker()
+
+    const isLoginPage = pathname === '/pos/login'
 
     return (
         <div className="min-h-screen bg-muted/30 flex flex-col">
             {/* Header */}
+            {!isLoginPage && (
             <header className="h-14 border-b bg-background/95 backdrop-blur-sm px-4 flex items-center justify-between shrink-0 sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 hover:bg-muted" asChild>
@@ -50,6 +56,8 @@ export default function POSLayoutClient({
                         <span>Press <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">/</kbd> to search</span>
                     </div>
 
+                    <PrinterConnect />
+
                     {/* Sync Indicator */}
                     {isSyncing && (
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30">
@@ -81,8 +89,11 @@ export default function POSLayoutClient({
                             Activity Log
                         </Link>
                     </Button>
+                    {/* Added Printer Connect Component on the right side of the header for POS hardware layout aligned perfectly */}
+                    <PrinterConnect />
                 </div>
             </header>
+            )}
 
             {/* Content */}
             <main className="flex-1 overflow-hidden">
@@ -91,3 +102,4 @@ export default function POSLayoutClient({
         </div>
     )
 }
+

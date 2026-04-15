@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/tenant"
 import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import bcrypt from "bcryptjs"
 
 // ─── Service Client (bypasses RLS) ────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ const inviteSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().optional(),
     role: z.enum(['manager', 'cashier'], { message: "Role must be 'manager' or 'cashier'" }),
+    pinCode: z.string().length(4, "PIN must be exactly 4 digits").regex(/^\d+$/, "PIN must contain only numbers").optional(),
 })
 
 export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
@@ -53,7 +55,7 @@ export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
         return { success: false, error: validation.error.issues[0].message }
     }
 
-    const { email, firstName, lastName, role } = validation.data
+    const { email, firstName, lastName, role, pinCode } = validation.data
 
     try {
         const ctx = await requireAdminContext()
@@ -154,6 +156,11 @@ export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
         // Since this is a staff member (not owner), we manually create/update the profile.
 
         if (inviteData.user) {
+            let hashedPin = null;
+            if (pinCode) {
+                hashedPin = await bcrypt.hash(pinCode, 10);
+            }
+
             const { error: profileError } = await serviceClient
                 .from('profiles')
                 .upsert({
@@ -163,6 +170,7 @@ export async function inviteStaff(input: z.infer<typeof inviteSchema>) {
                     first_name: firstName,
                     last_name: lastName || '',
                     role: role,
+                    ...(hashedPin && { pin_code: hashedPin }),
                 }, { onConflict: 'id' })
 
             if (profileError) {
@@ -231,6 +239,48 @@ export async function listStaff(): Promise<{ success: boolean; staff?: StaffMemb
 }
 
 // ─── Update Staff Role ────────────────────────────────────────────────────────
+
+export async function updateStaffPin(staffId: string, newPin: string) {
+    try {
+        const ctx = await requireAdminContext()
+        const supabase = await createSupabaseServerClient()
+
+        if (!/^\d{4}$/.test(newPin)) {
+            return { success: false, error: "PIN must be exactly 4 digits." };
+        }
+
+        // Verify staff belongs to same tenant
+        const { data: staffProfile } = await supabase
+            .from('profiles')
+            .select('id, tenant_id, role')
+            .eq('id', staffId)
+            .eq('tenant_id', ctx.tenantId)
+            .single()
+
+        if (!staffProfile) {
+            return { success: false, error: "Staff member not found" }
+        }
+
+        const hashedPin = await bcrypt.hash(newPin, 10);
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({ pin_code: hashedPin })
+            .eq('id', staffId)
+            .eq('tenant_id', ctx.tenantId)
+
+        if (error) {
+            return { success: false, error: "Failed to update PIN" }
+        }
+
+        revalidatePath('/', 'layout')
+        return { success: true }
+
+    } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
+        return { success: false, error: error.message || "Failed to update PIN" }
+    }
+}
 
 export async function updateStaffRole(staffId: string, newRole: 'manager' | 'cashier') {
     try {

@@ -61,38 +61,42 @@ export function PricingSection() {
                 transition={{ duration: 0.8, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                 className={cn(
                   "relative flex flex-col p-8 md:p-10 rounded-[2rem] border transition-all duration-300",
-                  plan.name.toLowerCase().includes('pro') 
+                  plan.name.toLowerCase().includes('growth') 
                     ? "bg-[#171717] text-[#fcfbf9] border-[#171717] shadow-xl shadow-black/10 scale-100 lg:scale-[1.02] z-10" 
                     : "bg-white text-[#171717] border-[#171717]/10"
                 )}
               >
                 
                 <div className="mb-8">
-                    <span className={cn("font-sans text-sm tracking-wide uppercase mb-2 block", plan.name.toLowerCase().includes('pro') ? "text-[#3255f1]" : "text-gray-400")}>
-                      {plan.name.toLowerCase().includes('pro') ? "Recommended" : "Tier"}
+                    <span className={cn("font-sans text-sm tracking-wide uppercase mb-2 block", plan.name.toLowerCase().includes('growth') ? "text-[#3255f1]" : "text-gray-400")}>
+                      {plan.name.toLowerCase().includes('growth') ? "Recommended" : "Tier"}
                     </span>
                     <h3 className="font-sans text-4xl font-bold tracking-tighter mb-6">{plan.name}</h3>
                     <div className="flex items-baseline gap-2 mb-2 font-sans">
                       <span className="text-5xl md:text-6xl font-bold tracking-tighter">NPR {plan.price_npr.toLocaleString()}</span>
-                      <span className={cn("text-xs md:text-sm tracking-widest font-bold uppercase", plan.name.toLowerCase().includes('pro') ? "text-white/40" : "text-gray-400")}>/{plan.billing_period}</span>
+                      <span className={cn("text-xs md:text-sm tracking-widest font-bold uppercase", plan.name.toLowerCase().includes('growth') ? "text-white/40" : "text-gray-400")}>/{plan.billing_period}</span>
                     </div>
                   </div>
 
                 <div className="space-y-4 mb-10 flex-grow">
-                  <FeatureRow included={plan.features.pos} text="Resilient Offline POS" dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={plan.features.inventory} text="Unified Inventory Sync" dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={plan.features.khata} text="Khata & Ledgers" dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={plan.features.multi_warehouse} text="Multi-Warehouse Support" dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={plan.features.api_access} text="Headless API Access" dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={true} text={`${plan.max_stores} Store Location${plan.max_stores > 1 ? 's' : ''}`} dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={true} text={`${plan.max_staff} Staff User${plan.max_staff > 1 ? 's' : ''}`} dark={plan.name.toLowerCase().includes('pro')} />
-                  <FeatureRow included={true} text={`${plan.features.reports === 'advanced' ? 'Advanced' : 'Basic'} Reports`} dark={plan.name.toLowerCase().includes('pro')} />
+                  <FeatureRow included={plan.features.offline_pos} text="Offline POS (works w/o internet)" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={true} text={plan.max_stores === -1 ? "Unlimited Store Locations" : `${plan.max_stores} Store Location${plan.max_stores > 1 ? 's' : ''}`} dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={true} text={`${plan.max_staff} Staff Accounts`} dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={true} text={plan.max_products === -1 ? "Unlimited Products" : `${plan.max_products} Products`} dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.khata} text="Digital Khata (Udhaaro)" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.payment_integration} text="Payment Integration" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.receipt_printing} text="Receipt Printing" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={true} text={`Website: ${plan.features.website}`} dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.whatsapp_ordering} text="WhatsApp Ordering" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={true} text={`Analytics & Reports: ${plan.features.reports}`} dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.multi_warehouse} text="Multi-Warehouse Support" dark={plan.name.toLowerCase().includes('growth')} />
+                  <FeatureRow included={plan.features.api_access} text="API Access" dark={plan.name.toLowerCase().includes('growth')} />
                 </div>
 
                 <button 
                   className={cn(
                     "w-full py-4 rounded-full font-sans text-sm tracking-wide uppercase font-bold transition-all duration-300 hover:scale-105 active:scale-95",
-                    plan.name.toLowerCase().includes('pro')
+                    plan.name.toLowerCase().includes('growth')
                       ? "bg-[#3255f1] text-white hover:bg-[#3255f1]/90 shadow-lg shadow-[#3255f1]/20"
                       : "bg-[#171717] text-[#fcfbf9] hover:bg-[#171717]/90 shadow-lg shadow-black/10"
                   )}
@@ -118,3 +122,4 @@ function FeatureRow({ included, text, dark }: { included: boolean; text: string;
     </div>
   );
 }
+

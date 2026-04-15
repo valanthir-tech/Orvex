@@ -85,7 +85,6 @@ export async function middleware(request: NextRequest) {
     const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/auth') || url.pathname.startsWith('/signup') || url.pathname.startsWith('/forgot-password')
     const isMarketingPage = url.pathname === '/'
     const isProtectedPage = url.pathname.startsWith('/dashboard') ||
-        url.pathname.startsWith('/pos') ||
         url.pathname.startsWith('/products') ||
         url.pathname.startsWith('/orders') ||
         url.pathname.startsWith('/inventory') ||

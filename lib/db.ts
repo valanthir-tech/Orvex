@@ -69,6 +69,20 @@ export interface SyncLog {
   responseData?: string;
 }
 
+export interface StaffProfile {
+  id: string;
+  tenant_id: string;
+  role: string;
+  full_name: string;
+  pin_code: string;
+  permissions: any;
+}
+
+export interface DeviceConfig {
+  key: string;
+  value: string;
+}
+
 // ----------------------------------------------------------------------
 // DATABASE CLASS
 // ----------------------------------------------------------------------
@@ -79,6 +93,8 @@ export class OrvexPOSDB extends Dexie {
   failedOrders!: Table<Order>;
   sessions!: Table<PosSession>;
   syncLogs!: Table<SyncLog>;
+  staffProfiles!: Table<StaffProfile>;
+  configStore!: Table<DeviceConfig>;
 
   constructor() {
     super('OrvexPOSDB');
@@ -96,6 +112,16 @@ export class OrvexPOSDB extends Dexie {
       failedOrders: '++id, &uuid, status, createdAt, paymentMode',
       sessions: '++id, status, openedBy',
       syncLogs: '++id, orderUuid, action, timestamp',
+    });
+
+    this.version(3).stores({
+      products: '&id, name, sku, category, barcode, isActive',
+      orders: '++id, &uuid, status, createdAt, paymentMode',
+      failedOrders: '++id, &uuid, status, createdAt, paymentMode',
+      sessions: '++id, status, openedBy',
+      syncLogs: '++id, orderUuid, action, timestamp',
+      staffProfiles: '&id, tenant_id, role, pin_code',
+      configStore: '&key',
     });
   }
 }

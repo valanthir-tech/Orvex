@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Edit2, Plus, Search, Trash2, UserPlus, Wallet, TrendingUp } from "lucide-react"
+import { badgeStyles, cardStyles } from "@/lib/theme"
 
 export function CustomersPageClient({ initialCustomers }: { initialCustomers: Customer[] }) {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
@@ -93,61 +94,108 @@ export function CustomersPageClient({ initialCustomers }: { initialCustomers: Cu
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold font-heading tracking-tight">Customers</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage your customer profiles, loyalty balances, and credit limits.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => openForm()}
+            className="btn-pill gap-2 h-11 shadow-lg shadow-primary/20"
+          >
+            <Plus className="h-4 w-4" />
+            Add Customer
+          </Button>
+        </div>
+      </div>
+
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className={cardStyles.teal.card}>
+          <div className={cardStyles.teal.overlay} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Customers</CardTitle>
+            <div className={cardStyles.teal.icon}>
+              <UserPlus className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customers.length}</div>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold font-heading">{customers.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Active registered profiles</p>
           </CardContent>
         </Card>
-        <Card className="bg-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding Balances</CardTitle>
-            <Wallet className="h-4 w-4 text-rose-500" />
+
+        <Card className={cardStyles.rose.card}>
+          <div className={cardStyles.rose.overlay} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Balances</CardTitle>
+            <div className={cardStyles.rose.icon}>
+              <Wallet className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-rose-600">₹{totalBalance.toLocaleString()}</div>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-rose-600 font-heading">₹{totalBalance.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">Khata/Credit owed</p>
           </CardContent>
         </Card>
-        <Card className="bg-card hidden lg:block">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total LTV (Sales)</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+
+        <Card className={`${cardStyles.emerald.card} hidden sm:block`}>
+          <div className={cardStyles.emerald.overlay} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total LTV (Sales)</CardTitle>
+            <div className={cardStyles.emerald.icon}>
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">₹{totalLTV.toLocaleString()}</div>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-emerald-600 font-heading">₹{totalLTV.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground mt-1">Lifetime generated revenue</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Table Area */}
-      <Card>
-        <CardHeader className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b bg-muted/20">
-          <div className="relative w-full md:max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search by name or phone..."
-              className="w-full pl-9 bg-background"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <Button onClick={() => openForm()} className="w-full md:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Button>
-        </CardHeader>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search by name or phone..."
+          className="pl-10 h-11 rounded-xl"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
-        <div className="overflow-x-auto rounded-b-lg">
-          <Table>
+      {/* Main Table Area */}
+      <Card className="card-float border-0 rounded-2xl">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 pb-4">
+          <div>
+            <CardTitle className="text-lg font-heading">All Customers</CardTitle>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {filteredCustomers.length === customers.length
+                ? `${customers.length} registered profiles`
+                : `Showing ${filteredCustomers.length} of ${customers.length} profiles`}
+            </p>
+          </div>
+          {search && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setSearch("")}
+            >
+              Clear filter
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto rounded-b-2xl">
+            <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Customer</TableHead>
@@ -216,8 +264,8 @@ export function CustomersPageClient({ initialCustomers }: { initialCustomers: Cu
             </TableBody>
           </Table>
         </div>
+        </CardContent>
       </Card>
-
       {/* Customer Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
