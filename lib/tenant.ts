@@ -188,3 +188,47 @@ export const getTenantClient = cache(async () => {
     const ctx = await getTenantContext();
     return ctx.client;
 });
+
+/**
+ * Fetch ERP Client directly by Tenant ID (Used for background/cron jobs where cookies are not present)
+ */
+export async function getTenantErpClient(tenantId: string): Promise<CoreEngineClient> {
+    const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: tenant, error: tenantError } = await adminClient
+        .from('tenants')
+        .select('erpnext_url, erpnext_api_key, erpnext_api_secret, status')
+        .eq('id', tenantId)
+        .single();
+
+    if (tenantError || !tenant) {
+        throw new Error("Tenant Not Found: " + tenantId);
+    }
+
+    if (tenant.status !== 'active') {
+        throw new Error(`Tenant Suspended: Status is ${tenant.status}`);
+    }
+
+    let decryptedApiKey = tenant.erpnext_api_key;
+    let decryptedApiSecret = tenant.erpnext_api_secret;
+
+    try {
+        const decrypted = decryptCredentials({
+            encryptedApiKey: tenant.erpnext_api_key,
+            encryptedApiSecret: tenant.erpnext_api_secret
+        });
+        decryptedApiKey = decrypted.apiKey;
+        decryptedApiSecret = decrypted.apiSecret;
+    } catch (err) {
+        throw new Error("Misconfigured Tenant: Unable to access credentials");
+    }
+
+    return new CoreEngineClient({
+        url: tenant.erpnext_url,
+        apiKey: decryptedApiKey,
+        apiSecret: decryptedApiSecret
+    });
+}

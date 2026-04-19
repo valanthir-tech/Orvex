@@ -81,8 +81,10 @@ export function TerminalRegistrationCard() {
                         email: p.email,
                         first_name: p.first_name,
                         last_name: p.last_name,
+                        full_name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown',
                         role: p.role,
-                        pin_code: p.pin_code
+                        pin_code: p.pin_code,
+                        permissions: p.permissions || null
                     }))
                     await db.staffProfiles.clear()
                     await db.staffProfiles.bulkPut(profilesToStore)

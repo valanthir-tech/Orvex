@@ -84,7 +84,7 @@ export const POST = withApiAuth(async (req, ctx) => {
             .from('storefront_orders')
             .insert({
                 tenant_id: ctx.tenantId,
-                customer_id: ctx.user?.id || null, // Will be null for guest checkouts
+                customer_id: ctx.customer?.sub || null, // Will be null for guest checkouts
                 order_number: newOrderNumber,
                 status: 'pending',          // Storefront status
                 sync_status: 'pending',     // ERPNext Sync worker status

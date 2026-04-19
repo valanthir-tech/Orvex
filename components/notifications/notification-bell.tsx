@@ -220,7 +220,7 @@ export function NotificationBell({ tenantId }: NotificationBellProps) {
                                         "w-full text-left px-4 py-3 flex gap-3 transition-colors hover:bg-muted/40",
                                         !n.is_read && "bg-primary/5 hover:bg-primary/8"
                                     )}
-                                    onClick={() => { if (!n.is_read) { handleMarkRead(n.id) }; if (n.action_url) { window.location.href = n.action_url } }}}
+                                    onClick={() => { if (!n.is_read) { handleMarkRead(n.id) }; if (n.action_url) { window.location.href = n.action_url } }}
                                 >
                                     {/* Icon */}
                                     <div className={cn(

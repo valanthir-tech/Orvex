@@ -134,7 +134,7 @@ export async function approveAndDispatchOrder(salesOrderId: string): Promise<{ s
         const client = await getTenantClient()
         
         // 1. Fetch the original Sales Order
-        const salesOrder = await client.getDoc("Sales Order", salesOrderId)
+        const salesOrder: any = await client.getDoc("Sales Order", salesOrderId)
         if (!salesOrder) throw new Error("Sales Order not found")
 
         // 2. Create a Sales Invoice from the Sales Order
@@ -169,7 +169,7 @@ export async function markOrderPaid(invoiceId: string, amount: number, modeOfPay
     try {
         const client = await getTenantClient()
         
-        const invoice = await client.getDoc("Sales Invoice", invoiceId)
+        const invoice: any = await client.getDoc("Sales Invoice", invoiceId)
         if (!invoice) throw new Error("Sales Invoice not found")
 
         // Create Payment Entry to wipe the Udhaaro (Outstanding)

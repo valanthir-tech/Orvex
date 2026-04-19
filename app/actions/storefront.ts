@@ -13,6 +13,16 @@ export interface StorefrontConfigPayload {
     is_checkout_disabled?: boolean
     is_maintenance_mode?: boolean
     theme_blocks?: any[]
+    theme_primary_color?: string
+    theme_text_color?: string
+    theme_bg_color?: string
+    logo_url?: string
+    favicon_url?: string
+    hero_image_url?: string
+    hero_heading?: string
+    hero_subheading?: string
+    about_text?: string
+    social_links?: any
 }
 
 // ------------------------------------------

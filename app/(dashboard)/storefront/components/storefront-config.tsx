@@ -4,6 +4,7 @@ import * as React from "react"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { updateStorefrontConfig, StorefrontConfigPayload } from "@/app/actions/storefront"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +19,7 @@ import { PlusCircle, GripVertical, Trash2, Loader2 } from "lucide-react"
 export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, tenantId }: { initialData: any, defaultCurrency: string, baseStoreName: string, tenantId: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  
+
   const [storeName, setStoreName] = useState(initialData?.store_name || baseStoreName)
   const [supportEmail, setSupportEmail] = useState(initialData?.support_email || "")
   const [taxRate, setTaxRate] = useState(initialData?.tax_rate_fallback || 0)
@@ -26,6 +27,18 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
 
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(!!initialData?.is_maintenance_mode)
   const [isCheckoutDisabled, setIsCheckoutDisabled] = useState(!!initialData?.is_checkout_disabled)
+
+  const [logoUrl, setLogoUrl] = useState(initialData?.logo_url || "")
+  const [faviconUrl, setFaviconUrl] = useState(initialData?.favicon_url || "")
+  const [heroImageUrl, setHeroImageUrl] = useState(initialData?.hero_image_url || "")
+  const [heroHeading, setHeroHeading] = useState(initialData?.hero_heading || "")
+  const [heroSubheading, setHeroSubheading] = useState(initialData?.hero_subheading || "")
+  const [aboutText, setAboutText] = useState(initialData?.about_text || "")
+  const [socialLinks, setSocialLinks] = useState(initialData?.social_links || { facebook: "", instagram: "", twitter: "", youtube: "" })
+
+  const [themePrimaryColor, setThemePrimaryColor] = useState(initialData?.theme_primary_color || "#4b5563")
+  const [themeTextColor, setThemeTextColor] = useState(initialData?.theme_text_color || "#1f2937")
+  const [themeBgColor, setThemeBgColor] = useState(initialData?.theme_bg_color || "#ffffff")
 
   const [themeBlocks, setThemeBlocks] = useState<any[]>(initialData?.theme_blocks?.length ? initialData.theme_blocks : [
     { id: "b1", type: "hero", title: "Hero Banner", config: { headline: "Welcome to our Gallery", subheadline: "Explore the latest curations." } },
@@ -45,6 +58,56 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
         toast.success("General settings saved successfully")
       } catch (err: any) {
         toast.error("Failed to save settings: " + err.message)
+      }
+    })
+  }
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: (url: string) => void) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const supabase = createSupabaseBrowserClient()
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${tenantId}/${Date.now()}-${Math.random()}.${fileExt}`
+    
+    toast("Uploading image...")
+    
+    try {
+      const { data, error } = await supabase.storage
+         .from('storefront_media')
+         .upload(fileName, file)
+         
+      if (error) {
+         toast.error("Upload failed: " + error.message)
+         return
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+         .from('storefront_media')
+         .getPublicUrl(fileName)
+         
+      setter(publicUrl)
+      toast.success("Image uploaded successfully!")
+    } catch (err: any) {
+      toast.error("Upload error: " + err.message)
+    }
+  }
+  const handleSaveBranding = () => {
+    startTransition(async () => {
+      try {
+        await updateStorefrontConfig({
+          logo_url: logoUrl,
+          favicon_url: faviconUrl,
+          hero_image_url: heroImageUrl,
+          hero_heading: heroHeading,
+          hero_subheading: heroSubheading,
+          about_text: aboutText,
+          social_links: socialLinks,
+          theme_primary_color: themePrimaryColor,
+          theme_text_color: themeTextColor,
+          theme_bg_color: themeBgColor,
+        })
+        toast.success("Branding details saved successfully")
+      } catch (err: any) {
+        toast.error("Failed to save branding: " + err.message)
       }
     })
   }
@@ -86,6 +149,7 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
     <Tabs defaultValue="general" className="space-y-4">
       <TabsList>
         <TabsTrigger value="general">Store Profile</TabsTrigger>
+        <TabsTrigger value="branding">Branding & Text</TabsTrigger>
         <TabsTrigger value="cms">Theme Builder</TabsTrigger>
         <TabsTrigger value="danger">Store Status</TabsTrigger>
       </TabsList>
@@ -102,9 +166,9 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
                 </CardDescription>
               </div>
               <Button asChild variant="outline" size="sm">
-                <a 
-                  href={`/store/${(storeName || baseStoreName).toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '')}`} 
-                  target="_blank" 
+                <a
+                  href={`/store/${(storeName || baseStoreName).toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '')}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                 >
                   View Live Store ↗
@@ -160,7 +224,133 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
         </Card>
       </TabsContent>
 
-{/* CMS THEME BUILDER */}
+      {/* BRANDING & TEXT */}
+      <TabsContent value="branding" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Branding & Media</CardTitle>
+            <CardDescription>Upload URLs for your main logos and hero image to keep the storefront on brand.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-3">
+              <Label>Logo</Label>
+              <div className="flex gap-2">
+                <Input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                <div>
+                  <Input type="file" id="logoUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setLogoUrl)} />
+                  <Button variant="outline" onClick={() => document.getElementById('logoUpload')?.click()}>Upload Logo</Button>
+                </div>
+              </div>
+              {logoUrl && <img src={logoUrl} alt="Logo Preview" className="h-10 object-contain w-auto mt-2" />}
+            </div>
+            
+            <div className="grid gap-3">
+              <Label>Favicon</Label>
+              <div className="flex gap-2">
+                <Input value={faviconUrl} onChange={e => setFaviconUrl(e.target.value)} placeholder="https://example.com/favicon.ico" />
+                <div>
+                  <Input type="file" id="faviconUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setFaviconUrl)} />
+                  <Button variant="outline" onClick={() => document.getElementById('faviconUpload')?.click()}>Upload Favicon</Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <Label>Hero Section Background Image</Label>
+              <div className="flex gap-2">
+                <Input value={heroImageUrl} onChange={e => setHeroImageUrl(e.target.value)} placeholder="https://example.com/hero.jpg" />
+                <div>
+                  <Input type="file" id="heroUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setHeroImageUrl)} />
+                  <Button variant="outline" onClick={() => document.getElementById('heroUpload')?.click()}>Upload Hero</Button>
+                </div>
+              </div>
+              {heroImageUrl && <img src={heroImageUrl} alt="Hero Preview" className="h-32 object-cover w-full rounded-md mt-2 opacity-80" />}
+            </div>
+          </CardContent>
+          <Separator />
+          <CardHeader>
+            <CardTitle>Core Texts</CardTitle>
+            <CardDescription>Update your Homepage welcome and About section.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <Label>Hero Heading</Label>
+              <Input value={heroHeading} onChange={e => setHeroHeading(e.target.value)} placeholder="Welcome to our Store" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Hero Subheading</Label>
+              <Input value={heroSubheading} onChange={e => setHeroSubheading(e.target.value)} placeholder="Find the best items here." />
+            </div>
+            <div className="grid gap-2">
+              <Label>About Us Summary</Label>
+              <Textarea rows={4} value={aboutText} onChange={e => setAboutText(e.target.value)} placeholder="We are a local brand..." />
+            </div>
+          </CardContent>
+          <Separator />
+          <CardHeader>
+            <CardTitle>Social Links</CardTitle>
+            <CardDescription>Displayed in the site footer.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Facebook URL</Label>
+                <Input value={socialLinks.facebook || ""} onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })} placeholder="https://facebook.com/..." />
+              </div>
+              <div className="grid gap-2">
+                <Label>Instagram URL</Label>
+                <Input value={socialLinks.instagram || ""} onChange={e => setSocialLinks({ ...socialLinks, instagram: e.target.value })} placeholder="https://instagram.com/..." />
+              </div>
+              <div className="grid gap-2">
+                <Label>Twitter/X URL</Label>
+                <Input value={socialLinks.twitter || ""} onChange={e => setSocialLinks({ ...socialLinks, twitter: e.target.value })} placeholder="https://twitter.com/..." />
+              </div>
+              <div className="grid gap-2">
+                <Label>YouTube URL</Label>
+                <Input value={socialLinks.youtube || ""} onChange={e => setSocialLinks({ ...socialLinks, youtube: e.target.value })} placeholder="https://youtube.com/..." />
+              </div>
+            </div>
+
+            <div className="pt-6 mt-6 border-t">
+              <h3 className="font-semibold text-lg text-slate-800 mb-2">Theme Colors</h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Define the colors for text and backgrounds on your storefront. Choose colors that contrast nicely over your uploaded images.
+              </p>
+              <div className="grid gap-6 md:grid-cols-3 mb-6">
+                <div className="space-y-2">
+                  <Label>Primary Brand Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input type="color" className="w-12 h-10 p-1 cursor-pointer" value={themePrimaryColor} onChange={e => setThemePrimaryColor(e.target.value)} title="Choose Primary Color" />
+                    <Input value={themePrimaryColor} onChange={e => setThemePrimaryColor(e.target.value)} placeholder="#4b5563" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Text Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input type="color" className="w-12 h-10 p-1 cursor-pointer" value={themeTextColor} onChange={e => setThemeTextColor(e.target.value)} title="Choose Text Color" />
+                    <Input value={themeTextColor} onChange={e => setThemeTextColor(e.target.value)} placeholder="#1f2937" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Background Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input type="color" className="w-12 h-10 p-1 cursor-pointer" value={themeBgColor} onChange={e => setThemeBgColor(e.target.value)} title="Choose Background Color" />
+                    <Input value={themeBgColor} onChange={e => setThemeBgColor(e.target.value)} placeholder="#ffffff" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSaveBranding} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Branding
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
+      {/* CMS THEME BUILDER */}
       <TabsContent value="cms" className="space-y-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -189,28 +379,28 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
                   {/* Basic editors based on block type */}
                   {block.type === "hero" && (
                     <div className="grid gap-2">
-                      <Input 
-                        value={block.config.headline} 
+                      <Input
+                        value={block.config.headline}
                         onChange={(e) => {
                           const newBlocks = [...themeBlocks]
                           newBlocks[index].config.headline = e.target.value
                           setThemeBlocks(newBlocks)
-                        }} 
-                        placeholder="Headline" 
+                        }}
+                        placeholder="Headline"
                       />
-                      <Input 
-                        value={block.config.subheadline} 
+                      <Input
+                        value={block.config.subheadline}
                         onChange={(e) => {
                           const newBlocks = [...themeBlocks]
                           newBlocks[index].config.subheadline = e.target.value
                           setThemeBlocks(newBlocks)
-                        }} 
-                        placeholder="Subheadline" 
+                        }}
+                        placeholder="Subheadline"
                       />
                     </div>
                   )}
                   {block.type === "about-history" && (
-                    <Textarea 
+                    <Textarea
                       value={block.config.text}
                       onChange={(e) => {
                         const newBlocks = [...themeBlocks]
@@ -223,8 +413,8 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
                   {block.type === "featured-grid" && (
                     <div className="flex items-center gap-2">
                       <Label>Product Limit:</Label>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         value={block.config.limit}
                         onChange={(e) => {
                           const newBlocks = [...themeBlocks]
