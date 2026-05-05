@@ -6,6 +6,7 @@ import { getSubscriptionPlans, SubscriptionPlan } from '@/app/actions/subscripti
 import { Check, X } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import Link from 'next/link';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -84,25 +85,22 @@ export function PricingSection() {
                   <FeatureRow included={true} text={`${plan.max_staff} Staff Accounts`} dark={plan.name.toLowerCase().includes('growth')} />
                   <FeatureRow included={true} text={plan.max_products === -1 ? "Unlimited Products" : `${plan.max_products} Products`} dark={plan.name.toLowerCase().includes('growth')} />
                   <FeatureRow included={plan.features.khata} text="Digital Khata (Udhaaro)" dark={plan.name.toLowerCase().includes('growth')} />
-                  <FeatureRow included={plan.features.payment_integration} text="Payment Integration" dark={plan.name.toLowerCase().includes('growth')} />
                   <FeatureRow included={plan.features.receipt_printing} text="Receipt Printing" dark={plan.name.toLowerCase().includes('growth')} />
                   <FeatureRow included={true} text={`Website: ${plan.features.website}`} dark={plan.name.toLowerCase().includes('growth')} />
-                  <FeatureRow included={plan.features.whatsapp_ordering} text="WhatsApp Ordering" dark={plan.name.toLowerCase().includes('growth')} />
                   <FeatureRow included={true} text={`Analytics & Reports: ${plan.features.reports}`} dark={plan.name.toLowerCase().includes('growth')} />
-                  <FeatureRow included={plan.features.multi_warehouse} text="Multi-Warehouse Support" dark={plan.name.toLowerCase().includes('growth')} />
-                  <FeatureRow included={plan.features.api_access} text="API Access" dark={plan.name.toLowerCase().includes('growth')} />
                 </div>
 
-                <button 
+                <Link 
+                  href="/signup"
                   className={cn(
-                    "w-full py-4 rounded-full font-sans text-sm tracking-wide uppercase font-bold transition-all duration-300 hover:scale-105 active:scale-95",
+                    "w-full py-4 rounded-full font-sans text-sm tracking-wide uppercase font-bold transition-all duration-300 hover:scale-105 active:scale-95 text-center flex items-center justify-center",
                     plan.name.toLowerCase().includes('growth')
                       ? "bg-[#3255f1] text-white hover:bg-[#3255f1]/90 shadow-lg shadow-[#3255f1]/20"
                       : "bg-[#171717] text-[#fcfbf9] hover:bg-[#171717]/90 shadow-lg shadow-black/10"
                   )}
                 >
                   Get Started
-                </button>
+                </Link>
               </motion.div>
             ))}
           </div>

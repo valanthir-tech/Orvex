@@ -9,6 +9,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { PolicyModal } from '@/components/landing/policy-modal';
+import { DigitalStorefrontAnimation, OfflinePOSAnimation, UnifiedInventoryAnimation } from '@/components/landing/platform-animations';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,20 +19,41 @@ const projects = [
   {
     title: "Digital Storefronts",
     category: "ONLINE CHANNELS",
-    image: "/browsing-fashion.png",
-    description: "Beautiful, dynamic e-commerce websites seamlessly integrated with your back-office. Engineered specifically for speed, conversion, and presenting your products in a premium shopping experience while matching in-store inventory instantaneously."
+    Animation: DigitalStorefrontAnimation,
+    description: "Beautiful, dynamic e-commerce websites seamlessly integrated with your back-office. Engineered specifically for speed, conversion, and presenting your products in a premium shopping experience while matching in-store inventory instantaneously.",
+    longDescription: "Our Digital Storefronts are built with modern frameworks and powered by edge computing, ensuring sub-second page loads. Every product action—from carts to checkout—reflects real-time inventory from your physical stores. With seamless mobile responsiveness, your online presence becomes a high-converting, intelligent extension of your brand.",
+    features: [
+      "Sub-second page load times",
+      "Real-time ERP stock synchronization",
+      "Dynamic tenant routing (BFF Architecture)",
+      "Optimized SEO & mobile-first design"
+    ]
   },
   {
     title: "Resilient Offline POS",
     category: "PHYSICAL LOCATIONS",
-    image: "/cashier-boutique.png",
-    description: "A lightning-fast point-of-sale system that continues to work flawlessly even when the internet drops. Complete idempotency ensures that you never miss a sale due to hardware chaos, network drops, or erratic power."
+    Animation: OfflinePOSAnimation,
+    description: "A lightning-fast point-of-sale system that continues to work flawlessly even when the internet drops. Complete idempotency ensures that you never miss a sale due to hardware chaos, network drops, or erratic power.",
+    longDescription: "The Orvex POS is designed for the harsh realities of physical retail in Nepal. Built fundamentally offline-first with IndexedDB, all transactions are queued instantly whether the internet is up or down. Hardware interruptions—such as printer cable pulls or power outages—are handled gracefully. Automatic idempotency checks prevent any duplicate billing when the network reconnects.",
+    features: [
+      "100% Offline-first transaction queuing",
+      "Idempotent UUID sync prevents double billing",
+      "Resilient to thermal printer hardware dropouts",
+      "Instant multi-terminal local caching"
+    ]
   },
   {
     title: "Unified Inventory API",
     category: "SOURCE OF TRUTH",
-    image: "/stylish-shopper.png",
-    description: "A single, centralized brain for your stock. Sell an item in your physical boutique and watch it instantly update online, eliminating double-billing and out-of-stock nightmares across all your channels."
+    Animation: UnifiedInventoryAnimation,
+    description: "A single, centralized brain for your stock. Sell an item in your physical boutique and watch it instantly update online, eliminating double-billing and out-of-stock nightmares across all your channels.",
+    longDescription: "Acting as the undisputed central source of truth, our ERPNext-powered backend enforces strict data governance across all tenant platforms. Custom background workers continuously handle asynchronous webhook events to keep the caching layer in perfect harmony with the core database, preventing overselling without blocking node API performance.",
+    features: [
+      "Strict ERPNext-governed source of truth",
+      "Asynchronous background worker queues",
+      "High-speed caching for edge retrieval",
+      "Absolute multi-tenant data isolation"
+    ]
   },
 ];
 
@@ -60,7 +82,6 @@ const capabilities = [
 
 export default function MarketingPage() {
   const [activeItem, setActiveItem] = useState<number | null>(0);
-  const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null);
   const [activePolicy, setActivePolicy] = useState<'privacy' | 'terms' | 'refund' | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -114,7 +135,7 @@ export default function MarketingPage() {
           <Link href="/login" className="hidden md:block font-sans text-sm tracking-wide uppercase text-[#171717]/80 hover:text-[#3255f1] transition-colors font-bold px-4 py-2">
             Login
           </Link>
-          <Link href="/login" className="flex items-center justify-center px-6 py-2.5 bg-[#3255f1] text-white rounded-full font-sans text-sm tracking-wide uppercase font-bold hover:bg-[#3255f1]/90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-[#3255f1]/20">
+          <Link href="/signup" className="flex items-center justify-center px-6 py-2.5 bg-[#3255f1] text-white rounded-full font-sans text-sm tracking-wide uppercase font-bold hover:bg-[#3255f1]/90 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-[#3255f1]/20">
             Get Started
           </Link>
         </div>
@@ -280,28 +301,11 @@ export default function MarketingPage() {
                     index % 2 !== 0 ? "md:mt-32" : ""
                   )}
                 >
-                  <div className="relative aspect-[4/3] rounded-[2rem] overflow-hidden transition-all duration-700 ease-premium group-hover:-translate-y-4 group-hover:shadow-2xl group-hover:shadow-[#3255f1]/10">
+                  <div className="relative aspect-[4/3] overflow-hidden">
                     <div 
-                      className="absolute inset-0 transition-transform duration-700 ease-premium group-hover:scale-105"
+                      className="absolute inset-0"
                     >
-                      <Image
-                        src={project.image}
-                        alt={project.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                      />
-                    </div>
-                    
-                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-700" />
-                    
-                    <div className="absolute bottom-8 right-8 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-premium">
-                      <button 
-                        onClick={() => setSelectedProject(project)}
-                        className="px-6 py-3 bg-white text-[#171717] rounded-full font-sans text-sm tracking-wide uppercase font-bold shadow-xl hover:bg-gray-100 transition-colors"
-                      >
-                        View Focus
-                      </button>
+                      <project.Animation />
                     </div>
                   </div>
 
@@ -349,11 +353,11 @@ export default function MarketingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16 mb-32 border-t border-white/10 pt-16">
-            <div className="col-span-1 md:col-span-1 flex flex-col">
-                <Link href="/" className="block -mt-4 -ml-4 -mb-2">
+            <div className="col-span-1 md:col-span-1 flex flex-col gap-4">
+                <Link href="/" className="block -ml-4">
                   <Image src="/orvex-horizontal-footer.png" alt="Orvex Logo" width={200} height={50} className="w-56 h-auto" priority />
                 </Link>
-                <p className="font-sans text-sm text-white/50 leading-relaxed max-w-sm -mt-4 relative z-10">
+                <p className="font-sans text-sm text-white/50 leading-relaxed max-w-sm relative z-10">
                 Orvex is Nepal's first modern retail operating system, bridging intuitive offline point-of-sale with dynamic e-commerce operations.
               </p>
             </div>
@@ -391,55 +395,6 @@ export default function MarketingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Project Modal Overlay */}
-      <AnimatePresence>
-        {selectedProject && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-md"
-            onClick={() => setSelectedProject(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative w-full max-w-2xl overflow-hidden bg-white rounded-3xl shadow-2xl text-[#171717]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="relative w-full h-64 md:h-80">
-                <Image
-                  src={selectedProject.image}
-                  alt={selectedProject.title}
-                  fill
-                  className="object-cover"
-                />
-                <button
-                  onClick={() => setSelectedProject(null)}
-                  className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white text-black rounded-full backdrop-blur-sm transition-all"
-                >
-                  <Plus className="w-6 h-6 rotate-45" />
-                </button>
-              </div>
-              <div className="p-8 md:p-12 space-y-4">
-                <span className="font-sans text-sm tracking-wide uppercase text-[#3255f1] font-semibold">
-                  {selectedProject.category}
-                </span>
-                <h2 className="font-sans text-3xl md:text-5xl font-bold tracking-tight">
-                  {selectedProject.title}
-                </h2>
-                <div className="h-[1px] w-full bg-gray-200 my-6" />
-                <p className="font-sans text-lg md:text-xl text-gray-600 leading-relaxed">
-                  {selectedProject.description}
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Policy Modal */}
       <PolicyModal policy={activePolicy} onClose={() => setActivePolicy(null)} />

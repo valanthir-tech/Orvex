@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { updateStorefrontConfig, StorefrontConfigPayload } from "@/app/actions/storefront"
+import { updateStorefrontConfig } from "@/app/actions/storefront"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -14,10 +13,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { PlusCircle, GripVertical, Trash2, Loader2 } from "lucide-react"
+import { GripVertical, Loader2 } from "lucide-react"
 
 export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, tenantId }: { initialData: any, defaultCurrency: string, baseStoreName: string, tenantId: string }) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [storeName, setStoreName] = useState(initialData?.store_name || baseStoreName)
@@ -41,10 +39,43 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
   const [themeBgColor, setThemeBgColor] = useState(initialData?.theme_bg_color || "#ffffff")
 
   const [themeBlocks, setThemeBlocks] = useState<any[]>(initialData?.theme_blocks?.length ? initialData.theme_blocks : [
-    { id: "b1", type: "hero", title: "Hero Banner", config: { headline: "Welcome to our Gallery", subheadline: "Explore the latest curations." } },
-    { id: "b2", type: "about-history", title: "Our History", config: { text: "Founded in 2026, we specialize in..." } },
-    { id: "b3", type: "featured-grid", title: "Featured Artworks", config: { limit: 8 } }
+    { id: "b1", type: "clean-hero", title: "Clean Hero Banner", config: { headline: "Simplicity Reimagined", subheadline: "Discover the new standard." } },
+    { id: "b2", type: "product-grid", title: "Product Grid", config: { limit: 8 } },
+    { id: "b3", type: "banner-with-image", title: "Feature Banner", config: { headline: "Quality First", image: "" } }
   ])
+
+  // Content fields
+  const [tagline, setTagline] = useState(initialData?.tagline || "")
+  const [philosophyText, setPhilosophyText] = useState(initialData?.philosophy_text || "")
+  const [aboutHeadline, setAboutHeadline] = useState(initialData?.about_headline || "")
+  const [testimonialQuote, setTestimonialQuote] = useState(initialData?.testimonial_quote || "")
+  const [testimonialAuthor, setTestimonialAuthor] = useState(initialData?.testimonial_author || "")
+  const [newsletterDescription, setNewsletterDescription] = useState(initialData?.newsletter_description || "")
+  const [themeTemplate, setThemeTemplate] = useState(initialData?.theme_template || "default")
+
+  const [materials, setMaterials] = useState<Array<{ label: string; sublabel: string }>>(
+    initialData?.materials?.length ? initialData.materials : [
+      { label: "Solid Oak", sublabel: "Natural wood grain, ethically sourced" },
+      { label: "Stoneware Ceramic", sublabel: "Hand-thrown, kiln-fired at 1280°C" },
+      { label: "Aged Brass", sublabel: "Living finish, deepens with time" },
+    ]
+  )
+  const [uiLabels, setUiLabels] = useState<Record<string, string>>(initialData?.ui_labels || {
+    hero_primary_button: "Explore the Collection",
+    hero_secondary_button: "View All Products →",
+    featured_label: "Featured Selection",
+    featured_badge: "Featured",
+    button_view_product: "View Product",
+    button_view_all: "View All →",
+    product_grid_label: "Our Offering",
+    product_grid_heading: "The Collection",
+    categories_label: "Browse",
+    categories_heading: "Shop by Category",
+    newsletter_label: "Stay Connected",
+    newsletter_heading: "Join the community",
+    newsletter_success: "Thank you — you're on the list. Welcome to the community.",
+    newsletter_button: "Subscribe"
+  })
 
   const handleSaveGeneral = () => {
     startTransition(async () => {
@@ -71,7 +102,7 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
     toast("Uploading image...")
     
     try {
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
          .from('storefront_media')
          .upload(fileName, file)
          
@@ -125,6 +156,38 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
     })
   }
 
+  const handleSaveContent = () => {
+    startTransition(async () => {
+      try {
+        await updateStorefrontConfig({
+          tagline: tagline || undefined,
+          philosophy_text: philosophyText || undefined,
+          about_headline: aboutHeadline || undefined,
+          testimonial_quote: testimonialQuote || undefined,
+          testimonial_author: testimonialAuthor || undefined,
+          newsletter_description: newsletterDescription || undefined,
+          materials: materials.filter(m => m.label.trim()),
+        })
+        toast.success("Content saved successfully")
+      } catch (err: any) {
+        toast.error("Failed to save content: " + err.message)
+      }
+    })
+  }
+
+  const handleSaveLabels = () => {
+    startTransition(async () => {
+      try {
+        await updateStorefrontConfig({
+          ui_labels: uiLabels
+        })
+        toast.success("Microcopy labels saved successfully")
+      } catch (err: any) {
+        toast.error("Failed to save labels: " + err.message)
+      }
+    })
+  }
+
   const handleToggleDanger = async (key: 'checkout' | 'maintenance', state: boolean) => {
     startTransition(async () => {
       try {
@@ -149,7 +212,9 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
     <Tabs defaultValue="general" className="space-y-4">
       <TabsList>
         <TabsTrigger value="general">Store Profile</TabsTrigger>
-        <TabsTrigger value="branding">Branding & Text</TabsTrigger>
+        <TabsTrigger value="branding">Branding & Media</TabsTrigger>
+        <TabsTrigger value="content">Content</TabsTrigger>
+        <TabsTrigger value="labels">Microcopy & Labels</TabsTrigger>
         <TabsTrigger value="cms">Theme Builder</TabsTrigger>
         <TabsTrigger value="danger">Store Status</TabsTrigger>
       </TabsList>
@@ -235,7 +300,6 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
             <div className="grid gap-3">
               <Label>Logo</Label>
               <div className="flex gap-2">
-                <Input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://example.com/logo.png" />
                 <div>
                   <Input type="file" id="logoUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setLogoUrl)} />
                   <Button variant="outline" onClick={() => document.getElementById('logoUpload')?.click()}>Upload Logo</Button>
@@ -247,7 +311,6 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
             <div className="grid gap-3">
               <Label>Favicon</Label>
               <div className="flex gap-2">
-                <Input value={faviconUrl} onChange={e => setFaviconUrl(e.target.value)} placeholder="https://example.com/favicon.ico" />
                 <div>
                   <Input type="file" id="faviconUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setFaviconUrl)} />
                   <Button variant="outline" onClick={() => document.getElementById('faviconUpload')?.click()}>Upload Favicon</Button>
@@ -258,7 +321,6 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
             <div className="grid gap-3">
               <Label>Hero Section Background Image</Label>
               <div className="flex gap-2">
-                <Input value={heroImageUrl} onChange={e => setHeroImageUrl(e.target.value)} placeholder="https://example.com/hero.jpg" />
                 <div>
                   <Input type="file" id="heroUpload" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, setHeroImageUrl)} />
                   <Button variant="outline" onClick={() => document.getElementById('heroUpload')?.click()}>Upload Hero</Button>
@@ -345,6 +407,277 @@ export function StorefrontConfig({ initialData, defaultCurrency, baseStoreName, 
             <Button onClick={handleSaveBranding} disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Branding
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
+      {/* CONTENT */}
+      <TabsContent value="content" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Site Tagline</CardTitle>
+            <CardDescription>Short line shown in the hero section and footer (e.g. "Thoughtful objects for everyday living.").</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Input
+              value={tagline}
+              onChange={e => setTagline(e.target.value)}
+              placeholder="Thoughtful objects for everyday living."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Our Philosophy</CardTitle>
+            <CardDescription>The animated paragraph shown in the intro section below the hero. Keep it 1–3 sentences.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              rows={4}
+              value={philosophyText}
+              onChange={e => setPhilosophyText(e.target.value)}
+              placeholder="We believe the objects you use every day should be beautiful, durable, and meaningful..."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Our Story Section</CardTitle>
+            <CardDescription>The bold headline in the dark "About" block. The body text is set in Branding &amp; Media.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2">
+              <Label>Story Headline</Label>
+              <Input
+                value={aboutHeadline}
+                onChange={e => setAboutHeadline(e.target.value)}
+                placeholder="Born from a love of honest materials and quiet design."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer Testimonial</CardTitle>
+            <CardDescription>The quote shown in the testimonials section.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <Label>Quote</Label>
+              <Textarea
+                rows={3}
+                value={testimonialQuote}
+                onChange={e => setTestimonialQuote(e.target.value)}
+                placeholder="Every piece feels like it was made just for our home..."
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Attribution</Label>
+              <Input
+                value={testimonialAuthor}
+                onChange={e => setTestimonialAuthor(e.target.value)}
+                placeholder="— Elena & Marcus, Berlin"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Newsletter Section</CardTitle>
+            <CardDescription>The description line below the newsletter heading.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Input
+              value={newsletterDescription}
+              onChange={e => setNewsletterDescription(e.target.value)}
+              placeholder="New collections, maker stories, and early access to limited editions."
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Material Highlights</CardTitle>
+            <CardDescription>Three cards shown in the "Material Quality" section. Each card has a name and a short subtitle.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {materials.map((mat, i) => (
+              <div key={i} className="grid grid-cols-2 gap-4 pb-4 border-b last:border-0 last:pb-0">
+                <div className="grid gap-2">
+                  <Label>Card {i + 1} — Name</Label>
+                  <Input
+                    value={mat.label}
+                    onChange={e => {
+                      const updated = [...materials]
+                      updated[i] = { ...updated[i], label: e.target.value }
+                      setMaterials(updated)
+                    }}
+                    placeholder={["Solid Oak", "Stoneware Ceramic", "Aged Brass"][i] || "Material name"}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Card {i + 1} — Subtitle</Label>
+                  <Input
+                    value={mat.sublabel}
+                    onChange={e => {
+                      const updated = [...materials]
+                      updated[i] = { ...updated[i], sublabel: e.target.value }
+                      setMaterials(updated)
+                    }}
+                    placeholder={["Natural wood grain, ethically sourced", "Hand-thrown, kiln-fired at 1280°C", "Living finish, deepens with time"][i] || "Short description"}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSaveContent} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Content
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
+      {/* MICROCOPY & LABELS */}
+      <TabsContent value="labels" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Microcopy & Labels</CardTitle>
+            <CardDescription>Customize every hardcoded button, section title, and small text across the storefront.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Hero Section</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Primary Button</Label>
+                  <Input value={uiLabels.hero_primary_button || ""} onChange={e => setUiLabels({ ...uiLabels, hero_primary_button: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Secondary Button</Label>
+                  <Input value={uiLabels.hero_secondary_button || ""} onChange={e => setUiLabels({ ...uiLabels, hero_secondary_button: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Featured Selection</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Section Label</Label>
+                  <Input value={uiLabels.featured_label || ""} onChange={e => setUiLabels({ ...uiLabels, featured_label: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Featured Badge</Label>
+                  <Input value={uiLabels.featured_badge || ""} onChange={e => setUiLabels({ ...uiLabels, featured_badge: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>View Product Button</Label>
+                  <Input value={uiLabels.button_view_product || ""} onChange={e => setUiLabels({ ...uiLabels, button_view_product: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>View All Button</Label>
+                  <Input value={uiLabels.button_view_all || ""} onChange={e => setUiLabels({ ...uiLabels, button_view_all: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Product Grid</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Section Label</Label>
+                  <Input value={uiLabels.product_grid_label || ""} onChange={e => setUiLabels({ ...uiLabels, product_grid_label: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Section Heading</Label>
+                  <Input value={uiLabels.product_grid_heading || ""} onChange={e => setUiLabels({ ...uiLabels, product_grid_heading: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Categories Grid</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Section Label</Label>
+                  <Input value={uiLabels.categories_label || ""} onChange={e => setUiLabels({ ...uiLabels, categories_label: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Section Heading</Label>
+                  <Input value={uiLabels.categories_heading || ""} onChange={e => setUiLabels({ ...uiLabels, categories_heading: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Newsletter</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Section Label</Label>
+                  <Input value={uiLabels.newsletter_label || ""} onChange={e => setUiLabels({ ...uiLabels, newsletter_label: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Section Heading</Label>
+                  <Input value={uiLabels.newsletter_heading || ""} onChange={e => setUiLabels({ ...uiLabels, newsletter_heading: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Success Message</Label>
+                  <Input value={uiLabels.newsletter_success || ""} onChange={e => setUiLabels({ ...uiLabels, newsletter_success: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Subscribe Button</Label>
+                  <Input value={uiLabels.newsletter_button || ""} onChange={e => setUiLabels({ ...uiLabels, newsletter_button: e.target.value })} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Navigation & Cart</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Shop Link</Label>
+                  <Input value={uiLabels.nav_shop || ""} onChange={e => setUiLabels({ ...uiLabels, nav_shop: e.target.value })} placeholder="Shop" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Story Link</Label>
+                  <Input value={uiLabels.nav_story || ""} onChange={e => setUiLabels({ ...uiLabels, nav_story: e.target.value })} placeholder="Story" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Cart Heading</Label>
+                  <Input value={uiLabels.cart_title || ""} onChange={e => setUiLabels({ ...uiLabels, cart_title: e.target.value })} placeholder="Your Bag" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Checkout Button</Label>
+                  <Input value={uiLabels.cart_checkout || ""} onChange={e => setUiLabels({ ...uiLabels, cart_checkout: e.target.value })} placeholder="Proceed to Checkout" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 border-b pb-2">Footer Setup</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Footer Headline</Label>
+                  <Input value={uiLabels.footer_shop_now || ""} onChange={e => setUiLabels({ ...uiLabels, footer_shop_now: e.target.value })} placeholder="Shop Now →" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Footer Disclaimer</Label>
+                  <Input value={uiLabels.footer_rights || ""} onChange={e => setUiLabels({ ...uiLabels, footer_rights: e.target.value })} placeholder="All rights reserved." />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSaveLabels} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Labels
             </Button>
           </CardFooter>
         </Card>

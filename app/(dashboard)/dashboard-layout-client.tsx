@@ -70,7 +70,7 @@ export default function DashboardLayoutClient({
     }
 
     return (
-        <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange} className="bg-zinc-100 dark:bg-zinc-950 p-2 md:p-3 overflow-hidden">
+        <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange} className="bg-zinc-100 dark:bg-zinc-950 p-2 md:p-3 overflow-hidden rounded-[1.5rem]">
             <AppSidebar userProfile={userProfile ? {
                 name: [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ') || userProfile.email?.split('@')[0] || 'Admin',
                 email: userProfile.email,

@@ -15,13 +15,10 @@ export interface SubscriptionPlan {
         pos?: boolean
         inventory?: boolean
         offline_pos: boolean
-        payment_integration: boolean
         receipt_printing: boolean
         khata: boolean
         website: string
-        whatsapp_ordering: boolean
         reports: "Basic" | "Advanced" | "basic" | "advanced"
-        multi_warehouse: boolean
         api_access: boolean
         white_label: boolean
         dedicated_manager: boolean
@@ -150,7 +147,6 @@ export async function getTenantFeatures() {
             reports: "basic" as const,
             khata: true,
             storefront: true, // Allow trial/free users to see storefront features
-            multi_warehouse: false,
             api_access: false
         }
 
@@ -171,7 +167,6 @@ export async function getTenantFeatures() {
             reports: "basic" as const,
             khata: false,
             storefront: true, // Allow UI to render for fallback states
-            multi_warehouse: false,
             api_access: false
         }
     }

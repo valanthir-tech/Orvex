@@ -28,6 +28,7 @@ import { Box, Building2, CheckCircle, Loader2 } from "lucide-react"
 
 import { getSubscriptionPlans, getPaymentQrCodes, type SubscriptionPlan, type PaymentQrCode } from "@/app/actions/subscriptions"
 import { SignupPaymentForm } from "@/components/auth/signup-payment-form"
+import Image from "next/image"
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const accountSchema = z.object({
@@ -178,12 +179,11 @@ export default function SignupPage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                    <Box className="h-6 w-6" />
+                <div className="flex h-20 items-center justify-center mb-2">
+                    <Image src="/orvex-horizontal.png" alt="Orvex" width={280} height={80} className="h-14 w-auto" />
                 </div>
-                <h1 className="text-2xl font-bold font-heading">Orvex POS</h1>
-                <p className="text-balance text-sm text-muted-foreground">
-                    {step === 1 ? "Create your account" : "Tell us about your business"}
+                <p className="text-balance text-sm text-muted-foreground mt-2">
+                    {step === 1 ? "Create your account" : step === 3 ? "Complete Your Payment" : "Tell us about your business"}
                 </p>
             </div>
 

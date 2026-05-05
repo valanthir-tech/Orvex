@@ -36,6 +36,10 @@ import QrScanner from "@/components/pos/QrScanner"
 import SyncLogsPanel from "@/components/pos/SyncLogsPanel"
 import { CustomerPickerDialog } from "@/components/pos/CustomerPickerDialog"
 import { Activity } from "lucide-react"
+import { generateLocalInvoice, GeneratedOfflineInvoice } from "@/lib/pos/invoice-generator"
+import { setupSyncTriggers as setupOfflineInvoiceSyncTriggers } from "@/lib/pos/sync-engine"
+import { DigitalHandoffModal, type DigitalHandoffPayload } from "@/components/pos/DigitalHandoffModal"
+import { logger } from "@/lib/logger"
 
 type NumpadMode = "qty" | "discount" | "price"
 
@@ -111,6 +115,8 @@ export default function POSInterface() {
     const [qrScannerOpen, setQrScannerOpen] = useState(false)
     const [syncLogsOpen, setSyncLogsOpen] = useState(false)
     const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
+    const [digitalHandoffOpen, setDigitalHandoffOpen] = useState(false)
+    const [digitalHandoffPayload, setDigitalHandoffPayload] = useState<DigitalHandoffPayload | null>(null)
     const searchInputRef = useRef<HTMLInputElement>(null)
 
     // Order history from Dexie
@@ -165,6 +171,10 @@ export default function POSInterface() {
             }
         }, [products, handleAddToCart])
     });
+
+    useEffect(() => {
+        return setupOfflineInvoiceSyncTriggers()
+    }, [])
 
     // Numpad handling
     const handleNumpadClick = useCallback((value: string) => {
@@ -254,6 +264,18 @@ export default function POSInterface() {
                 return
             }
             const order = await checkout(paymentMode, paid)
+            const offlineInvoice = await generateLocalInvoice({
+                items: order.products.map((item) => ({
+                    item_code: item.sku,
+                    qty: item.quantity,
+                    rate: item.price,
+                    amount: item.price * item.quantity,
+                })),
+                total: order.grandTotal,
+                payment_method: paymentMode,
+                customer_name: order.customerName,
+                source_entry_id: order.uuid,
+            })
             setCheckoutOpen(false)
             setPaidAmount("")
             setReceiptOrder(order)
@@ -279,15 +301,41 @@ export default function POSInterface() {
                     paymentMode: paymentMode,
                     change: Math.max(0, paid - order.grandTotal)
                 };
-                printer.printOrderSlip(slipData).catch(err => {
-                    console.error("Auto print failed", err);
-                    toast.error("Auto print failed. Check printer connection.");
-                });
+                try {
+                    await printer.printOrderSlip(slipData)
+                    await db.offline_invoices.update(offlineInvoice.id, {
+                        receipt_printed: true,
+                    })
+                } catch (error) {
+                    await db.offline_invoices.update(offlineInvoice.id, {
+                        receipt_printed: false,
+                    })
+                    triggerDigitalHandoffUI(offlineInvoice, order)
+                    logger.error("Auto print failed. Triggering digital handoff UI.", { error })
+                    toast.error("Auto print failed. Showing digital handoff receipt.")
+                }
             }
         } catch (err) {
             toast.error("Checkout failed", { description: err instanceof Error ? err.message : "Unknown error" })
         }
         setIsProcessing(false)
+    }
+
+    const triggerDigitalHandoffUI = (invoice: GeneratedOfflineInvoice, order: Order) => {
+        const payload: DigitalHandoffPayload = {
+            invoice_id: invoice.id,
+            invoice_number: invoice.local_invoice_number,
+            total: order.grandTotal,
+            items: order.products.map((item) => ({
+                name: item.name,
+                qty: item.quantity,
+                amount: item.price * item.quantity,
+            })),
+            date: safeDate(order.createdAt).toISOString(),
+            business_name: "Main Store",
+        }
+        setDigitalHandoffPayload(payload)
+        setDigitalHandoffOpen(true)
     }
 
     // Sync
@@ -1128,6 +1176,12 @@ export default function POSInterface() {
                 onOpenChange={setCustomerPickerOpen}
                 onSelect={setCustomer}
                 currentName={customerName}
+            />
+
+            <DigitalHandoffModal
+                open={digitalHandoffOpen}
+                onOpenChange={setDigitalHandoffOpen}
+                payload={digitalHandoffPayload}
             />
         </>
     )

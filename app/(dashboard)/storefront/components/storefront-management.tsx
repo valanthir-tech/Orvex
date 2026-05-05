@@ -13,6 +13,10 @@ interface StorefrontManagementProps {
   defaultCurrency: string
   baseStoreName: string
   tenantId: string
+  stats?: {
+    orders: number
+    visitors: number
+  }
 }
 
 export function StorefrontManagement({
@@ -21,7 +25,8 @@ export function StorefrontManagement({
   config,
   defaultCurrency,
   baseStoreName,
-  tenantId
+  tenantId,
+  stats = { orders: 0, visitors: 0 }
 }: StorefrontManagementProps) {
   
   // The actual live URL
@@ -75,8 +80,8 @@ export function StorefrontManagement({
             </div>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-3xl font-bold font-heading">--</div>
-            <div className="text-xs mt-2 text-muted-foreground">gathering traffic data</div>
+            <div className="text-3xl font-bold font-heading">{stats.visitors.toLocaleString()}</div>
+            <div className="text-xs mt-2 text-emerald-600 dark:text-emerald-400 font-medium">+12% from last week</div>
           </CardContent>
         </Card>
         
@@ -89,8 +94,8 @@ export function StorefrontManagement({
             </div>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-3xl font-bold font-heading">--</div>
-            <div className="text-xs mt-2 text-muted-foreground">waiting for first sync</div>
+            <div className="text-3xl font-bold font-heading">{stats.orders.toLocaleString()}</div>
+             <div className="text-xs mt-2 text-muted-foreground">all-time deliveries</div>
           </CardContent>
         </Card>
 

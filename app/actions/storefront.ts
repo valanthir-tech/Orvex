@@ -13,6 +13,7 @@ export interface StorefrontConfigPayload {
     is_checkout_disabled?: boolean
     is_maintenance_mode?: boolean
     theme_blocks?: any[]
+    theme_template?: string
     theme_primary_color?: string
     theme_text_color?: string
     theme_bg_color?: string
@@ -22,7 +23,17 @@ export interface StorefrontConfigPayload {
     hero_heading?: string
     hero_subheading?: string
     about_text?: string
+    about_headline?: string
     social_links?: any
+    // Content fields — replace hardcoded storefront placeholders
+    tagline?: string
+    philosophy_text?: string
+    testimonial_quote?: string
+    testimonial_author?: string
+    newsletter_description?: string
+    materials?: Array<{ label: string; sublabel: string }>
+    // Microcopy overrides
+    ui_labels?: Record<string, string>
 }
 
 // ------------------------------------------

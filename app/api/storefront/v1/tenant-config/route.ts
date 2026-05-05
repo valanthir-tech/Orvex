@@ -75,10 +75,12 @@ export async function GET(request: Request) {
       tenantId: tenant.id,
       storeName: config?.store_name || tenant.company_name,
       maintenanceMode: config?.is_maintenance_mode || false,
-      plan: tenant.plan || 'STARTER', // Tells the storefront which features to unlock
+      plan: tenant.plan || 'STARTER',
       theme: {
-        primaryColor: config?.theme_primary_color || "#0F172A",          textColor: config?.theme_text_color || "#1f2937",
-          bgColor: config?.theme_bg_color || "#ffffff",        fontFamily: config?.theme_font_family || "Inter",
+        primaryColor: config?.theme_primary_color || "#0F172A",
+        textColor: config?.theme_text_color || "#1f2937",
+        bgColor: config?.theme_bg_color || "#ffffff",
+        fontFamily: config?.theme_font_family || "Inter",
         themeBlocks: config?.theme_blocks || [],
         logoUrl: config?.logo_url || null,
         faviconUrl: config?.favicon_url || null,
@@ -86,7 +88,15 @@ export async function GET(request: Request) {
         heroHeading: config?.hero_heading || null,
         heroSubheading: config?.hero_subheading || null,
         aboutText: config?.about_text || null,
-        socialLinks: config?.social_links || {}
+        aboutHeadline: config?.about_headline || null,
+        socialLinks: config?.social_links || {},
+        // Content fields
+        tagline: config?.tagline || null,
+        philosophyText: config?.philosophy_text || null,
+        testimonialQuote: config?.testimonial_quote || null,
+        testimonialAuthor: config?.testimonial_author || null,
+        newsletterDescription: config?.newsletter_description || null,
+        materials: config?.materials?.length ? config.materials : null,
       },
       status: tenant.storefront_status
     });

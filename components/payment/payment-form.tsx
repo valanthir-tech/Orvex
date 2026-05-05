@@ -140,7 +140,6 @@ export function PaymentForm({ plans, qrCodes, tenantId }: { plans: SubscriptionP
                                         { s: plan.features.pos, t: "Offline POS" },
                                         { s: plan.features.inventory, t: "Inventory & Sync" },
                                         { s: plan.features.khata, t: "Khata ledger" },
-                                        { s: plan.features.multi_warehouse, t: "Multi-Warehouse" },
                                         { s: true, t: `${plan.max_stores} Store Location${plan.max_stores > 1 ? 's' : ''}` },
                                         { s: true, t: `${plan.max_staff} Staff User${plan.max_staff > 1 ? 's' : ''}` },
                                     ].map((f, i) => (
