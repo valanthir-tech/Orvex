@@ -152,7 +152,7 @@ export interface PendingSMS {
 // DATABASE CLASS
 // ----------------------------------------------------------------------
 
-export class OrvexPOSDB extends Dexie {
+export class OnedexoPOSDB extends Dexie {
   products!: Table<Product>;
   orders!: Table<Order>;
   failedOrders!: Table<Order>;
@@ -167,7 +167,7 @@ export class OrvexPOSDB extends Dexie {
   pending_sms!: Table<PendingSMS>;
 
   constructor() {
-    super('OrvexPOSDB');
+    super('OnedexoPOSDB');
 
     this.version(1).stores({
       products: '&id, name, sku, category, barcode, isActive',
@@ -225,4 +225,4 @@ export class OrvexPOSDB extends Dexie {
   }
 }
 
-export const db = new OrvexPOSDB();
+export const db = new OnedexoPOSDB();

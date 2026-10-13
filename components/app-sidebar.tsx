@@ -19,6 +19,7 @@ import {
     Warehouse,
     Store,
     Inbox,
+    FileText,
 } from "lucide-react"
 
 import Image from "next/image"
@@ -105,6 +106,37 @@ const navigationBlocks = {
                     title: "Stock Entries",
                     url: "/stock/entries",
                 },
+                {
+                    title: "Stock Reconciliation",
+                    url: "/stock/counts",
+                },
+                {
+                    title: "Stock Ledger",
+                    url: "/stock/ledger",
+                },
+            ],
+        },
+        {
+            title: "ERP & Accounting",
+            url: "#",
+            icon: FileText,
+            items: [
+                {
+                    title: "Sales Invoices",
+                    url: "/sales/invoices",
+                },
+                {
+                    title: "Purchase Bills",
+                    url: "/purchases/bills",
+                },
+                {
+                    title: "Journal Entries",
+                    url: "/accounting/journal",
+                },
+                {
+                    title: "Chart of Accounts",
+                    url: "/accounting",
+                },
             ],
         },
         {
@@ -132,7 +164,7 @@ const navigationBlocks = {
     navSecondary: [
         {
             title: "Support",
-            url: "mailto:orvex@valanthir.com",
+            url: "mailto:support@onedexo.com",
             icon: LifeBuoy,
         },
         {
@@ -174,8 +206,8 @@ export function AppSidebar({ userProfile, features, ...props }: React.ComponentP
             <SidebarHeader className="pt-6 pb-4">
                 <div className="flex items-center justify-center w-full">
                     <a href="/">
-                        <Image src="/orvex-horizontal.png" alt="Orvex" width={140} height={40} className="h-9 w-auto mix-blend-multiply group-data-[collapsible=icon]:hidden" />
-                        <Image src="/icon.png" alt="Orvex" width={32} height={32} className="h-8 w-auto mix-blend-multiply hidden group-data-[collapsible=icon]:block" />
+                        <Image src="/onedexo-horizontal.png" alt="Onedexo" width={140} height={42} className="h-8 w-auto object-contain dark:brightness-0 dark:invert group-data-[collapsible=icon]:hidden" priority />
+                        <Image src="/icon.png" alt="Onedexo" width={32} height={32} className="h-8 w-8 object-contain hidden group-data-[collapsible=icon]:block" priority />
                     </a>
                 </div>
             </SidebarHeader>

@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy | Orvex Inventory POS',
-    description: 'How we collect, use, and protect your data on the Orvex Inventory POS platform.',
+    title: 'Privacy Policy | Onedexo Inventory POS',
+    description: 'How we collect, use, and protect your data on the Onedexo Inventory POS platform.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -122,7 +122,7 @@ export default function PrivacyPolicyPage() {
                         <li><strong>Portability:</strong> Export your data in standard formats for migration</li>
                         <li><strong>Restriction:</strong> Limit how we process your data</li>
                     </ul>
-                    <p className="mt-2">To exercise these rights, contact <a href="mailto:privacy@valanthir.com" className="underline">privacy@valanthir.com</a>.</p>
+                    <p className="mt-2">To exercise these rights, contact <a href="mailto:privacy@onedexo.com" className="underline">privacy@onedexo.com</a>.</p>
                 </section>
 
                 <section>
@@ -154,8 +154,8 @@ export default function PrivacyPolicyPage() {
 
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">11. Contact</h2>
-                    <p>For privacy concerns, contact us at: <a href="mailto:privacy@valanthir.com" className="underline">privacy@valanthir.com</a></p>
-                    <p className="mt-1">Data Protection Officer: Orvex Tech Pvt. Ltd., Kathmandu, Nepal</p>
+                    <p>For privacy concerns, contact us at: <a href="mailto:privacy@onedexo.com" className="underline">privacy@onedexo.com</a></p>
+                    <p className="mt-1">Data Protection Officer: Onedexo Tech Pvt. Ltd., Kathmandu, Nepal</p>
                 </section>
             </div>
         </main>

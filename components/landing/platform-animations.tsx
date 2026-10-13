@@ -19,7 +19,7 @@ export function DigitalStorefrontAnimation() {
         >
           <div className="flex items-center gap-3">
             <Globe className="w-5 h-5 text-[#3255f1]" />
-            <span className="text-sm font-semibold tracking-wide text-[#171717]">orvex.page</span>
+            <span className="text-sm font-semibold tracking-wide text-[#171717]">onedexo.page</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -198,7 +198,7 @@ export function UnifiedInventoryAnimation() {
               whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
               <div className="h-6 bg-gray-50 flex items-center px-3 gap-1 border-b border-gray-100">
                 <div className="flex gap-1"><span className="w-2 h-2 rounded-full bg-red-400"/><span className="w-2 h-2 rounded-full bg-yellow-400"/><span className="w-2 h-2 rounded-full bg-green-400"/></div>
-                <div className="mx-auto text-[8px] text-gray-400 pl-2">store.orvex.page</div>
+                <div className="mx-auto text-[8px] text-gray-400 pl-2">store.onedexo.page</div>
               </div>
               <div className="p-4">
                 <div className="flex gap-3 items-center mb-4">

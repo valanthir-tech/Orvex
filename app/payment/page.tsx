@@ -7,7 +7,7 @@ import { Clock } from "lucide-react"
 import Image from "next/image"
 
 export const metadata = {
-    title: "Complete Payment | Orvex",
+    title: "Complete Payment | Onedexo",
 }
 
 export default async function PaymentPage() {
@@ -52,7 +52,7 @@ export default async function PaymentPage() {
         <div className="min-h-screen bg-[#fcfbf9] flex flex-col items-center py-20 px-4 font-sans text-[#171717]">
             {/* Header */}
             <div className="flex flex-col items-center gap-4 text-center mb-12">
-                <Image src="/orvex-horizontal.png" alt="Orvex" width={220} height={60} className="h-12 w-auto mix-blend-multiply" />
+                <Image src="/onedexo-horizontal.png" alt="Onedexo" width={220} height={60} className="h-12 w-auto object-contain" priority />
                 <p className="text-base tracking-wide text-[#171717]/60">
                     {tenant?.company_name
                         ? `Welcome, ${tenant.company_name}!`

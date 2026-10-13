@@ -122,7 +122,7 @@ export async function POST(req: Request) {
                         qty: item.qty,
                         rate: item.rate
                     })),
-                    // Adding notes for the Merchant to view in their Orvex POS Dashboard
+                    // Adding notes for the Merchant to view in their Onedexo POS Dashboard
                     inter_company_order_reference: `Payment Method: ${order.payment_method}\nDelivery: ${order.delivery_city}, ${order.delivery_address}\nNotes: ${order.delivery_notes || 'None'}`
                 }
 

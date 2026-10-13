@@ -11,7 +11,7 @@ import { WebsiteBuildingStatus } from "./components/website-building-status"
 import { StorefrontManagement } from "./components/storefront-management"
 
 export const metadata: Metadata = {
-  title: "Storefront Config | Orvex",
+  title: "Storefront Config | Onedexo",
   description: "Manage your storefront layout and settings."
 }
 

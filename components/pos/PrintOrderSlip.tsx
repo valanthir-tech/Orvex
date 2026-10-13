@@ -207,7 +207,7 @@ export function PrintOrderSlipDialog({
                                     "This order slip is for your purchase record only."}
                             </p>
                             <p className="text-[8px] mt-1">
-                                Powered by Orvex by valanthir tech
+                                Powered by Onedexo
                             </p>
                         </div>
                     </div>

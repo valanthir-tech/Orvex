@@ -29,9 +29,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Domain parameter is required" }, { status: 400 });
     }
 
-    // Standardize domain vs slug matching for the .orvex.page root domain
-    const isOrvexPageHost = domainParam.endsWith(".orvex.page");
-    const slug = isOrvexPageHost ? domainParam.replace(".orvex.page", "") : null;
+    // Standardize domain vs slug matching for the .onedexo.page root domain
+    const isOnedexoPageHost = domainParam.endsWith(".onedexo.page");
+    const slug = isOnedexoPageHost ? domainParam.replace(".onedexo.page", "") : null;
 
     // 3. Connect to Supabase as Admin (Service Role)
     // We are querying as the admin because the client storefront has ZERO keys.
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     ];
 
     if (slug) {
-      // If it exists on our main orvex.page domain wildcard, also allow checking an exact slug match if they stored just 'ramesh'
+      // If it exists on our main onedexo.page domain wildcard, also allow checking an exact slug match if they stored just 'ramesh'
       orQueryMatches.push(`storefront_subdomain.ilike.${slug}`);
     }
 

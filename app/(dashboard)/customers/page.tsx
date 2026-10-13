@@ -2,7 +2,7 @@ import { getCustomers } from "@/app/actions/customers"
 import { CustomersPageClient } from "@/components/customers/customers-page-client"
 
 export const metadata = {
-  title: "Customers | Orvex",
+  title: "Customers | Onedexo",
   description: "Manage your customer list, view their purchase history, and handle credits.",
 }
 

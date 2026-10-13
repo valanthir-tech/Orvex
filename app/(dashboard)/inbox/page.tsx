@@ -3,7 +3,7 @@ import { InboxClient } from "./components/inbox-client"
 import { getInquiries } from "@/app/actions/inbox"
 
 export const metadata: Metadata = {
-  title: "Inbox | Orvex",
+  title: "Inbox | Onedexo",
   description: "Manage your storefront inquiries and messages."
 }
 

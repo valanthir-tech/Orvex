@@ -30,7 +30,7 @@ export function StorefrontManagement({
 }: StorefrontManagementProps) {
   
   // The actual live URL
-  const primaryUrl = customDomain ? `https://${customDomain}` : (subdomain ? `https://${subdomain}.orvex.page` : null)
+  const primaryUrl = customDomain ? `https://${customDomain}` : (subdomain ? `https://${subdomain}.onedexo.page` : null)
 
   return (
     <div className="space-y-8">
@@ -62,7 +62,7 @@ export function StorefrontManagement({
           </CardHeader>
           <CardContent className="relative">
             <div className="text-xl font-bold font-heading truncate">
-              {customDomain || (subdomain ? `${subdomain}.orvex.page` : 'Pending...')}
+              {customDomain || (subdomain ? `${subdomain}.onedexo.page` : 'Pending...')}
             </div>
             <p className="text-xs text-muted-foreground mt-2 flex items-center">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
@@ -108,7 +108,7 @@ export function StorefrontManagement({
             </div>
           </CardHeader>
           <CardContent className="relative flex flex-col h-[70px] justify-end">
-             <Button variant="outline" size="sm" className="w-full relative z-10 bg-white/50 backdrop-blur border-white/20 hover:bg-white/80" onClick={() => window.open('mailto:support@orvex.app')}>
+             <Button variant="outline" size="sm" className="w-full relative z-10 bg-white/50 backdrop-blur border-white/20 hover:bg-white/80" onClick={() => window.open('mailto:support@onedexo.app')}>
                Request Changes
              </Button>
           </CardContent>

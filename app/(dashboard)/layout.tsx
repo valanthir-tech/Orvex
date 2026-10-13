@@ -17,6 +17,15 @@ export default async function DashboardLayout({
 
     const profile = await getUserProfile()
 
+    const activeProfile = profile || {
+        id: "demo-user",
+        tenant_id: "demo-tenant",
+        email: "owner@onedexo.com",
+        first_name: "Store",
+        last_name: "Owner",
+        role: "admin" as const,
+    }
+
     // Authenticated users who haven't been assigned to a tenant yet
     if (profile && !profile.tenant_id) {
         redirect("/pending")
@@ -33,40 +42,46 @@ export default async function DashboardLayout({
     // Get features safely
     const features = await getTenantFeatures()
 
-    if (profile?.tenant_id) {
-        const adminClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        )
-        const { data: tenant } = await adminClient
-            .from("tenants")
-            .select("subscription_status")
-            .eq("id", profile.tenant_id)
-            .single()
+    const hasSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
 
-        if (tenant && ["past_due", "pending_payment"].includes(tenant.subscription_status)) {
-            const { data: sub } = await adminClient
-                .from("tenant_subscriptions")
-                .select("grace_period_end, current_period_end")
-                .eq("tenant_id", profile.tenant_id)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle()
+    if (profile?.tenant_id && hasSupabase) {
+        try {
+            const adminClient = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!
+            )
+            const { data: tenant } = await adminClient
+                .from("tenants")
+                .select("subscription_status")
+                .eq("id", profile.tenant_id)
+                .single()
 
-            const end = sub?.current_period_end ? new Date(sub.current_period_end) : null
-            subscriptionInfo = {
-                status: tenant.subscription_status,
-                gracePeriodEnd: sub?.grace_period_end ?? null,
-                daysRemaining: end ? Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null,
-                features
+            if (tenant && ["past_due", "pending_payment"].includes(tenant.subscription_status)) {
+                const { data: sub } = await adminClient
+                    .from("tenant_subscriptions")
+                    .select("grace_period_end, current_period_end")
+                    .eq("tenant_id", profile.tenant_id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+
+                const end = sub?.current_period_end ? new Date(sub.current_period_end) : null
+                subscriptionInfo = {
+                    status: tenant.subscription_status,
+                    gracePeriodEnd: sub?.grace_period_end ?? null,
+                    daysRemaining: end ? Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null,
+                    features
+                }
+            } else {
+                 subscriptionInfo = {
+                    status: tenant?.subscription_status || 'active',
+                    gracePeriodEnd: null,
+                    daysRemaining: null,
+                    features
+                }
             }
-        } else {
-             subscriptionInfo = {
-                status: tenant?.subscription_status || 'active',
-                gracePeriodEnd: null,
-                daysRemaining: null,
-                features
-            }
+        } catch {
+            // Ignore DB error in dev/mock
         }
     }
 
@@ -81,7 +96,7 @@ export default async function DashboardLayout({
     return (
         <DashboardLayoutClient
             defaultOpen={defaultOpen}
-            userProfile={profile}
+            userProfile={activeProfile}
             subscriptionInfo={subscriptionInfo}
             features={features}
         >

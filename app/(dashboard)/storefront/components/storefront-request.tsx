@@ -61,7 +61,7 @@ export function StorefrontRequest({ currentPlan }: { currentPlan: string }) {
             ))}
             <li className="flex items-center text-muted-foreground">
                 <Globe className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" />
-                <span>Free Subdomain Included (yourstore.orvex.page)</span>
+                <span>Free Subdomain Included (yourstore.onedexo.page)</span>
             </li>
             <li className="flex items-center text-muted-foreground">
                 <Zap className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" />
@@ -77,7 +77,7 @@ export function StorefrontRequest({ currentPlan }: { currentPlan: string }) {
           </CardHeader>
           <CardContent className="text-center pt-4 pb-6">
             <div className="text-5xl font-extrabold tracking-tighter text-primary">Rs.{(fee / 1000).toLocaleString()}K</div>
-            <p className="text-sm text-muted-foreground mt-2">NPR - Monthly Maintenance Fees Apply</p>
+            <p className="text-sm text-muted-foreground mt-2">NPR - Annual Maintenance Included in Plan</p>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button 

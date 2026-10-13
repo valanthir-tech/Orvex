@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users, UserPlus, Shield, Loader2, Info, KeyRound } from "lucide-react"
+import { Users, UserPlus, Loader2, Info } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -27,7 +27,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 
-import { listStaff, inviteStaff, updateStaffRole, updateStaffPin, type StaffMember } from "@/app/actions/staff"
+import { listStaff, inviteStaff, type StaffMember } from "@/app/actions/staff"
 import { getTenantSubscription, type TenantSubscription } from "@/app/actions/subscriptions"
 
 export function StaffSettingsCard() {
@@ -43,11 +43,6 @@ export function StaffSettingsCard() {
     const [inviteFirstName, setInviteFirstName] = useState("")
     const [inviteLastName, setInviteLastName] = useState("")
     const [inviteRole, setInviteRole] = useState<"manager" | "cashier">("cashier")
-    const [invitePin, setInvitePin] = useState("")
-
-    const [pinModalStaffId, setPinModalStaffId] = useState<string | null>(null)
-    const [updatePinValue, setUpdatePinValue] = useState("")
-    const [isUpdatingPin, setIsUpdatingPin] = useState(false)
 
     // Limits
     const maxStaff = subscription?.plan?.max_staff ?? 2 // Default to starter limit
@@ -91,7 +86,6 @@ export function StaffSettingsCard() {
                 firstName: inviteFirstName,
                 lastName: inviteLastName,
                 role: inviteRole,
-                ...(invitePin ? { pinCode: invitePin } : {})
             })
 
             if (result.success) {
@@ -101,7 +95,6 @@ export function StaffSettingsCard() {
                 setInviteFirstName("")
                 setInviteLastName("")
                 setInviteRole("cashier")
-                setInvitePin("")
                 setIsInviteModalOpen(false)
                 // Reload list
                 await loadData()
@@ -112,27 +105,6 @@ export function StaffSettingsCard() {
             toast.error("An unexpected error occurred")
         } finally {
             setIsInviting(false)
-        }
-    }
-    const handleUpdatePinSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!pinModalStaffId) return
-
-        setIsUpdatingPin(true)
-        try {
-            const result = await updateStaffPin(pinModalStaffId, updatePinValue)
-
-            if (result.success) {
-                toast.success("PIN updated successfully!")
-                setUpdatePinValue("")
-                setPinModalStaffId(null)
-            } else {
-                toast.error(result.error || "Failed to update PIN")
-            }
-        } catch (error) {
-            toast.error("An error occurred")
-        } finally {
-            setIsUpdatingPin(false)
         }
     }
     return (
@@ -200,7 +172,7 @@ export function StaffSettingsCard() {
                                         <Label>Role *</Label>
                                         <Select 
                                             value={inviteRole} 
-                                            onValueChange={(val: "manager" | "cashier") => setInviteRole(val)}
+                                            onValueChange={(val: string) => setInviteRole(val as "manager" | "cashier")}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue />
@@ -210,21 +182,6 @@ export function StaffSettingsCard() {
                                                 <SelectItem value="cashier">Cashier (Only POS & Sales)</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>POS PIN (Optional)</Label>
-                                        <Input
-                                            type="password"
-                                            maxLength={4}
-                                            inputMode="numeric"
-                                            pattern="[0-9]*"
-                                            placeholder="1234"
-                                            value={invitePin}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, '')
-                                                setInvitePin(val)
-                                            }}
-                                        />
                                     </div>
                                 </div>
                                 
@@ -291,74 +248,12 @@ export function StaffSettingsCard() {
                                         <Badge variant={member.role === 'manager' || member.role === 'admin' || member.role === 'superadmin' ? 'default' : 'secondary'}>
                                             {member.role === 'superadmin' ? 'Admin' : member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                                         </Badge>
-                                        {member.role !== 'admin' && member.role !== 'superadmin' && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setPinModalStaffId(member.id)}
-                                                className="h-7 text-xs"
-                                            >
-                                                <KeyRound className="w-3 h-3 mr-1.5" />
-                                                Set PIN
-                                            </Button>
-                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
-
-            {/* PIN Update Modal */}
-            <Dialog open={pinModalStaffId !== null} onOpenChange={(open) => {
-                if (!open) {
-                    setPinModalStaffId(null)
-                    setUpdatePinValue("")
-                }
-            }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Set POS PIN</DialogTitle>
-                        <DialogDescription>
-                            Assign a new 4-digit PIN for offline POS login.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleUpdatePinSubmit} className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>4-Digit PIN</Label>
-                            <Input
-                                type="password"
-                                maxLength={4}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                placeholder="1234"
-                                value={updatePinValue}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '')
-                                    setUpdatePinValue(val)
-                                }}
-                                required
-                            />
-                        </div>
-                        <div className="flex items-center justify-end gap-2 pt-2">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                onClick={() => {
-                                    setPinModalStaffId(null)
-                                    setUpdatePinValue("")
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={isUpdatingPin || updatePinValue.length !== 4}>
-                                {isUpdatingPin && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                Save PIN
-                            </Button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
 
         </CardContent>
     </Card>

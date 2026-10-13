@@ -1,4 +1,4 @@
-﻿import { notFound } from "next/navigation"
+import { notFound } from "next/navigation"
 import { createClient } from "@supabase/supabase-js"
 import { createSupabaseServerClient } from "@/lib/tenant"
 
@@ -11,28 +11,36 @@ function slugify(text: string) {
         .replace(/-+$/, '');            // Trim - from end of text
 }
 
-export async function generateStaticParams() {
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data: tenants } = await supabase
-        .from('tenants')
-        .select('company_name')
-        .eq('status', 'active')
+export const dynamic = 'force-dynamic'
 
-    return (tenants || []).map(t => ({
-        slug: slugify(t.company_name)
-    }))
+export async function generateStaticParams() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return []
+
+    try {
+        const supabase = createClient(url, key)
+        const { data: tenants } = await supabase
+            .from('tenants')
+            .select('company_name')
+            .eq('status', 'active')
+
+        return (tenants || []).map(t => ({
+            slug: slugify(t.company_name)
+        }))
+    } catch {
+        return []
+    }
 }
 
 export default async function StorefrontPage(props: { params: Promise<{ slug: string }> }) {
     const { slug } = await props.params;
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) notFound()
+
+    const supabase = createClient(url, key)
     
     const slugName = slug.replace(/-/g, ' ')
 
@@ -106,7 +114,7 @@ export default async function StorefrontPage(props: { params: Promise<{ slug: st
             </div>
             
             <footer className="bg-white border-t py-12 text-center text-[#171717]/50 mt-auto">
-                <p>&copy; {new Date().getFullYear()} {tenant.company_name}. Customer Storefront Powered by Orvex Core.</p>
+                <p>&copy; {new Date().getFullYear()} {tenant.company_name}. Customer Storefront Powered by Onedexo Core.</p>
             </footer>
         </main>
     )

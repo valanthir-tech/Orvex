@@ -1,0 +1,57 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "pos": "Point of Sale",
+    "sales": "Sales & Invoicing",
+    "purchases": "Purchases",
+    "inventory": "Inventory",
+    "accounting": "Accounting",
+    "store": "Online Store",
+    "reports": "Reports",
+    "settings": "Settings",
+    "save": "Save",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "status": "Status",
+    "date": "Date",
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "amount": "Amount",
+    "total": "Total",
+    "action": "Action",
+    "search": "Search...",
+    "loading": "Loading...",
+    "noData": "No records found",
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "cancelled": "Cancelled"
+  },
+  "pos": {
+    "searchProduct": "Search products or scan barcode (F2)...",
+    "cart": "Active Cart",
+    "checkout": "Pay (F8)",
+    "holdCart": "Hold / Resume (Ctrl+H)",
+    "emptyCart": "Cart is empty",
+    "subtotal": "Subtotal",
+    "vat": "VAT (13%)",
+    "grandTotal": "Grand Total",
+    "cashPayment": "Cash Payment",
+    "fonepay": "Fonepay QR",
+    "printReceipt": "Print Receipt"
+  },
+  "sales": {
+    "invoices": "Sales Invoices",
+    "newInvoice": "Create Sales Invoice",
+    "invoiceNo": "Invoice #",
+    "dueDate": "Due Date"
+  },
+  "accounting": {
+    "journal": "Journal Entry",
+    "dr": "Debit",
+    "cr": "Credit",
+    "difference": "Difference",
+    "mustBalance": "Total Debit must equal Total Credit before submitting."
+  }
+}

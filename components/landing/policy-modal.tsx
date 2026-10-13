@@ -36,13 +36,13 @@ const POLICY_CONTENT = {
         <p>We use cookies and similar technologies to remember your preferences, analyze website traffic, provide personalized content, and improve our services. You can control cookie settings through your browser preferences.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">6. Your Rights and Choices</h3>
-        <p>You have the right to access, review, and request corrections or deletion of your personal information, opt-out of marketing communications, and withdraw consent. To exercise these rights, please contact us at orvex@valanthir.com.</p>
+        <p>You have the right to access, review, and request corrections or deletion of your personal information, opt-out of marketing communications, and withdraw consent. To exercise these rights, please contact us at support@onedexo.com.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">7. Data Retention & Third Parties</h3>
         <p>We retain your personal information only as long as necessary. Our website may contain links to third-party websites or services, and we are not responsible for their privacy practices.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">Contact Us</h3>
-        <p>Valanthir Tech<br/>orvex@valanthir.com<br/>https://www.valanthir.com</p>
+        <p>Onedexo<br/>support@onedexo.com<br/>https://www.onedexo.com</p>
       </div>
     )
   },
@@ -53,13 +53,13 @@ const POLICY_CONTENT = {
         <p className="font-semibold text-gray-900">Please read these terms carefully before using our services.</p>
         <p className="text-sm">Last updated: January 2026</p>
         
-        <p>Welcome to Orvex ("we," "our," "us"), a Valanthir Tech product. These Terms of Service ("Terms") govern your access to and use of the Orvex website, platform, products, and services (collectively, the "Services"). By using our Services, you agree to comply with these Terms.</p>
+        <p>Welcome to Onedexo ("we," "our," "us"). These Terms of Service ("Terms") govern your access to and use of the Onedexo website, platform, products, and services (collectively, the "Services"). By using our Services, you agree to comply with these Terms.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">1. Eligibility & Account Registration</h3>
         <p>You must be at least 18 years old to use our Services. You must provide accurate, complete, and up-to-date information when creating your account. You are responsible for maintaining the confidentiality of your login credentials.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">2. Use of Services & IP</h3>
-        <p>You agree to use the Services only for lawful purposes. You may not engage in fraudulent activities, reverse-engineer any part of the Services, or interfere with security. All content and code associated with Orvex are owned by us.</p>
+        <p>You agree to use the Services only for lawful purposes. You may not engage in fraudulent activities, reverse-engineer any part of the Services, or interfere with security. All content and code associated with Onedexo are owned by us.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">3. Payment & Subscriptions</h3>
         <p>Certain features may require a paid subscription. All fees are stated in NPR and are non-refundable except as required by law. We reserve the right to change pricing with prior notice.</p>
@@ -68,7 +68,7 @@ const POLICY_CONTENT = {
         <p>We may suspend or terminate your account if you violate these Terms. The Services are provided on an "AS IS" basis. We are not liable for indirect, incidental, special, or consequential damages arising from your use of the Services.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">Contact Us</h3>
-        <p>Valanthir Tech<br/>orvex@valanthir.com<br/>https://www.valanthir.com</p>
+        <p>Onedexo<br/>support@onedexo.com<br/>https://www.onedexo.com</p>
       </div>
     )
   },
@@ -76,7 +76,7 @@ const POLICY_CONTENT = {
     title: "Return & Refund Policy",
     content: (
       <div className="space-y-4 font-sans text-gray-600 leading-relaxed max-w-none">
-        <p className="font-semibold text-gray-900">We want all our clients to be satisfied with Orvex services.</p>
+        <p className="font-semibold text-gray-900">We want all our clients to be satisfied with Onedexo services.</p>
         <p className="text-sm">Effective Date: January 2026</p>
         
         <h3 className="text-lg font-bold text-gray-900 mt-6">1. Refund Eligibility</h3>
@@ -86,16 +86,16 @@ const POLICY_CONTENT = {
         </ul>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">2. Refund Process</h3>
-        <p>Send a written refund request with subscription details to orvex@valanthir.com. Refunds are processed within 7–15 business days.</p>
+        <p>Send a written refund request with subscription details to support@onedexo.com. Refunds are processed within 7–15 business days.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">3. Limitations</h3>
         <ul className="list-disc pl-5 space-y-2">
           <li>Transaction fees from payment gateways are non-refundable.</li>
-          <li>Refunds cover the Orvex subscription only, not the Merchant's own customer orders or physical hardware setup costs.</li>
+          <li>Refunds cover the Onedexo subscription only, not the Merchant's own customer orders or physical hardware setup costs.</li>
         </ul>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">Contact Us</h3>
-        <p>For refund requests or questions about this policy, please contact us:<br/>Valanthir Tech<br/>orvex@valanthir.com<br/>https://www.valanthir.com</p>
+        <p>For refund requests or questions about this policy, please contact us:<br/>Onedexo<br/>support@onedexo.com<br/>https://www.onedexo.com</p>
       </div>
     )
   }

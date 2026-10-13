@@ -34,7 +34,7 @@ const projects = [
     category: "PHYSICAL LOCATIONS",
     Animation: OfflinePOSAnimation,
     description: "A lightning-fast point-of-sale system that continues to work flawlessly even when the internet drops. Complete idempotency ensures that you never miss a sale due to hardware chaos, network drops, or erratic power.",
-    longDescription: "The Orvex POS is designed for the harsh realities of physical retail in Nepal. Built fundamentally offline-first with IndexedDB, all transactions are queued instantly whether the internet is up or down. Hardware interruptions—such as printer cable pulls or power outages—are handled gracefully. Automatic idempotency checks prevent any duplicate billing when the network reconnects.",
+    longDescription: "The Onedexo POS is designed for the harsh realities of physical retail in Nepal. Built fundamentally offline-first with IndexedDB, all transactions are queued instantly whether the internet is up or down. Hardware interruptions—such as printer cable pulls or power outages—are handled gracefully. Automatic idempotency checks prevent any duplicate billing when the network reconnects.",
     features: [
       "100% Offline-first transaction queuing",
       "Idempotent UUID sync prevents double billing",
@@ -111,7 +111,7 @@ export default function MarketingPage() {
           : "top-6 bg-transparent border-transparent"
       )}>
         <Link href="/">
-          <Image src="/orvex-horizontal.png" alt="Orvex Logo" width={264} height={66} className="h-11 md:h-[53px] w-auto mix-blend-multiply" />
+          <Image src="/onedexo-horizontal.png" alt="Onedexo Logo" width={210} height={63} className="h-10 md:h-12 w-auto object-contain" priority />
         </Link>
         
         <nav className="hidden md:flex items-center gap-12">
@@ -354,11 +354,11 @@ export default function MarketingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16 mb-32 border-t border-white/10 pt-16">
             <div className="col-span-1 md:col-span-1 flex flex-col gap-4">
-                <Link href="/" className="block -ml-4">
-                  <Image src="/orvex-horizontal-footer.png" alt="Orvex Logo" width={200} height={50} className="w-56 h-auto" priority />
+                <Link href="/" className="block">
+                  <Image src="/onedexo-horizontal-footer.png" alt="Onedexo Logo" width={423} height={126} className="h-11 md:h-12 w-auto object-contain" priority />
                 </Link>
                 <p className="font-sans text-sm text-white/50 leading-relaxed max-w-sm relative z-10">
-                Orvex is Nepal's first modern retail operating system, bridging intuitive offline point-of-sale with dynamic e-commerce operations.
+                Onedexo is Nepal's first modern retail operating system, bridging intuitive offline point-of-sale with dynamic e-commerce operations.
               </p>
             </div>
             <div className="space-y-6">
@@ -373,20 +373,20 @@ export default function MarketingPage() {
               <span className="font-sans text-sm tracking-wide uppercase text-white/40">Contact</span>
                 <p className="font-sans text-xl">
                   <a href="tel:+9779813957139" className="hover:text-[#3255f1] transition-colors">+977 9813957139</a><br />
-                  <a href="mailto:orvex@valanthir.com" className="hover:text-[#3255f1] transition-colors">orvex@valanthir.com</a>
+                  <a href="mailto:support@onedexo.com" className="hover:text-[#3255f1] transition-colors">support@onedexo.com</a>
                 </p>
             </div>
             <div className="space-y-6">
               <span className="font-sans text-sm tracking-wide uppercase text-white/40">Social</span>
               <div className="flex flex-col gap-2">
-                <a href="https://www.instagram.com/orvex.valanthir" target="_blank" rel="noopener noreferrer" className="font-sans text-xl hover:text-[#3255f1] transition-colors w-fit">Instagram</a>
+                <a href="https://www.instagram.com/onedexo" target="_blank" rel="noopener noreferrer" className="font-sans text-xl hover:text-[#3255f1] transition-colors w-fit">Instagram</a>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-white/5">
             <span className="font-sans text-sm tracking-wide uppercase text-white/20">
-                © {new Date().getFullYear()} VALANTHIR TECH. ALL RIGHTS RESERVED.
+                © {new Date().getFullYear()} ONEDEXO. ALL RIGHTS RESERVED.
               </span>
               <div className="flex gap-8">
                 <button onClick={() => setActivePolicy('privacy')} className="font-sans text-sm tracking-wide uppercase text-white/20 hover:text-white transition-colors">Privacy</button>

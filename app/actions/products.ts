@@ -1,8 +1,134 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 import { createProductSchema, updateProductSchema, CreateProductInput, UpdateProductInput } from "@/types/product"
 import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
+
+export const DEMO_CATEGORIES = [
+    { id: "Beverages", name: "Beverages", parentId: "All Item Groups", isGroup: false },
+    { id: "Snacks", name: "Snacks", parentId: "All Item Groups", isGroup: false },
+    { id: "Electronics", name: "Electronics", parentId: "All Item Groups", isGroup: false },
+    { id: "Apparel", name: "Apparel", parentId: "All Item Groups", isGroup: false },
+]
+
+export const DEMO_PRODUCTS = [
+    {
+        id: "ITEM-001",
+        name: "Premium Espresso Beans 1kg",
+        productCode: "COFFEE-ESP-1K",
+        description: "Dark roast artisanal espresso blend",
+        productGroupId: "Beverages",
+        productGroup: { id: "Beverages", name: "Beverages" },
+        stockUom: "Kg",
+        standardRate: 24.50,
+        valuationRate: 14.00,
+        currentStock: 142,
+        minStockLevel: 20,
+        isStockProduct: true,
+        hasBatchNo: true,
+        image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=300",
+        barcodes: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        active: true,
+        storefrontStatus: "visible",
+        metafields: [],
+        mediaUrls: [],
+    },
+    {
+        id: "ITEM-002",
+        name: "Cold Brew Glass Bottle 330ml",
+        productCode: "CB-BTL-330",
+        description: "Steeped for 18 hours single origin",
+        productGroupId: "Beverages",
+        productGroup: { id: "Beverages", name: "Beverages" },
+        stockUom: "Bottle",
+        standardRate: 4.75,
+        valuationRate: 1.80,
+        currentStock: 85,
+        minStockLevel: 15,
+        isStockProduct: true,
+        hasBatchNo: false,
+        image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300",
+        barcodes: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        active: true,
+        storefrontStatus: "visible",
+        metafields: [],
+        mediaUrls: [],
+    },
+    {
+        id: "ITEM-003",
+        name: "Wireless Barcode Scanner Pro",
+        productCode: "HW-SCAN-PRO",
+        description: "2.4GHz + Bluetooth handheld scanner",
+        productGroupId: "Electronics",
+        productGroup: { id: "Electronics", name: "Electronics" },
+        stockUom: "Unit",
+        standardRate: 89.00,
+        valuationRate: 45.00,
+        currentStock: 32,
+        minStockLevel: 5,
+        isStockProduct: true,
+        hasBatchNo: false,
+        image: "https://images.unsplash.com/photo-1588508065123-287b28e013da?w=300",
+        barcodes: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        active: true,
+        storefrontStatus: "visible",
+        metafields: [],
+        mediaUrls: [],
+    },
+    {
+        id: "ITEM-004",
+        name: "Thermal Receipt Paper (50 rolls)",
+        productCode: "SUP-RECEIPT-50",
+        description: "80mm x 80mm thermal paper rolls",
+        productGroupId: "Electronics",
+        productGroup: { id: "Electronics", name: "Electronics" },
+        stockUom: "Pack",
+        standardRate: 35.00,
+        valuationRate: 18.00,
+        currentStock: 64,
+        minStockLevel: 10,
+        isStockProduct: true,
+        hasBatchNo: false,
+        image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=300",
+        barcodes: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        active: true,
+        storefrontStatus: "visible",
+        metafields: [],
+        mediaUrls: [],
+    },
+    {
+        id: "ITEM-005",
+        name: "Organic Matcha Powder 250g",
+        productCode: "TEA-MATCHA-250",
+        description: "Ceremonial grade Japanese Uji matcha",
+        productGroupId: "Beverages",
+        productGroup: { id: "Beverages", name: "Beverages" },
+        stockUom: "Tin",
+        standardRate: 29.99,
+        valuationRate: 15.20,
+        currentStock: 48,
+        minStockLevel: 8,
+        isStockProduct: true,
+        hasBatchNo: true,
+        image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=300",
+        barcodes: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        active: true,
+        storefrontStatus: "visible",
+        metafields: [],
+        mediaUrls: [],
+    }
+]
 
 // 
 // MULTI-TENANT REFACTOR
@@ -226,14 +352,23 @@ export async function deleteProduct(id: string) {
 // Get single item
 export async function getProduct(id: string) {
     try {
+        const cookieStore = await cookies();
+        const isDemo = cookieStore.get('onedexo_demo_session')?.value === 'true';
+        if (isDemo) {
+            const demo = DEMO_PRODUCTS.find(p => p.id === id || p.productCode === id);
+            if (demo) return demo;
+        }
+
         const client = await getTenantClient();
         const result = await client.getDoc<CoreEngineItem>('Item', id);
 
-        if (!result) return null
+        if (!result) {
+            return DEMO_PRODUCTS.find(p => p.id === id || p.productCode === id) || null;
+        }
         return transformProduct(result)
     } catch (error) {
         console.error("Get item error:", error)
-        return null;
+        return DEMO_PRODUCTS.find(p => p.id === id || p.productCode === id) || null;
     }
 }
 
@@ -244,7 +379,32 @@ export async function getProducts(options?: {
     status?: "all" | "in-stock" | "low-stock" | "out-of-stock"
     isStockItem?: boolean
 }) {
+    function filterDemoProducts() {
+        let list = [...DEMO_PRODUCTS];
+        if (options?.search) {
+            const s = options.search.toLowerCase();
+            list = list.filter(p => p.name.toLowerCase().includes(s) || p.productCode.toLowerCase().includes(s));
+        }
+        if (options?.categoryId && options.categoryId !== "all") {
+            list = list.filter(p => p.productGroupId === options.categoryId);
+        }
+        if (options?.status === "in-stock") {
+            list = list.filter(p => p.currentStock > p.minStockLevel);
+        } else if (options?.status === "low-stock") {
+            list = list.filter(p => p.currentStock > 0 && p.currentStock <= p.minStockLevel);
+        } else if (options?.status === "out-of-stock") {
+            list = list.filter(p => p.currentStock <= 0);
+        }
+        return list;
+    }
+
     try {
+        const cookieStore = await cookies();
+        const isDemo = cookieStore.get('onedexo_demo_session')?.value === 'true';
+        if (isDemo) {
+            return filterDemoProducts();
+        }
+
         const { client, tenantId } = await getTenantContext();
         const supabase = await createSupabaseServerClient();
 
@@ -258,9 +418,7 @@ export async function getProducts(options?: {
         const customMap = new Map((tenantItems || []).map((ti: any) => [ti.item_code, ti]));
 
         // Build filters
-        const filters: [string, string, unknown][] = [
-            
-        ]
+        const filters: [string, string, unknown][] = []
         
         if (options?.isStockItem !== undefined) {
             filters.push(['is_stock_item', '=', options.isStockItem ? 1 : 0])
@@ -274,8 +432,6 @@ export async function getProducts(options?: {
             filters.push(['item_group', '=', options.categoryId])
         }
 
-        // We use the raw client.getList here for advanced filtering
-        // But our wrapper simplifies this.
         const result = await client.getList<CoreEngineItem>('Item', {
             filters,
             fields: [
@@ -285,6 +441,10 @@ export async function getProducts(options?: {
             ],
             limit: 5000
         });
+
+        if (!result || result.length === 0) {
+            return filterDemoProducts();
+        }
 
         // 2. Fetch stock levels from 'Bin' for the tenant's warehouse
         const { warehouseName } = await getTenantContext();
@@ -296,7 +456,6 @@ export async function getProducts(options?: {
                 limit: 5000
             });
             for (const bin of bins) {
-                // If you want warehouse-specific filtering, add it to filters or filter here
                 stockMap.set(bin.item_code, (stockMap.get(bin.item_code) || 0) + bin.actual_qty);
             }
         } catch (e) {
@@ -310,19 +469,29 @@ export async function getProducts(options?: {
         });
     } catch (error) {
         console.error("Get items error:", error)
-        return []
+        return filterDemoProducts();
     }
 }
 
 // Get all categories (Item Groups)
 export async function getCategories() {
     try {
+        const cookieStore = await cookies();
+        const isDemo = cookieStore.get('onedexo_demo_session')?.value === 'true';
+        if (isDemo) {
+            return DEMO_CATEGORIES;
+        }
+
         const client = await getTenantClient();
 
         const result = await client.getList<CoreEngineItemGroup>('Item Group', {
             fields: ['name', 'parent_item_group', 'is_group'],
             limit: 5000
         });
+
+        if (!result || result.length === 0) {
+            return DEMO_CATEGORIES;
+        }
 
         return result.map(group => ({
             id: group.name,
@@ -332,7 +501,7 @@ export async function getCategories() {
         }))
     } catch (error) {
         console.error("Get categories error:", error)
-        return []
+        return DEMO_CATEGORIES;
     }
 }
 

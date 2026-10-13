@@ -46,7 +46,7 @@ export function SubscriptionSettingsClient({ subscription, submissions, plans, q
             <div className="font-sans space-y-8 text-[#171717]">
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight">Upgrade or Renew</h1>
-                    <p className="text-[#171717]/60 tracking-wide mt-2">Select a plan and complete your payment to continue using Orvex.</p>
+                    <p className="text-[#171717]/60 tracking-wide mt-2">Select a plan and complete your payment to continue using Onedexo.</p>
                 </div>
                 <div className="bg-[#fcfbf9] border border-[#171717]/10 p-2 md:p-8 rounded-3xl">
                     <button 
@@ -124,7 +124,7 @@ export function SubscriptionSettingsClient({ subscription, submissions, plans, q
                                 </p>
                             )}
                             <p className="text-sm text-[#171717]/60 tracking-wide max-w-[280px] mx-auto">
-                                Subscribe now to continue using Orvex without interruption. Payment must be made before your trial ends.
+                                Subscribe now to continue using Onedexo without interruption. Payment must be made before your trial ends.
                             </p>
                         </div>
                     )}

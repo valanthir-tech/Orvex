@@ -33,7 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Box, Loader2 } from "lucide-react"
+import { Box, Loader2, Sparkles, ArrowRight } from "lucide-react"
 import Image from "next/image"
 
 const loginSchema = z.object({
@@ -58,7 +58,7 @@ function LoginForm() {
             try {
                 const token = await db.configStore.get("device_token")
                 if (token) {
-                    router.replace("/pos/login")
+                    router.replace("/pos")
                 }
             } catch (err) {
                 console.error("Dexie offline config error", err)
@@ -75,8 +75,30 @@ function LoginForm() {
         },
     })
 
+    function handleDemoLogin() {
+        setIsLoading(true)
+        document.cookie = "onedexo_demo_session=true; path=/; max-age=604800; SameSite=Lax"
+        window.location.href = "/dashboard"
+    }
+
+    function handleFillDemoCredentials() {
+        form.setValue("email", "demo@onedexo.com")
+        form.setValue("password", "demo1234")
+    }
+
     async function onSubmit(values: LoginFormValues) {
         setIsLoading(true)
+
+        // Handle demo credentials directly
+        if (
+            values.email.trim().toLowerCase() === "demo@onedexo.com" &&
+            values.password === "demo1234"
+        ) {
+            document.cookie = "onedexo_demo_session=true; path=/; max-age=604800; SameSite=Lax"
+            window.location.href = "/dashboard"
+            return
+        }
+
         const supabase = createSupabaseBrowserClient()
 
         const { error } = await supabase.auth.signInWithPassword({
@@ -95,15 +117,65 @@ function LoginForm() {
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex h-20 items-center justify-center mb-2">
-                    <Image src="/orvex-horizontal.png" alt="Orvex" width={280} height={80} className="h-14 w-auto" />
+                    <Image src="/onedexo-horizontal.png" alt="Onedexo" width={280} height={80} className="h-12 w-auto object-contain" priority />
                 </div>
-                <p className="text-balance text-sm text-muted-foreground mt-2">
+                <p className="text-balance text-sm text-muted-foreground mt-1">
                     Login to your Inventory & POS system
                 </p>
             </div>
+
+            {/* Test Demo Credentials Showcase Box */}
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 shadow-sm text-left">
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2">
+                        <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                            Demo Test Access
+                        </span>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={handleDemoLogin}
+                        disabled={isLoading}
+                        className="h-8 px-3 text-xs font-medium shadow-sm hover:shadow"
+                    >
+                        {isLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+                        Quick Demo Sign In
+                    </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                    Test the complete dashboard, POS, and inventory features instantly:
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-xs bg-background/80 rounded-xl p-3 border border-border/50 font-mono">
+                    <div>
+                        <span className="text-muted-foreground block text-[10px] font-sans font-medium uppercase tracking-wider mb-0.5">Email</span>
+                        <span className="font-semibold text-foreground select-all text-xs sm:text-sm">demo@onedexo.com</span>
+                    </div>
+                    <div>
+                        <span className="text-muted-foreground block text-[10px] font-sans font-medium uppercase tracking-wider mb-0.5">Password</span>
+                        <span className="font-semibold text-foreground select-all text-xs sm:text-sm">demo1234</span>
+                    </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="text-[11px]">Role: <strong className="text-foreground">Store Admin</strong></span>
+                    <button
+                        type="button"
+                        onClick={handleFillDemoCredentials}
+                        className="text-primary hover:underline font-medium text-xs cursor-pointer flex items-center gap-1"
+                    >
+                        Fill into form <ArrowRight className="h-3 w-3" />
+                    </button>
+                </div>
+            </div>
+
             <Card className="border-0 shadow-lg rounded-2xl">
                 <CardHeader>
                     <CardTitle>Welcome back</CardTitle>
@@ -202,7 +274,7 @@ function LoginForm() {
             </Card>
 
             <p className="text-[10px] text-muted-foreground/60 text-center max-w-sm mx-auto leading-relaxed">
-                Orvex is a modern inventory management and order recording system.
+                Onedexo is a modern inventory management and order recording system.
                 Order slips generated are for internal record-keeping only and do not
                 constitute tax invoices. By signing in you agree to our{" "}
                 <Link href="/legal/terms" className="underline hover:text-muted-foreground">

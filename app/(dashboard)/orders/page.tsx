@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Orders | Orvex"
+    title: "Orders | Onedexo"
 }
 
 import OrdersPageClient from "@/components/orders/orders-page-client"

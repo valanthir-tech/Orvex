@@ -1001,7 +1001,7 @@ export default function POSInterface() {
                             <>
                                 {/* Receipt Header */}
                                 <div className="text-center mb-4">
-                                    <h2 className="text-lg font-bold">Orvex POS</h2>
+                                    <h2 className="text-lg font-bold">Onedexo POS</h2>
                                     <p className="text-xs text-muted-foreground">Order Slip</p>
                                     <div className="h-px bg-border my-3" />
                                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -1067,7 +1067,7 @@ export default function POSInterface() {
                                 <div className="text-center text-xs text-muted-foreground mt-4 pt-3 border-t border-dashed">
                                     <p>Thank you for your purchase!</p>
                                     <p className="mt-1 text-[10px] text-muted-foreground/70">Tax filing is the sole responsibility of the business owner.</p>
-                                    <p className="mt-1">Powered by Orvex</p>
+                                    <p className="mt-1">Powered by Onedexo</p>
                                 </div>
                             </>
                         )}

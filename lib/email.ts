@@ -13,7 +13,7 @@ import { Resend } from 'resend'
 // It will use the actual process.env variable at runtime.
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_fallback_key')
 
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'Orvex <noreply@valanthir.com>'
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'Onedexo <noreply@onedexo.com>'
 
 interface SendEmailOptions {
     to: string
@@ -68,7 +68,7 @@ export function storefrontPasswordResetEmail(params: {
   </p>
   <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
   <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
-  <p style="color: #999; font-size: 12px;">Powered by Orvex</p>
+  <p style="color: #999; font-size: 12px;">Powered by Onedexo</p>
 </body>
 </html>`.trim(),
     }
@@ -111,7 +111,7 @@ export function paymentApprovedEmail(params: {
   </div>
   <p style="color:#6b7280; font-size:14px;">You now have full access to all features included in your plan. Log in to your store dashboard to continue.</p>
   <hr style="border:none; border-top:1px solid #eee; margin:32px 0;">
-  <p style="color:#9ca3af; font-size:12px;">Orvex &middot; <a href="mailto:support@valanthir.com" style="color:#9ca3af;">support@valanthir.com</a></p>
+  <p style="color:#9ca3af; font-size:12px;">Onedexo &middot; <a href="mailto:support@onedexo.com" style="color:#9ca3af;">support@onedexo.com</a></p>
 </body>
 </html>`.trim(),
     }
@@ -125,7 +125,7 @@ export function paymentRejectedEmail(params: {
     adminNotes: string | null
 }) {
     return {
-        subject: `Action Required — Payment Update for Orvex`,
+        subject: `Action Required — Payment Update for Onedexo`,
         html: `
 <!DOCTYPE html>
 <html>
@@ -141,13 +141,13 @@ export function paymentRejectedEmail(params: {
   </div>` : ''}
   <p>Please resubmit your payment with the correct proof and details. If you believe this is an error, contact our support team.</p>
   <p style="margin:24px 0;">
-    <a href="https://app.valanthir.com/settings/subscription"
+    <a href="https://app.onedexo.com/settings/subscription"
        style="display:inline-block; padding:12px 24px; background:#171717; color:#fff; text-decoration:none; border-radius:8px; font-weight:500;">
       Resubmit Payment
     </a>
   </p>
   <hr style="border:none; border-top:1px solid #eee; margin:32px 0;">
-  <p style="color:#9ca3af; font-size:12px;">Orvex &middot; <a href="mailto:support@valanthir.com" style="color:#9ca3af;">support@valanthir.com</a></p>
+  <p style="color:#9ca3af; font-size:12px;">Onedexo &middot; <a href="mailto:support@onedexo.com" style="color:#9ca3af;">support@onedexo.com</a></p>
 </body>
 </html>`.trim(),
     }
@@ -168,7 +168,7 @@ export function subscriptionExpiryEmail(params: {
 
     return {
         subject: isExpired
-            ? `Your Orvex subscription has expired`
+            ? `Your Onedexo subscription has expired`
             : `Your subscription expires in ${params.daysRemaining} day${params.daysRemaining !== 1 ? 's' : ''}`,
         html: `
 <!DOCTYPE html>
@@ -185,13 +185,13 @@ export function subscriptionExpiryEmail(params: {
     : `<p>Your <strong>${escapeHtml(params.planName)}</strong> subscription expires on <strong>${formattedDate}</strong>. Renew now to keep everything running without interruption.</p>`
   }
   <p style="margin:24px 0;">
-    <a href="https://app.valanthir.com/settings/subscription"
+    <a href="https://app.onedexo.com/settings/subscription"
        style="display:inline-block; padding:12px 24px; background:#171717; color:#fff; text-decoration:none; border-radius:8px; font-weight:500;">
       Renew Subscription
     </a>
   </p>
   <hr style="border:none; border-top:1px solid #eee; margin:32px 0;">
-  <p style="color:#9ca3af; font-size:12px;">Orvex &middot; <a href="mailto:support@valanthir.com" style="color:#9ca3af;">support@valanthir.com</a></p>
+  <p style="color:#9ca3af; font-size:12px;">Onedexo &middot; <a href="mailto:support@onedexo.com" style="color:#9ca3af;">support@onedexo.com</a></p>
 </body>
 </html>`.trim(),
     }

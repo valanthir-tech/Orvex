@@ -45,8 +45,13 @@ export function NavUser({
     const router = useRouter()
 
     async function handleLogout() {
-        const supabase = createSupabaseBrowserClient()
-        await supabase.auth.signOut()
+        document.cookie = "onedexo_demo_session=; path=/; max-age=0;"
+        try {
+            const supabase = createSupabaseBrowserClient()
+            await supabase.auth.signOut()
+        } catch {
+            // Ignore if Supabase client errors
+        }
         window.location.href = "/login"
     }
 

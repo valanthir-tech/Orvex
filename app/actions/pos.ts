@@ -1,10 +1,12 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 import { z } from "zod"
 import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
 import { CoreEngineSalesInvoice, CoreEngineClient, CoreEngineConfig } from "@/lib/core"
 import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
+import { DEMO_PRODUCTS } from "@/app/actions/products"
 
 // 
 // MULTI-TENANT REFACTOR
@@ -54,6 +56,19 @@ export async function createPOSInvoice(formData: FormData) {
     if (cartItems.length === 0) return { error: "Cart is empty" }
 
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            revalidatePath('/', 'layout');
+            return {
+                success: true,
+                name: `INV-DEMO-${Math.floor(1000 + Math.random() * 9000)}`,
+                grandTotal: paidAmount,
+                paidAmount: paidAmount,
+                status: "Paid",
+                posUuid,
+            };
+        }
+
         const { client, companyName, warehouseName, priceList, tenantId } = await getTenantContext();
         const supabase = await createSupabaseServerClient()
 
@@ -159,6 +174,39 @@ export async function getTodayInvoices() {
     const today = new Date().toISOString().split('T')[0]
 
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            return [
+                {
+                    id: "INV-DEMO-001",
+                    name: "INV-2026-0042",
+                    customer: "Walk-in Customer",
+                    grandTotal: 1250,
+                    paidAmount: 1250,
+                    createdAt: new Date(Date.now() - 15 * 60 * 1000),
+                    status: "Paid",
+                },
+                {
+                    id: "INV-DEMO-002",
+                    name: "INV-2026-0041",
+                    customer: "Aarav Sharma",
+                    grandTotal: 3400,
+                    paidAmount: 3400,
+                    createdAt: new Date(Date.now() - 52 * 60 * 1000),
+                    status: "Paid",
+                },
+                {
+                    id: "INV-DEMO-003",
+                    name: "INV-2026-0040",
+                    customer: "Sita Devi",
+                    grandTotal: 850,
+                    paidAmount: 850,
+                    createdAt: new Date(Date.now() - 110 * 60 * 1000),
+                    status: "Paid",
+                },
+            ];
+        }
+
         const client = await getTenantClient();
 
         const result = await client.getList<{
@@ -274,7 +322,30 @@ export async function deleteInvoice(id: string) {
 
 // Get items for the POS terminal (formatted for Dexie local DB)
 export async function getPOSItems() {
+    function mapDemoProducts() {
+        return DEMO_PRODUCTS.map(item => ({
+            id: item.id,
+            name: item.name,
+            sku: item.productCode,
+            price: item.standardRate,
+            cost: item.valuationRate,
+            stock: item.currentStock,
+            minStock: item.minStockLevel,
+            category: item.productGroupId,
+            barcode: null as string | null,
+            image: item.image,
+            isActive: true,
+            isSynced: true,
+            updatedAt: item.updatedAt,
+        }));
+    }
+
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            return mapDemoProducts();
+        }
+
         const { client, tenantId, warehouseName } = await getTenantContext();
         const supabase = await createSupabaseServerClient();
 
@@ -316,6 +387,10 @@ export async function getPOSItems() {
             stockMap.set(bin.item_code, (stockMap.get(bin.item_code) || 0) + bin.actual_qty);
         }
 
+        if (items.length === 0) {
+            return mapDemoProducts();
+        }
+
         return items.map(item => {
             const custom = customMap.get(item.item_code) || {};
             return {
@@ -335,6 +410,6 @@ export async function getPOSItems() {
         }});
     } catch (error) {
         console.error('Get POS items error:', error instanceof Error ? error.message : String(error));
-        return [];
+        return mapDemoProducts();
     }
 }

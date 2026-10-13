@@ -50,7 +50,7 @@ export function PaymentVerificationPending({ amount, method, refCode }: { amount
             <div className="text-sm">
               <p className="font-medium mb-1">Need help?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                 Contact support@orvex.app if your payment remains unverified for over 24 hours.
+                 Contact support@onedexo.app if your payment remains unverified for over 24 hours.
               </p>
             </div>
           </div>

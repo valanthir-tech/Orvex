@@ -152,7 +152,7 @@ export async function approveAndDispatchOrder(salesOrderId: string): Promise<{ s
                 sales_order: salesOrder.name,
                 so_detail: item.name
             })),
-            remarks: `Auto-generated from ${salesOrder.name} via Orvex Dashboard.`,
+            remarks: `Auto-generated from ${salesOrder.name} via Onedexo Dashboard.`,
             docstatus: 1 // Submit instantly
         }
 

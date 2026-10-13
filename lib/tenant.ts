@@ -5,9 +5,12 @@ import { cache } from 'react'
 export async function createSupabaseServerClient() {
     const cookieStore = await cookies()
 
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+
     return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        url,
+        key,
         {
             cookieOptions: {
                 name: 'sb-pos-auth',
@@ -61,6 +64,21 @@ export function tenantFilter(warehouseName: string): [string, string, unknown][]
 
 // Cached per request to avoid double DB hits
 export const getTenantContext = cache(async (): Promise<TenantContext> => {
+    const cookieStore = await cookies();
+    if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+        return {
+            client: new CoreEngineClient({
+                url: process.env.NEXT_PUBLIC_ERPNEXT_URL || 'https://demo.onedexo.com',
+                apiKey: 'demo-api-key',
+                apiSecret: 'demo-api-secret'
+            }),
+            tenantId: 'demo-tenant',
+            companyName: 'Onedexo Demo Retail',
+            warehouseName: 'Stores - ODR',
+            priceList: 'Standard Selling'
+        }
+    }
+
     const supabase = await createSupabaseServerClient();
 
     // 1. Get current user
@@ -70,10 +88,9 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     }
 
     // 2. Get Profile to find Role & Tenant (use service-role to bypass RLS)
-    const adminClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     let { data: profile } = await adminClient
         .from('profiles')
@@ -172,7 +189,7 @@ export const getTenantContext = cache(async (): Promise<TenantContext> => {
     // 7. Return Configured Client mapped specifically to this single site
     return {
         client: new CoreEngineClient({
-            url: tenant.erpnext_url, // Unique isolated Frappe instance (e.g. client1.valanthir.com)
+            url: tenant.erpnext_url, // Unique isolated Frappe instance (e.g. client1.onedexo.com)
             apiKey: decryptedApiKey,
             apiSecret: decryptedApiSecret
         }),
@@ -193,10 +210,9 @@ export const getTenantClient = cache(async () => {
  * Fetch ERP Client directly by Tenant ID (Used for background/cron jobs where cookies are not present)
  */
 export async function getTenantErpClient(tenantId: string): Promise<CoreEngineClient> {
-    const adminClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     const { data: tenant, error: tenantError } = await adminClient
         .from('tenants')

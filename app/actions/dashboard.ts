@@ -1,5 +1,6 @@
 "use server"
 
+import { cookies } from "next/headers"
 import { getTenantContext } from "@/lib/tenant"
 import { createSupabaseServerClient } from "@/lib/tenant"
 
@@ -12,6 +13,15 @@ export interface LowStockItem {
 
 export async function getLowStockItems(limit: number = 5): Promise<LowStockItem[]> {
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            return [
+                { name: "Wireless Barcode Scanner Pro", current: 4, reorder: 10, status: "critical" as const },
+                { name: "Cold Brew Glass Bottle 330ml", current: 8, reorder: 15, status: "warning" as const },
+                { name: "Thermal Receipt Paper (50 rolls)", current: 6, reorder: 12, status: "warning" as const },
+            ].slice(0, limit);
+        }
+
         const { client, tenantId, warehouseName } = await getTenantContext()
         const supabase = await createSupabaseServerClient();
 

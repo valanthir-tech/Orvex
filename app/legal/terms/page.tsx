@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service | Orvex Inventory POS',
-    description: 'Terms and conditions for using the Orvex Inventory POS platform.',
+    title: 'Terms of Service | Onedexo Inventory POS',
+    description: 'Terms and conditions for using the Onedexo Inventory POS platform.',
 };
 
 export default function TermsOfServicePage() {
@@ -14,12 +14,12 @@ export default function TermsOfServicePage() {
             <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6">
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">1. Acceptance of Terms</h2>
-                    <p>By accessing or using the Orvex Inventory POS platform (&quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+                    <p>By accessing or using the Onedexo Inventory POS platform (&quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
                 </section>
 
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">2. Service Description</h2>
-                    <p>Orvex Inventory POS is a multi-tenant point-of-sale and inventory management platform that provides:</p>
+                    <p>Onedexo Inventory POS is a multi-tenant point-of-sale and inventory management platform that provides:</p>
                     <ul className="list-disc pl-6 space-y-1 mt-2">
                         <li>Offline-first point-of-sale terminal</li>
                         <li>Inventory tracking and management</li>
@@ -37,7 +37,7 @@ export default function TermsOfServicePage() {
 
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">4. Subscription & Payment</h2>
-                    <p>Subscription plans are billed monthly. Custom POS installations are billed as a one-time fee. Pricing is subject to change with 30 days&apos; notice.</p>
+                    <p>Subscription plans are billed annually. Custom POS installations are billed as a one-time fee. Pricing is subject to change with 30 days&apos; notice.</p>
                     <p className="mt-2">Failure to pay may result in suspension of service. Data will be retained for 30 days after suspension before deletion.</p>
                 </section>
 
@@ -85,7 +85,7 @@ export default function TermsOfServicePage() {
 
                 <section>
                     <h2 className="text-xl font-semibold mt-8 mb-3">11. Contact</h2>
-                    <p>For questions about these Terms, contact us at: <a href="mailto:legal@valanthir.com" className="underline">legal@valanthir.com</a></p>
+                    <p>For questions about these Terms, contact us at: <a href="mailto:legal@onedexo.com" className="underline">legal@onedexo.com</a></p>
                 </section>
             </div>
         </main>

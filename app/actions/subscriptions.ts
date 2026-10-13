@@ -66,13 +66,114 @@ export interface PaymentQrCode {
     is_active: boolean
 }
 
+const FALLBACK_PLANS: SubscriptionPlan[] = [
+    {
+        id: "plan-starter",
+        name: "Starter",
+        price_npr: 15000,
+        billing_period: "yearly",
+        features: {
+            pos: true,
+            inventory: true,
+            offline_pos: true,
+            receipt_printing: true,
+            khata: true,
+            website: "Basic Storefront",
+            reports: "basic",
+            api_access: false,
+            white_label: false,
+            dedicated_manager: false,
+            support_type: "Standard"
+        },
+        max_stores: 1,
+        max_staff: 3,
+        max_products: 500,
+        is_active: true,
+        sort_order: 1
+    },
+    {
+        id: "plan-pro",
+        name: "Retail Pro",
+        price_npr: 35000,
+        billing_period: "yearly",
+        features: {
+            pos: true,
+            inventory: true,
+            offline_pos: true,
+            receipt_printing: true,
+            khata: true,
+            website: "Custom Domain",
+            reports: "advanced",
+            api_access: true,
+            white_label: false,
+            dedicated_manager: false,
+            support_type: "Priority"
+        },
+        max_stores: 3,
+        max_staff: 10,
+        max_products: 5000,
+        is_active: true,
+        sort_order: 2
+    },
+    {
+        id: "plan-enterprise",
+        name: "Enterprise",
+        price_npr: 80000,
+        billing_period: "yearly",
+        features: {
+            pos: true,
+            inventory: true,
+            offline_pos: true,
+            receipt_printing: true,
+            khata: true,
+            website: "Multi-Storefront",
+            reports: "advanced",
+            api_access: true,
+            white_label: true,
+            dedicated_manager: true,
+            support_type: "24/7 Dedicated"
+        },
+        max_stores: 10,
+        max_staff: 50,
+        max_products: 50000,
+        is_active: true,
+        sort_order: 3
+    }
+]
+
+const FALLBACK_QR_CODES: PaymentQrCode[] = [
+    {
+        id: "qr-fonepay",
+        payment_method: "bank_transfer",
+        qr_code_url: "/fonepay-mock.png",
+        payment_details: {
+            bank_name: "Nabil Bank",
+            account_name: "Onedexo Technologies Pvt. Ltd.",
+            account_number: "01201017500011"
+        },
+        is_active: true
+    },
+    {
+        id: "qr-esewa",
+        payment_method: "esewa",
+        qr_code_url: "/esewa-mock.png",
+        payment_details: {
+            esewa_id: "9800000000",
+            name: "Onedexo Technologies"
+        },
+        is_active: true
+    }
+]
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getAdminClient() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key || url.includes("placeholder")) {
+        return null
+    }
+    return createClient(url, key)
 }
 
 async function getAuthenticatedTenantId(): Promise<{ userId: string; tenantId: string }> {
@@ -81,6 +182,7 @@ async function getAuthenticatedTenantId(): Promise<{ userId: string; tenantId: s
     if (!user) throw new Error("Unauthorized")
 
     const adminClient = getAdminClient()
+    if (!adminClient) throw new Error("Database unconfigured")
     const { data: profile } = await adminClient
         .from("profiles")
         .select("tenant_id")
@@ -95,45 +197,71 @@ async function getAuthenticatedTenantId(): Promise<{ userId: string; tenantId: s
 
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     const adminClient = getAdminClient()
-    const { data, error } = await adminClient
-        .from("subscription_plans")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
+    if (!adminClient) return FALLBACK_PLANS
 
-    if (error) throw new Error(error.message)
-    return (data ?? []) as SubscriptionPlan[]
+    try {
+        const { data, error } = await adminClient
+            .from("subscription_plans")
+            .select("*")
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true })
+
+        if (error || !data || data.length === 0) return FALLBACK_PLANS
+        
+        // Ensure all plans are yearly
+        const yearlyPlans = data.map((plan: any) => ({
+            ...plan,
+            billing_period: "yearly",
+            price_npr: plan.billing_period === "monthly" && plan.price_npr < 10000 
+                ? plan.price_npr * 10 
+                : plan.price_npr
+        }))
+        return yearlyPlans as SubscriptionPlan[]
+    } catch {
+        return FALLBACK_PLANS
+    }
 }
 
 // ─── Get QR Codes for Payment ─────────────────────────────────────────────────
 
 export async function getPaymentQrCodes(): Promise<PaymentQrCode[]> {
     const adminClient = getAdminClient()
-    const { data, error } = await adminClient
-        .from("payment_qr_codes")
-        .select("*")
-        .eq("is_active", true)
+    if (!adminClient) return FALLBACK_QR_CODES
 
-    if (error) throw new Error(error.message)
-    return (data ?? []) as PaymentQrCode[]
+    try {
+        const { data, error } = await adminClient
+            .from("payment_qr_codes")
+            .select("*")
+            .eq("is_active", true)
+
+        if (error || !data || data.length === 0) return FALLBACK_QR_CODES
+        return data as PaymentQrCode[]
+    } catch {
+        return FALLBACK_QR_CODES
+    }
 }
 
 // ─── Get Tenant Subscription ──────────────────────────────────────────────────
 
 export async function getTenantSubscription(): Promise<TenantSubscription | null> {
-    const { tenantId } = await getAuthenticatedTenantId()
     const adminClient = getAdminClient()
+    if (!adminClient) return null
 
-    const { data, error } = await adminClient
-        .from("tenant_subscriptions")
-        .select("*, plan:subscription_plans(*)")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
+    try {
+        const { tenantId } = await getAuthenticatedTenantId()
+        const { data, error } = await adminClient
+            .from("tenant_subscriptions")
+            .select("*, plan:subscription_plans(*)")
+            .eq("tenant_id", tenantId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-    if (error) throw new Error(error.message)
-    return data as TenantSubscription | null
+        if (error) return null
+        return data as TenantSubscription | null
+    } catch {
+        return null
+    }
 }
 
 export async function getTenantFeatures() {
@@ -182,6 +310,9 @@ export async function checkSubscriptionStatus(tenantId: string): Promise<{
     isBlocked: boolean
 }> {
     const adminClient = getAdminClient()
+    if (!adminClient) {
+        return { isActive: true, status: "active", daysRemaining: 30, isPastDue: false, isBlocked: false }
+    }
 
     const { data: tenant } = await adminClient
         .from("tenants")
@@ -227,6 +358,7 @@ export async function submitPayment(data: {
 }): Promise<{ submissionId: string }> {
     const { userId, tenantId } = await getAuthenticatedTenantId()
     const adminClient = getAdminClient()
+    if (!adminClient) throw new Error("Database unconfigured")
 
     // Fetch tenant name for readable filename
     const { data: tenant } = await adminClient
@@ -366,15 +498,20 @@ export async function submitPayment(data: {
 // ─── Get Payment Submissions (for tenant) ────────────────────────────────────
 
 export async function getPaymentSubmissions(): Promise<PaymentSubmission[]> {
-    const { tenantId } = await getAuthenticatedTenantId()
     const adminClient = getAdminClient()
+    if (!adminClient) return []
 
-    const { data, error } = await adminClient
-        .from("payment_submissions")
-        .select("*, plan:subscription_plans(name, price_npr)")
-        .eq("tenant_id", tenantId)
-        .order("submitted_at", { ascending: false })
+    try {
+        const { tenantId } = await getAuthenticatedTenantId()
+        const { data, error } = await adminClient
+            .from("payment_submissions")
+            .select("*, plan:subscription_plans(name, price_npr)")
+            .eq("tenant_id", tenantId)
+            .order("submitted_at", { ascending: false })
 
-    if (error) throw new Error(error.message)
-    return (data ?? []) as PaymentSubmission[]
+        if (error) return []
+        return (data ?? []) as PaymentSubmission[]
+    } catch {
+        return []
+    }
 }

@@ -4,7 +4,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { db, DevicePoolConfig, OfflineInvoice } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
-const DEVICE_ID_STORAGE_KEY = 'orvex_device_id';
+const DEVICE_ID_STORAGE_KEY = 'onedexo_device_id';
 
 export interface LocalSaleItem {
   item_code: string;

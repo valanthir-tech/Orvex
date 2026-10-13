@@ -25,8 +25,8 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const isOrvexPageHost = domain.endsWith(".orvex.page");
-    const slug = isOrvexPageHost ? domain.replace(".orvex.page", "") : null;
+    const isOnedexoPageHost = domain.endsWith(".onedexo.page");
+    const slug = isOnedexoPageHost ? domain.replace(".onedexo.page", "") : null;
     
     // We query against storefront_subdomain and storefront_custom_domain
     const orQueryMatches = [
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     ];
     
     if (slug) {
-      // If it exists on our main orvex.page domain wildcard, also allow checking an exact slug match if they stored just 'ramesh'
+      // If it exists on our main onedexo.page domain wildcard, also allow checking an exact slug match if they stored just 'ramesh'
       orQueryMatches.push(`storefront_subdomain.eq.${slug}`);
     }
 

@@ -5,7 +5,7 @@ import { getTenantSubscription, getPaymentSubmissions, getSubscriptionPlans, get
 import { SubscriptionSettingsClient } from "@/components/payment/subscription-settings-client"
 
 export const metadata = {
-    title: "Subscription – Orvex",
+    title: "Subscription – Onedexo",
 }
 
 export default async function SubscriptionSettingsPage() {

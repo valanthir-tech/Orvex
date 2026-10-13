@@ -1,4 +1,4 @@
-# Inventory POS System
+# Onedexo POS System
 
 ## Project Overview
 A modern, offline-first Stock/Inventory Management and Point of Sale (POS) system for Nepal.

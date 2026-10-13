@@ -73,10 +73,13 @@ export function PricingSection() {
                       {plan.name.toLowerCase().includes('growth') ? "Recommended" : "Tier"}
                     </span>
                     <h3 className="font-sans text-4xl font-bold tracking-tighter mb-6">{plan.name}</h3>
-                    <div className="flex items-baseline gap-2 mb-2 font-sans">
+                    <div className="flex flex-wrap items-baseline gap-2 mb-2 font-sans">
                       <span className="text-5xl md:text-6xl font-bold tracking-tighter">NPR {plan.price_npr.toLocaleString()}</span>
-                      <span className={cn("text-xs md:text-sm tracking-widest font-bold uppercase", plan.name.toLowerCase().includes('growth') ? "text-white/40" : "text-gray-400")}>/{plan.billing_period}</span>
+                      <span className={cn("text-xs md:text-sm tracking-widest font-bold uppercase", (plan.name.toLowerCase().includes('growth') || plan.name.toLowerCase().includes('pro')) ? "text-white/60" : "text-gray-400")}>/year</span>
                     </div>
+                    <p className={cn("text-xs tracking-wider uppercase font-semibold mt-1", (plan.name.toLowerCase().includes('growth') || plan.name.toLowerCase().includes('pro')) ? "text-[#3255f1]" : "text-gray-400")}>
+                      Billed Annually
+                    </p>
                   </div>
 
                 <div className="space-y-4 mb-10 flex-grow">

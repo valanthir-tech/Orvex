@@ -132,7 +132,7 @@ export function PaymentForm({ plans, qrCodes, tenantId }: { plans: SubscriptionP
                                 <h3 className="text-lg font-semibold tracking-tight text-[#171717]">{plan.name}</h3>
                                 <div className="mt-2 mb-6 flex items-baseline gap-1">
                                     <span className="text-3xl font-bold tracking-tighter text-[#171717]">NPR {plan.price_npr.toLocaleString()}</span>
-                                    <span className="text-xs font-medium tracking-wide text-[#171717]/40 uppercase">/{plan.billing_period}</span>
+                                    <span className="text-xs font-semibold tracking-wide text-[#3255f1] uppercase">/year</span>
                                 </div>
 
                                 <ul className="space-y-3">

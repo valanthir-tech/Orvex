@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Strict Design Tokens for Onedexo ERP & Retail OS
+   Zero Raw Hex in JSX - All colors derive from semantic design tokens
+   ========================================================================== */
+
+:root {
+  /* Core Brand Tokens */
+  --brand-primary: #3255f1;
+  --brand-primary-hover: #2646d6;
+  --brand-primary-subtle: #eef2fe;
+
+  /* Surface / Background Tokens */
+  --surface: hsl(0 0% 100%);
+  --surface-elevated: hsl(210 20% 98%);
+  --surface-subtle: hsl(210 20% 95%);
+  --surface-hover: hsl(210 20% 93%);
+  --surface-active: hsl(210 20% 90%);
+
+  /* Text Tokens */
+  --text: hsl(222 47% 11%);
+  --text-muted: hsl(215 16% 47%);
+  --text-inverted: hsl(0 0% 100%);
+
+  /* Border Tokens */
+  --border: hsl(214 32% 91%);
+  --border-subtle: hsl(214 32% 94%);
+  --border-strong: hsl(215 25% 75%);
+
+  /* Status Tokens */
+  --success-solid: hsl(142 76% 36%);
+  --success-subtle: hsl(142 72% 95%);
+  --success-text: hsl(142 76% 28%);
+
+  --warning-solid: hsl(38 92% 50%);
+  --warning-subtle: hsl(48 96% 94%);
+  --warning-text: hsl(32 95% 36%);
+
+  --danger-solid: hsl(0 84% 60%);
+  --danger-subtle: hsl(0 86% 97%);
+  --danger-text: hsl(0 74% 42%);
+
+  --info-solid: hsl(199 89% 48%);
+  --info-subtle: hsl(199 89% 95%);
+  --info-text: hsl(199 89% 36%);
+}
+
+.dark {
+  --brand-primary: #4e6ef7;
+  --brand-primary-hover: #6984f8;
+  --brand-primary-subtle: #192461;
+
+  --surface: hsl(222 47% 9%);
+  --surface-elevated: hsl(222 47% 12%);
+  --surface-subtle: hsl(222 47% 15%);
+  --surface-hover: hsl(222 47% 18%);
+  --surface-active: hsl(222 47% 22%);
+
+  --text: hsl(210 40% 98%);
+  --text-muted: hsl(215 20% 65%);
+  --text-inverted: hsl(222 47% 11%);
+
+  --border: hsl(217 33% 20%);
+  --border-subtle: hsl(217 33% 16%);
+  --border-strong: hsl(217 33% 30%);
+
+  --success-solid: hsl(142 71% 45%);
+  --success-subtle: hsl(142 50% 12%);
+  --success-text: hsl(142 71% 75%);
+
+  --warning-solid: hsl(38 92% 54%);
+  --warning-subtle: hsl(38 50% 14%);
+  --warning-text: hsl(38 92% 75%);
+
+  --danger-solid: hsl(0 74% 60%);
+  --danger-subtle: hsl(0 50% 14%);
+  --danger-text: hsl(0 74% 80%);
+
+  --info-solid: hsl(199 89% 55%);
+  --info-subtle: hsl(199 50% 14%);
+  --info-text: hsl(199 89% 80%);
+}
+
+/* Utilities for semantic classes */
+.bg-surface { background-color: var(--surface); }
+.bg-surface-elevated { background-color: var(--surface-elevated); }
+.bg-surface-subtle { background-color: var(--surface-subtle); }
+.bg-surface-hover { background-color: var(--surface-hover); }
+.bg-surface-active { background-color: var(--surface-active); }
+
+.text-text { color: var(--text); }
+.text-text-muted { color: var(--text-muted); }
+.text-text-inverted { color: var(--text-inverted); }
+
+.border-border { border-color: var(--border); }
+.border-border-subtle { border-color: var(--border-subtle); }
+.border-border-strong { border-color: var(--border-strong); }
+
+.bg-primary { background-color: var(--brand-primary); }
+.text-primary { color: var(--brand-primary); }
+.border-primary { border-color: var(--brand-primary); }
+.bg-primary-hover:hover { background-color: var(--brand-primary-hover); }
+.bg-primary-subtle { background-color: var(--brand-primary-subtle); }
+
+.bg-success-solid { background-color: var(--success-solid); }
+.text-success-solid { color: var(--success-solid); }
+.bg-success-subtle { background-color: var(--success-subtle); }
+.text-success { color: var(--success-text); }
+.border-success { border-color: var(--success-solid); }
+
+.bg-warning-solid { background-color: var(--warning-solid); }
+.text-warning-solid { color: var(--warning-solid); }
+.bg-warning-subtle { background-color: var(--warning-subtle); }
+.text-warning { color: var(--warning-text); }
+.border-warning { border-color: var(--warning-solid); }
+
+.bg-danger-solid { background-color: var(--danger-solid); }
+.text-danger-solid { color: var(--danger-solid); }
+.bg-danger-subtle { background-color: var(--danger-subtle); }
+.text-danger { color: var(--danger-text); }
+.border-danger { border-color: var(--danger-solid); }
+
+.bg-info-solid { background-color: var(--info-solid); }
+.text-info-solid { color: var(--info-solid); }
+.bg-info-subtle { background-color: var(--info-subtle); }
+.text-info { color: var(--info-text); }
+.border-info { border-color: var(--info-solid); }

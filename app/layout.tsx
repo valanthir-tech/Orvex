@@ -23,17 +23,17 @@ const jetbrainsMono = JetBrains_Mono({
 
   export const metadata: Metadata = {
   title: {
-    default: "Orvex | Orvex by valanthir tech",
-    template: "%s | Orvex by valanthir tech",
+    default: "Onedexo | Modern ERP & Retail OS",
+    template: "%s | Onedexo",
   },
-  description: "Orvex is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
+  description: "Onedexo is an inventory management and POS workspace for store teams handling products, orders, and day-to-day operations.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Orvex POS",
+    title: "Onedexo POS",
   },
-  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "orvex", "valanthir tech"],
+  keywords: ["inventory", "pos", "nepal", "stock management", "point of sale", "erp", "store operations", "onedexo"],
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",

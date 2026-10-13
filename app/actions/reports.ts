@@ -1,5 +1,6 @@
 "use server"
 
+import { cookies } from "next/headers"
 import { getTenantClient } from "@/lib/tenant"
 
 export interface DailySalesData {
@@ -35,6 +36,19 @@ export interface SalesSummary {
 // Get sales summary (today, this week, this month)
 export async function getSalesSummary(): Promise<SalesSummary> {
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            return {
+                todaySales: 18450,
+                todayInvoices: 26,
+                todayTax: 2398,
+                weekSales: 94200,
+                weekInvoices: 148,
+                monthSales: 412500,
+                monthInvoices: 620,
+            }
+        }
+
         const client = await getTenantClient()
         const today = new Date().toISOString().split("T")[0]
 
@@ -117,6 +131,22 @@ export async function getDailySales(
     days: number = 7
 ): Promise<DailySalesData[]> {
     try {
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            const list: DailySalesData[] = [];
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                list.push({
+                    date: d.toISOString().split("T")[0],
+                    totalSales: 14000 + ((i * 1230) % 8000),
+                    invoiceCount: 16 + ((i * 3) % 12),
+                    totalTax: 1800 + ((i * 150) % 1000),
+                });
+            }
+            return list;
+        }
+
         const client = await getTenantClient()
         const today = new Date()
         const startDate = new Date(today)
@@ -184,9 +214,18 @@ export async function getTopSellingItems(
     limit: number = 10
 ): Promise<TopSellingItem[]> {
     try {
-        const client = await getTenantClient()
+        const cookieStore = await cookies();
+        if (cookieStore.get('onedexo_demo_session')?.value === 'true') {
+            return [
+                { itemCode: "COFFEE-ESP-1K", itemName: "Premium Espresso Beans 1kg", totalQty: 48, totalAmount: 1176 },
+                { itemCode: "TEA-MATCHA-250", itemName: "Organic Matcha Powder 250g", totalQty: 32, totalAmount: 959.68 },
+                { itemCode: "CB-BTL-330", itemName: "Cold Brew Glass Bottle 330ml", totalQty: 29, totalAmount: 137.75 },
+                { itemCode: "HW-SCAN-PRO", itemName: "Wireless Barcode Scanner Pro", totalQty: 12, totalAmount: 1068 },
+                { itemCode: "SUP-RECEIPT-50", itemName: "Thermal Receipt Paper (50 rolls)", totalQty: 18, totalAmount: 630 },
+            ].slice(0, limit);
+        }
 
-        // Get this month's start
+        const client = await getTenantClient()
         const now = new Date()
         const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
         const today = now.toISOString().split("T")[0]

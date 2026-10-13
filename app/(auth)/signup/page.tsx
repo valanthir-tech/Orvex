@@ -180,7 +180,7 @@ export default function SignupPage() {
         <div className="flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex h-20 items-center justify-center mb-2">
-                    <Image src="/orvex-horizontal.png" alt="Orvex" width={280} height={80} className="h-14 w-auto" />
+                    <Image src="/onedexo-horizontal.png" alt="Onedexo" width={280} height={80} className="h-12 w-auto object-contain" priority />
                 </div>
                 <p className="text-balance text-sm text-muted-foreground mt-2">
                     {step === 1 ? "Create your account" : step === 3 ? "Complete Your Payment" : "Tell us about your business"}

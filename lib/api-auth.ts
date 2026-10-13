@@ -67,8 +67,8 @@ function getJwtSecret(): Uint8Array {
 
 export function generateApiKey(): { key: string; prefix: string } {
     const raw = randomBytes(32).toString('hex') // 64 hex chars
-    const key = `orvex_${raw}`
-    const prefix = `orvex_${raw.slice(0, 8)}****`
+    const key = `onedexo_${raw}`
+    const prefix = `onedexo_${raw.slice(0, 8)}****`
     return { key, prefix }
 }
 
@@ -133,7 +133,7 @@ export async function validateTenantId(tenantId: string): Promise<ApiTenantConte
 // ─── API Key Validation (Deprecated temporarily for easier storefront building) ──────────────────
 
 export async function validateApiKey(apiKey: string, requestOrigin?: string | null): Promise<ApiTenantContext | null> {
-    if (!apiKey || !apiKey.startsWith('orvex_')) return null
+    if (!apiKey || (!apiKey.startsWith('onedexo_') && !apiKey.startsWith('onedexo_'))) return null
 
     const supabase = getServiceClient()
 
@@ -242,7 +242,7 @@ export async function signCustomerJwt(customer: {
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('7d')
-        .setIssuer('valanthir-ims')
+        .setIssuer('onedexo-ims')
         .sign(getJwtSecret())
 }
 

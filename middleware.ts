@@ -68,13 +68,22 @@ export async function middleware(request: NextRequest) {
     )
 
     // 1. Refresh Session (Critical for SSR)
-    let user = null
-    try {
-        const { data } = await supabase.auth.getUser()
-        user = data?.user ?? null
-    } catch {
-        // Supabase unreachable — allow request through (mock/offline mode)
-        return response
+    const isDemoSession = request.cookies.get('onedexo_demo_session')?.value === 'true'
+    let user: any = null
+
+    if (isDemoSession) {
+        user = {
+            id: 'demo-user',
+            email: 'demo@onedexo.com',
+        }
+    } else {
+        try {
+            const { data } = await supabase.auth.getUser()
+            user = data?.user ?? null
+        } catch {
+            // Supabase unreachable — allow request through (mock/offline mode)
+            return response
+        }
     }
 
     const url = request.nextUrl.clone()
@@ -105,18 +114,28 @@ export async function middleware(request: NextRequest) {
         url.pathname.startsWith('/services') ||
         url.pathname.startsWith('/storefront')
 
+    // If authenticated demo/real user visits auth pages, redirect to dashboard
+    if (isAuthPage && user) {
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+    }
+
     // Redirect unauthenticated users
     if (isProtectedPage && !user) {
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
 
+    // Demo sessions bypass remote Supabase profile checks
+    if (isDemoSession) {
+        return response
+    }
+
     // Role guard: superadmin cannot use the POS app — redirect to admin portal
     if (isProtectedPage && user) {
-        const adminClient = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        )
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+        const adminClient = createClient(supabaseUrl, serviceRoleKey)
         // Optimize: Fetch profile and tenant data in a single joined query
         const { data: profile } = await adminClient
             .from('profiles')

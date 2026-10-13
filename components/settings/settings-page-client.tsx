@@ -227,12 +227,12 @@ export default function SettingsPageClient() {
     }
 
     async function handleLogout() {
-        const supabase = createSupabaseBrowserClient()
-        const { error } = await supabase.auth.signOut()
-
-        if (error) {
-            toast.error("Failed to log out")
-            return
+        document.cookie = "onedexo_demo_session=; path=/; max-age=0;"
+        try {
+            const supabase = createSupabaseBrowserClient()
+            await supabase.auth.signOut()
+        } catch {
+            // Ignore client signout error
         }
 
         // Hard redirect to fully clear in-memory auth state

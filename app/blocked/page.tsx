@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ShieldX } from "lucide-react"
 
 export const metadata = {
-    title: "Account Blocked – Orvex",
+    title: "Account Blocked – Onedexo",
 }
 
 export default async function BlockedPage() {

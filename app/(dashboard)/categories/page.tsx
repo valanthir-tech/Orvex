@@ -1,7 +1,7 @@
 import CategoriesPageClient from "@/components/categories/categories-page-client"
 
 export const metadata = {
-    title: "Categories | Orvex",
+    title: "Categories | Onedexo",
 }
 
 export const dynamic = "force-dynamic"

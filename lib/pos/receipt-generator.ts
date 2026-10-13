@@ -91,7 +91,7 @@ function buildReceipt(invoice: ReceiptInvoice, businessInfo: BusinessInfo): stri
   const itemsTotal = invoice.items.reduce((sum, item) => sum + item.amount, 0);
   const receiptLines: string[] = [];
 
-  receiptLines.push('        ' + (businessInfo.business_name ?? 'ORVEX POS'));
+  receiptLines.push('        ' + (businessInfo.business_name ?? 'ONEDEXO POS'));
   if (businessInfo.address) receiptLines.push(`  ${businessInfo.address}`);
   if (businessInfo.phone) receiptLines.push(`  Ph: ${businessInfo.phone}`);
   if (businessInfo.pan_number) receiptLines.push(`  PAN: ${businessInfo.pan_number}`);

@@ -6,7 +6,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             <header className="border-b px-6 py-4">
                 <div className="max-w-3xl mx-auto flex items-center justify-between">
                     <Link href="/" className="text-lg font-semibold hover:opacity-80 transition-opacity">
-                        Orvex POS
+                        Onedexo POS
                     </Link>
                     <nav className="flex items-center gap-6 text-sm">
                         <Link href="/legal/terms" className="hover:underline text-muted-foreground hover:text-foreground transition-colors">
@@ -21,7 +21,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             {children}
             <footer className="border-t px-6 py-8 mt-12">
                 <div className="max-w-3xl mx-auto text-sm text-muted-foreground">
-                    <p>&copy; {new Date().getFullYear()} Orvex Tech Pvt. Ltd. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} Onedexo Tech Pvt. Ltd. All rights reserved.</p>
                     <div className="flex gap-4 mt-2">
                         <Link href="/legal/terms" className="hover:underline">Terms of Service</Link>
                         <Link href="/legal/privacy" className="hover:underline">Privacy Policy</Link>
