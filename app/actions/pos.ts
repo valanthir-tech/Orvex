@@ -6,7 +6,7 @@ import { z } from "zod"
 import { getTenantClient, getTenantContext, createSupabaseServerClient } from "@/lib/tenant"
 import { CoreEngineSalesInvoice, CoreEngineClient, CoreEngineConfig } from "@/lib/core"
 import { POS_DEFAULT_CUSTOMER } from "@/lib/constants"
-import { DEMO_PRODUCTS } from "@/app/actions/products"
+import { DEMO_PRODUCTS } from "@/lib/demo-data"
 
 // 
 // MULTI-TENANT REFACTOR
